@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#91bfd1"/>
+<title>MERA — Professional Adventure Slice</title>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div id="loading" class="screen active">
+  <div class="panel loading-panel">
+    <div class="eyebrow">MERA // ADVENTURE PROTOTYPE</div>
+    <h1>MERA</h1>
+    <p id="loading-copy">Preparing the island…</p>
+    <div class="loadbar"><div id="loadfill"></div></div>
+    <div id="asset-status" class="micro">Loading character, wildlife and landscape systems</div>
+    <button id="start-btn" disabled>ENTER THE ISLAND</button>
+  </div>
+</div>
+
+<div id="choice" class="choice hidden">
+  <div class="choice-card">
+    <div class="choice-kicker">THE STREAM</div>
+    <div class="choice-title">Choose your crossing</div>
+    <div class="choice-buttons">
+      <button data-route="bridge">Cross the wooden bridge</button>
+      <button data-route="ford" class="ghost">Wade through the shallows</button>
+    </div>
+  </div>
+</div>
+
+<div id="cinematic-bars"><div></div><div></div></div>
+<div id="fade"></div>
+
+<div id="hud" class="hidden">
+  <div class="hud-left">
+    <div class="brand">MERA</div>
+    <div id="region">SOUTHERN MEADOW</div>
+  </div>
+  <div id="hint">WASD · Shift to run · drag mouse to look</div>
+</div>
+
+<div id="mobile" class="hidden">
+  <div id="joystick"><div id="stick"></div></div>
+  <div id="lookpad"></div>
+  <div id="runbtn">RUN</div>
+</div>
+
+<div id="complete" class="screen hidden">
+  <div class="panel complete-panel">
+    <div class="eyebrow">VERTICAL SLICE COMPLETE</div>
+    <h2>The ridge opens ahead.</h2>
+    <p>This build is deliberately about movement, atmosphere, wildlife and authored route feel. The research task is not implemented yet.</p>
+    <button onclick="location.reload()">PLAY AGAIN</button>
+  </div>
+</div>
+
+<script type="module" src="game.js"></script>
+</body>
+</html>
