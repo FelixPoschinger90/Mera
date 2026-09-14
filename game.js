@@ -136,10 +136,37 @@ const southPts=[[0,86],[2,75],[-2,64],[1,53],[-2,42],[0,31],[0,21]];
 const westPts=[[0,21],[-5,17],[-9,13],[-11.6,8],[-12,2],[-17,-8],[-22,-18],[-20,-30],[-12,-41],[0,-49]];
 const eastPts=[[0,21],[5,17],[9,13],[11.7,8],[13,2],[18,-8],[22,-18],[19,-30],[11,-41],[0,-49]];
 const northPts=[[0,-49],[-2,-59],[2,-70],[0,-84]];
-buildRibbon(southPts,4.7,mats.dirt);
-buildRibbon(westPts,3.6,mats.dirt);
-buildRibbon(eastPts,3.6,mats.dirt);
-buildRibbon(northPts,4.7,mats.dirt);
+const southPath=buildRibbon(southPts,4.7,mats.dirt);
+const westPath=buildRibbon(westPts,4.25,mats.dirt);
+const eastPath=buildRibbon(eastPts,4.05,mats.dirt);
+const northPath=buildRibbon(northPts,4.7,mats.dirt);
+
+// Route-clearance math is shared by scenery placement and collision. This is
+// deliberately generous: a visible trail must remain a genuinely walkable trail.
+function segDist2D(px,pz,ax,az,bx,bz){
+  const vx=bx-ax,vz=bz-az, wx=px-ax,wz=pz-az;
+  const vv=vx*vx+vz*vz||1; const t=clamp((wx*vx+wz*vz)/vv,0,1);
+  const dx=px-(ax+t*vx),dz=pz-(az+t*vz); return Math.hypot(dx,dz);
+}
+function pathDistance(x,z,pts){
+  let d=Infinity; for(let i=0;i<pts.length-1;i++)d=Math.min(d,segDist2D(x,z,pts[i][0],pts[i][1],pts[i+1][0],pts[i+1][1]));
+  return d;
+}
+function anyTrailDistance(x,z){return Math.min(pathDistance(x,z,southPts),pathDistance(x,z,westPts),pathDistance(x,z,eastPts),pathDistance(x,z,northPts));}
+
+// Fine trail edging gives the branches a visually continuous authored route
+// without turning the path into block/slab geometry.
+function decorateTrail(pts,spacing=2.8){
+  const curve=new THREE.CatmullRomCurve3(pts.map(([x,z])=>new THREE.Vector3(x,0,z)),false,'centripetal',.4);
+  const n=Math.max(5,Math.floor(curve.getLength()/spacing));
+  for(let i=1;i<n;i++){
+    if(i%2===0)continue; const t=i/n,p=curve.getPoint(t),ta=curve.getTangent(t),side=new THREE.Vector3(-ta.z,0,ta.x).normalize();
+    const sign=(i%4<2?-1:1),off=2.35+(.35*rnd()); const x=p.x+side.x*off*sign,z=p.z+side.z*off*sign;
+    const peb=new THREE.Mesh(new THREE.DodecahedronGeometry(.12+rnd()*.10,1),rnd()<.55?mats.stone:mats.stoneW);
+    peb.position.set(x,terrainH(x,z)+.07,z);peb.scale.set(1.4,.55,1);peb.rotation.y=rnd()*6.2;peb.receiveShadow=true;scene.add(peb);
+  }
+}
+decorateTrail(westPts); decorateTrail(eastPts); decorateTrail(northPts,3.2);
 
 // stream ribbon actually follows river valley
 const streamPoints=[];
@@ -275,17 +302,24 @@ for(let i=0;i<30;i++){
 
 // banks get larger collision boulders
 for(let i=0;i<26;i++){
-  const x=(rnd()<.5?-1:1)*(18+rnd()*34),z=-35+rnd()*80;
-  addFallbackRock(x,z,.55+rnd()*1.25,rnd()<.25?mats.stoneW:mats.stone,true);
+  let placed=false;
+  for(let tries=0;tries<12&&!placed;tries++){
+    const x=(rnd()<.5?-1:1)*(18+rnd()*34),z=-35+rnd()*80;
+    // never allow a decorative boulder to become a trail blocker
+    if(anyTrailDistance(x,z)<5.2)continue;
+    addFallbackRock(x,z,.55+rnd()*1.25,rnd()<.25?mats.stoneW:mats.stone,true);placed=true;
+  }
 }
 
 // vegetation placement slots; external CC0 models will replace fallback visuals
 const vegetationSlots=[];
 function safeFromPaths(x,z){
-  const center=Math.abs(x);
-  if(z<84&&z>-86 && center<6.0) return false;
-  if(Math.hypot(x-BRIDGE_X,z-BRIDGE_Z)<7) return false;
-  if(Math.hypot(x-FORD_X,z-FORD_Z)<7) return false;
+  // Keep a broad, collision-free visual corridor around every authored route.
+  // V4 only protected the centre line, which allowed random scenery to seal the
+  // western trail immediately after the bridge.
+  if(anyTrailDistance(x,z)<5.0)return false;
+  if(Math.hypot(x-BRIDGE_X,z-BRIDGE_Z)<7.5)return false;
+  if(Math.hypot(x-FORD_X,z-FORD_Z)<7.5)return false;
   return true;
 }
 for(let i=0;i<118;i++){
@@ -317,6 +351,18 @@ for(let i=0;i<grassCount;i++){
   dummy.updateMatrix();grass.setMatrixAt(i,dummy.matrix);
 }
 grass.instanceMatrix.needsUpdate=true;grass.receiveShadow=true;scene.add(grass);
+
+// Stream-bank reeds: small, repeated silhouettes give the river a real bank
+// rather than a blue ribbon laid across grass. They are visual only, not colliders.
+const reedMat=new THREE.MeshStandardMaterial({color:0x60794f,roughness:1,side:THREE.DoubleSide});
+const reedGeo=new THREE.PlaneGeometry(.10,.78,1,2);reedGeo.translate(0,.39,0);
+const reeds=new THREE.InstancedMesh(reedGeo,reedMat,260);
+for(let i=0;i<260;i++){
+  const x=-57+rnd()*114, cz=streamZ(x), side=rnd()<.5?-1:1, z=cz+side*(4.1+rnd()*2.2);
+  dummy.position.set(x,terrainH(x,z)+.02,z);dummy.rotation.set(0,rnd()*Math.PI,side*.05);
+  const sc=.65+rnd()*.85;dummy.scale.set(sc,sc,sc);dummy.updateMatrix();reeds.setMatrixAt(i,dummy.matrix);
+}
+reeds.instanceMatrix.needsUpdate=true;scene.add(reeds);
 
 // soft cloud masses
 const clouds=[];
@@ -384,14 +430,21 @@ scene.add(player);
 let char=null,charMixer=null,currentAction=null,charClips={},charFallback=false;
 
 const CHARACTER_URLS=[
-  'https://cdn.jsdelivr.net/gh/kunalkushwaha/vsim@main/packages/assets/library/rogue.glb',
-  'https://cdn.jsdelivr.net/gh/kunalkushwaha/vsim@main/packages/assets/library/knight.glb',
+  // First choice is the clean CC0 Quaternius-derived human: rigged, animated,
+  // no sword/shield loadout. Adventurer models are only fallbacks.
+  'https://cdn.jsdelivr.net/gh/UMRAM-Bilkent/supine-human-model@main/assets/human.glb',
   'https://cdn.jsdelivr.net/gh/kunalkushwaha/vsim@main/packages/assets/library/human.glb',
-  'https://cdn.jsdelivr.net/gh/UMRAM-Bilkent/supine-human-model@main/assets/human.glb'
+  'https://cdn.jsdelivr.net/gh/kunalkushwaha/vsim@main/packages/assets/library/rogue.glb',
+  'https://cdn.jsdelivr.net/gh/kunalkushwaha/vsim@main/packages/assets/library/knight.glb'
 ];
+function stripWeapons(root){
+  const rx=/(sword|shield|bow|quiver|weapon|axe|dagger|spear|staff|wand|hammer|crossbow|blade|scabbard)/i;
+  root.traverse(o=>{if(rx.test(o.name||''))o.visible=false;});
+}
 
 loadFirst(CHARACTER_URLS).then(gltf=>{
   char=gltf.scene;
+  stripWeapons(char);
   improveMaterials(char);
   normalizeHeight(char,1.78);
   char.rotation.y=Math.PI;
@@ -409,6 +462,7 @@ loadFirst(CHARACTER_URLS).then(gltf=>{
   for(const sx of [-1,1]){
     const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.085,.60,6,12),dark);leg.position.set(sx*.16,.42,0);g.add(leg);
     const arm=new THREE.Mesh(new THREE.CapsuleGeometry(.07,.52,6,12),skin);arm.position.set(sx*.40,1.11,0);g.add(arm);
+    const hand=new THREE.Mesh(new THREE.SphereGeometry(.085,14,10),skin);hand.position.set(sx*.40,.78,0);g.add(hand);
   }
   g.traverse(o=>{if(o.isMesh)o.castShadow=true});char=g;player.add(char);progress('Explorer fallback ready · preparing wildlife');
 });
@@ -535,7 +589,13 @@ function slopeAllowed(x0,z0,x1,z1){
 function canOccupy(x,z){
   if(x<-59||x>59||z<-90||z>91)return false;
   if(!routeBranchAllowed(x,z)||!routeWaterAllowed(x,z))return false;
-  for(const c of colliders)if(insideCircle(x,z,c))return false;
+  for(const c of colliders){
+    if(!insideCircle(x,z,c))continue;
+    // A generated scenic collider is never allowed to invalidate a designed path.
+    // The central rock spine remains physical because it is not inside either branch corridor.
+    if(anyTrailDistance(c.x,c.z)<4.45)continue;
+    return false;
+  }
   return true;
 }
 
@@ -619,7 +679,7 @@ function updateMovement(dt){
     state.streamChoice=true;state.locked=true;velocity.set(0,0,0);setAnim('idle');
     $('#choice').classList.remove('hidden');
   }
-  if(state.route==='bridge'&&state.phase==='west'&&player.position.z<-11){state.phase='west2';$('#region').textContent='ANIMAL TRAIL'}
+  if(state.route==='bridge'&&state.phase==='west'&&player.position.z<-7){state.phase='west2';$('#region').textContent='WESTERN ANIMAL TRAIL'}
   if(state.route==='ford'&&state.phase==='east'&&player.position.z<-11){state.phase='east2';$('#region').textContent='BIRCH HOLLOW'}
   if(state.route&&!state.complete&&player.position.z<-76){
     state.complete=true;state.locked=true;velocity.set(0,0,0);setAnim('idle');
@@ -703,6 +763,16 @@ function updateCamera(dt){
   // keep camera above terrain
   const minY=terrainH(desired.x,desired.z)+.55;
   if(desired.y<minY)desired.y=minY;
+
+  // Pull the camera forward before it clips through a nearby tree/boulder.
+  // This is deliberately inexpensive but makes the chase camera read far more like a game camera.
+  let best=1; const sx=target.x,sz=target.z,dx=desired.x-sx,dz=desired.z-sz,dd=dx*dx+dz*dz||1;
+  for(const c of colliders){
+    const t=clamp(((c.x-sx)*dx+(c.z-sz)*dz)/dd,0,1);
+    const qx=sx+dx*t,qz=sz+dz*t,dist=Math.hypot(qx-c.x,qz-c.z);
+    if(dist<c.r+.28)best=Math.min(best,Math.max(.24,t-.08));
+  }
+  if(best<1)desired.lerpVectors(target,desired,best);
 
   camera.position.lerp(desired,1-Math.exp(-dt*9.5));
   camLook.lerp(target,1-Math.exp(-dt*12));
