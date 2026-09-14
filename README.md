@@ -1,51 +1,38 @@
-# MERA — V6 Attempt 1
+# MERA — Authored 3D Diorama Attempt 3
 
-This is the first rebuild of MERA around the actual study concept rather than the earlier open-world prototype logic.
+This is a genuine **3D** browser prototype, not a static background image with a moving cutout.
 
-## What changed
+## What this version is
 
-- The level is treated as a **small authored scenic corridor** rather than a freely explorable island.
-- The **outpost is visible as the fixed destination** from the start.
-- The player physically walks the route: choosing bridge or ford **unlocks that branch** instead of triggering an automatic crossing cinematic.
-- Off-trail movement is deliberately limited to a few metres so the scene can be visually dense without letting the participant wander into the wilderness.
-- Ground and trail materials now use procedural surface textures instead of flat colour alone.
-- The fallback traveller has a coat, boots, tied-back hair and backpack, with free hands and no weapons.
-- A permanent outpost landmark, richer fallback trees, water-bank vegetation, deer, rocks and path scenery remain part of the playable scene.
-- The game contains an initial **MERA NAV** overlay with placeholder novel lexical items.
-- Route choice, AI messages, timing, outpost arrival and final free-text directions are logged.
-- At the outpost, the AI goes offline and the participant writes a guide for the next traveller.
-- Pilot data can be downloaded locally as JSON.
+A very small scenic 3D diorama designed around the desired MERA composition:
 
-## Placeholder lexical configuration
+- visible northern outpost from the beginning;
+- a southern starting trail;
+- a stream with both a **bridge** route and a **ford** route;
+- a second route choice (**ridge ascent** vs **meadow curve**);
+- a clothed traveller with backpack in real 3D;
+- trees, grass, rocks, water, deer, distant mountains, and a waterfall;
+- tightly constrained movement so the player remains on authored paths and cannot roam into the wilderness.
 
-At the top of the study-state section in `game.js`:
+## Controls
 
-```js
-const STUDY={
-  items:{bridge:'menic',ford:'silar',ridge:'valen'},
-  ...
-};
-```
+- `W A S D` or arrow keys: move
+- `Shift`: run
+- mouse drag: rotate camera
 
-These are only placeholders for testing pacing. The final lexical items, gloss schedule and experimental conditions can be swapped here later.
+## What is intentionally not included yet
 
-## GitHub Pages deployment
+This build focuses only on the visual / spatial hard part. The AI lexical overlay is **not** included yet. The game does, however, already track the chosen first and second routes and can export a JSON session file.
 
-Upload/replace these files in the root of the repository:
+## Honest scope
+
+This is still a code-authored browser diorama rather than a Blender-built asset pipeline with professionally authored GLB assets. But unlike the prior attempts, it is a **real 3D scene** and not a procedural prototype dressed as a final world, nor a 2D scenic plate.
+
+## Files
 
 - `index.html`
 - `styles.css`
 - `game.js`
+- `README.md`
 
-GitHub Pages serves the files directly. The current build loads Three.js and several optional 3D assets from CDN URLs. If a remote model fails, the scene has local procedural fallbacks rather than failing to start.
-
-## Controls
-
-- WASD / arrow keys: move
-- Shift: run
-- Mouse drag: look
-- Mobile: joystick + look pad + run button
-
-## Current status
-
-This is **Attempt 1**, intended to test the new level architecture and study flow. It is not yet the final visual-quality pass. The generated cinematic valley image remains the art-direction target; the next iterations should focus primarily on higher-quality authored 3D assets, terrain dressing, vegetation density/composition, bridge/ford dressing, character model quality and lighting/post-processing.
+Deploy directly to GitHub Pages.
