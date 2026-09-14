@@ -1,44 +1,45 @@
-# MERA — Authored 3D Diorama Attempt 3
+# MERA — Visual Milestone 1 (zero budget)
 
-This is a genuine **3D** browser prototype, not a static background image with a moving cutout.
+This build deliberately tackles only the visual/spatial milestone before the linguistic experiment is added.
 
-## What this version is
+## Scope
 
-A very small scenic 3D diorama designed around the desired MERA composition:
+- Real Three.js 3D world — not a background plate.
+- Small authored valley with highly constrained traversable corridors.
+- Outpost visible from the beginning.
+- Two physical river crossings: custom-built timber bridge and shallow ford.
+- Custom-authored terrain, river, bridge, distant cliff/outpost, waterfall and mountain backdrop.
+- CC0 Poly Haven PBR surfaces for forest floor, dirt trail, weathered timber and mossy stone.
+- Rigged third-person human base loaded from the Three.js sample library, recolored and dressed in-browser with a muted traveller silhouette and backpack.
+- Walk / run / idle clips are taken from the Three.js Soldier sample and retargeted to the traveller by matching Mixamo bone names.
+- No AI navigation dialogue, nonce words, survey, or final text task yet.
 
-- visible northern outpost from the beginning;
-- a southern starting trail;
-- a stream with both a **bridge** route and a **ford** route;
-- a second route choice (**ridge ascent** vs **meadow curve**);
-- a clothed traveller with backpack in real 3D;
-- trees, grass, rocks, water, deer, distant mountains, and a waterfall;
-- tightly constrained movement so the player remains on authored paths and cannot roam into the wilderness.
+## Why this build is different
 
-## Controls
+Previous prototypes tried to make the *art* procedurally out of simple shapes. This milestone uses the procedural code mainly to author the level geometry, while the visible surfaces are PBR and the player is a real rigged human mesh. The bridge and outpost are intentionally custom-built because those are small, scene-defining objects and do not justify buying assets.
 
-- `W A S D` or arrow keys: move
-- `Shift`: run
-- mouse drag: rotate camera
+## Deployment
 
-## What is intentionally not included yet
-
-This build focuses only on the visual / spatial hard part. The AI lexical overlay is **not** included yet. The game does, however, already track the chosen first and second routes and can export a JSON session file.
-
-## Honest scope
-
-This is still a code-authored browser diorama rather than a Blender-built asset pipeline with professionally authored GLB assets. But unlike the prior attempts, it is a **real 3D scene** and not a procedural prototype dressed as a final world, nor a 2D scenic plate.
-
-## Files
+Put these files at the GitHub Pages root:
 
 - `index.html`
 - `styles.css`
 - `game.js`
-- `README.md`
 
-Deploy directly to GitHub Pages.
+The page loads Three.js from jsDelivr and CC0 textures/HDRI from Poly Haven at runtime. An internet connection is therefore required for the first load.
 
+## Controls
 
-## Fixed2
+- WASD / arrow keys: move
+- Shift: run
+- drag mouse / pointer: camera
 
-- Fixed scene initialization crash: `_grassTex` is now declared before `buildScene()` invokes `grassTexture()`.
-- Startup remains guarded: the Enter button enables only after scene construction completes successfully.
+## Licensing / asset notes
+
+Environment surface textures and HDRI: Poly Haven, CC0.
+
+Prototype human/animation bases are loaded from the public Three.js example asset CDN. These are used only as an embedded prototype dependency here; for a final research release, the character pipeline should be replaced by a fully redistributable CC0/owned human export (e.g. MakeHuman or another explicitly redistributable source) before archiving the stimulus package.
+
+## Acceptance criterion for Milestone 1
+
+Do **not** proceed to the AI/lexical layer unless this slice is visually convincing enough that a participant would voluntarily move through it for several minutes. If the traveller or environment still looks too prototype-like, the next work should be art/asset replacement, not experimental logic.

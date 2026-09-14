@@ -1,63 +1,63 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-  <meta name="theme-color" content="#6e8b83">
-  <title>MERA — Authored 3D Diorama Attempt 3</title>
-  <link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#7f9c91" />
+  <title>MERA — Milestone 1</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <canvas id="game"></canvas>
+
   <div id="loading" class="screen">
-    <div class="panel">
-      <div class="kicker">MERA · AUTHORED 3D DIORAMA</div>
+    <div class="panel intro">
+      <div class="kicker">MERA · ZERO-BUDGET VISUAL MILESTONE 1</div>
       <h1>The Northern Outpost</h1>
-      <p>
-        This version is a real, browser-playable 3D scene: a tiny scenic valley with a visible outpost,
-        bridge and ford routes, a second branching trail, and tightly constrained movement.
-      </p>
-      <ul>
-        <li><strong>W A S D</strong> or arrow keys: move</li>
-        <li><strong>Shift</strong>: run</li>
-        <li><strong>mouse drag</strong>: rotate camera</li>
-      </ul>
-      <div id="bootStatus">Loading 3D engine and landscape…</div>
-      <button id="startBtn" disabled>Preparing valley…</button>
+      <p class="lead">A deliberately small, genuinely 3D visual slice. No AI experiment yet — this build exists only to test whether the valley, traveller, trail, bridge, water and distant outpost can feel credible enough to continue.</p>
+      <div class="loadrow"><span id="loadLabel">Building the valley…</span><span id="loadPct">0%</span></div>
+      <div class="bar"><div id="barFill"></div></div>
+      <div id="loadDetail" class="detail">Preparing authored terrain and materials.</div>
+      <button id="enterBtn" disabled>ENTER THE VALLEY</button>
+      <div id="fatal" class="fatal hidden"></div>
     </div>
   </div>
 
   <div id="hud" class="hidden">
-    <div class="hud-left">
+    <div>
       <div class="brand">MERA</div>
-      <div id="objective">Reach the outpost.</div>
-      <div id="region">Southern trail</div>
+      <div id="objective">Reach the northern outpost</div>
+      <div id="region">SOUTHERN TRAIL</div>
     </div>
-    <div class="hud-right">
-      <div id="choiceHint" class="pill">Trail choice ahead</div>
+    <div class="hudright">
+      <div class="chip">WASD · move</div>
+      <div class="chip">SHIFT · run</div>
+      <div class="chip">DRAG · look</div>
     </div>
+  </div>
+
+  <div id="routeNotice" class="notice hidden">
+    <strong id="noticeTitle">The trail divides.</strong>
+    <span id="noticeCopy">Bridge left · shallow ford right</span>
   </div>
 
   <div id="finish" class="screen hidden">
-    <div class="panel compact">
+    <div class="panel finishpanel">
       <div class="kicker">OUTPOST REACHED</div>
-      <h2>Scenic 3D build complete.</h2>
-      <p>
-        This milestone focuses only on the genuine hard part: a small, authored, actually navigable 3D diorama that tries to stay as close as possible to the desired atmosphere.
-      </p>
-      <textarea id="notes" placeholder="Optional notes for the next iteration..."></textarea>
-      <div class="actions">
-        <button id="downloadBtn">Download session JSON</button>
-        <button id="restartBtn" class="secondary">Play again</button>
-      </div>
+      <h2>Milestone complete.</h2>
+      <p>This build intentionally stops here. The research interface, lexical items and data capture come only after the visual direction is accepted.</p>
+      <div class="stats" id="stats"></div>
+      <button id="againBtn">WALK IT AGAIN</button>
     </div>
   </div>
 
-  <canvas id="game"></canvas>
+  <div id="assetCredit">Environment surfaces: Poly Haven CC0 · prototype character source: Three.js/Mixamo sample</div>
 
   <script type="importmap">
   {
     "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js"
+      "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
     }
   }
   </script>
