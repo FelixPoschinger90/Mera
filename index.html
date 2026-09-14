@@ -26,7 +26,7 @@
     </div>
     <div class="hud-right">
       <div class="objective-dot"></div>
-      <div>Reach the northern ridge</div>
+      <div>Reach the outpost</div>
     </div>
   </div>
 
@@ -47,12 +47,22 @@
     </div>
   </div>
 
+  <div id="ai-panel" class="ai-panel hidden" aria-live="polite">
+    <div class="ai-head"><span class="ai-dot"></span><strong>MERA NAV</strong><span id="ai-state">online</span></div>
+    <div id="ai-copy">Stay on the trail. The outpost is visible ahead.</div>
+  </div>
+
   <div id="complete" class="screen hidden">
-    <div class="title-card compact">
-      <div class="kicker">RIDGE REACHED</div>
-      <h1>The path opens north.</h1>
-      <p>This is the end of the current game-feel slice.</p>
-      <button onclick="location.reload()">PLAY AGAIN</button>
+    <div class="title-card guide-card">
+      <div class="kicker">OUTPOST REACHED · NAVIGATION OFFLINE</div>
+      <h1>Guide the next traveller.</h1>
+      <p>The navigation assistant is unavailable for the next traveller. Write a short route guide so they can reach this outpost from your starting point.</p>
+      <textarea id="guide-text" maxlength="1500" placeholder="Write the route as you would explain it to another traveller…"></textarea>
+      <div class="guide-actions">
+        <button id="submit-guide">SAVE GUIDE</button>
+        <button id="download-data" class="secondary hidden">DOWNLOAD SESSION DATA</button>
+      </div>
+      <div id="save-note"></div>
     </div>
   </div>
 

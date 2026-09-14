@@ -46,10 +46,24 @@ const palette={
   stoneWarm:0x8a806d, wood:0x74543c, bark:0x624a35,
   leaf:0x4f7650, leaf2:0x678e54, water:0x3c9bb2
 };
-const std=(color,rough=.92)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:0});
+function makeSurfaceTexture(base, fleckA, fleckB, repeatX=12, repeatY=18){
+  const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');
+  x.fillStyle=base;x.fillRect(0,0,256,256);
+  for(let i=0;i<2100;i++){
+    x.globalAlpha=.10+Math.random()*.24;x.fillStyle=Math.random()<.67?fleckA:fleckB;
+    const sz=.6+Math.random()*2.2;x.fillRect(Math.random()*256,Math.random()*256,sz,sz);
+  }
+  x.globalAlpha=1;
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(repeatX,repeatY);
+  t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());return t;
+}
+const grassTex=makeSurfaceTexture('#769557','#a8ba78','#4f6f43',15,27);
+const dirtTex=makeSurfaceTexture('#9d7b53','#c4aa7a','#67523e',2.3,14);
+const woodTex=makeSurfaceTexture('#725039','#9b7655','#443225',3,9);
+const std=(color,rough=.92,map=null)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:0,map});
 const mats={
-  dirt:std(palette.dirt), dirt2:std(palette.dirt2), stone:std(palette.stone),
-  stoneW:std(palette.stoneWarm), wood:std(palette.wood), bark:std(palette.bark),
+  dirt:std(0xffffff,.96,dirtTex), dirt2:std(palette.dirt2), stone:std(palette.stone),
+  stoneW:std(palette.stoneWarm), wood:std(0xffffff,.86,woodTex), bark:std(palette.bark),
   leaf:std(palette.leaf), leaf2:std(palette.leaf2)
 };
 
@@ -82,9 +96,36 @@ for(let i=0;i<tp.count;i++){
 }
 terrainG.setAttribute('color',new THREE.Float32BufferAttribute(terrainColors,3));
 terrainG.computeVertexNormals();
-const terrain=new THREE.Mesh(terrainG,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1}));
+const terrain=new THREE.Mesh(terrainG,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,map:grassTex}));
 terrain.receiveShadow=true;
 scene.add(terrain);
+
+// -----------------------------------------------------------------------------
+// Fixed destination landmark — always visible from the opening meadow.
+// The playable world is intentionally a scenic corridor, not an open world.
+// -----------------------------------------------------------------------------
+function buildOutpost(){
+  const g=new THREE.Group();
+  const stone=new THREE.MeshStandardMaterial({color:0x7e8178,roughness:1});
+  const stoneDark=new THREE.MeshStandardMaterial({color:0x535b56,roughness:1});
+  const timber=new THREE.MeshStandardMaterial({color:0x604633,roughness:.92});
+  const roofMat=new THREE.MeshStandardMaterial({color:0x3d463f,roughness:.95});
+  const tower=new THREE.Mesh(new THREE.CylinderGeometry(2.35,2.72,6.4,10),stone);tower.position.y=3.2;g.add(tower);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(3.05,2.35,10),roofMat);roof.position.y=7.55;roof.rotation.y=.16;g.add(roof);
+  const door=new THREE.Mesh(new THREE.BoxGeometry(1.05,1.95,.18),timber);door.position.set(0,.98,2.60);g.add(door);
+  for(const sx of [-1,1]){const slit=new THREE.Mesh(new THREE.BoxGeometry(.28,.75,.12),stoneDark);slit.position.set(sx*.82,4.45,2.36);g.add(slit)}
+  // short palisade and beacon make the silhouette read as an outpost rather than a tower prop
+  for(let i=-4;i<=4;i++)for(const side of [-1,1]){
+    const post=new THREE.Mesh(new THREE.CylinderGeometry(.10,.14,2.45,7),timber);post.position.set(i*.72,1.2,side*4.1);g.add(post);
+  }
+  const mast=new THREE.Mesh(new THREE.CylinderGeometry(.045,.065,3.4,7),timber);mast.position.set(2.5,8.8,0);g.add(mast);
+  const flag=new THREE.Mesh(new THREE.PlaneGeometry(1.35,.72),new THREE.MeshStandardMaterial({color:0xb55e3e,side:THREE.DoubleSide,roughness:.9}));flag.position.set(3.18,9.75,0);flag.rotation.y=Math.PI/2;g.add(flag);
+  const brazier=new THREE.Mesh(new THREE.CylinderGeometry(.28,.20,.30,8),stoneDark);brazier.position.set(-2.5,6.75,0);g.add(brazier);
+  const flame=new THREE.PointLight(0xffad55,14,17,2);flame.position.set(-2.5,7.25,0);g.add(flame);
+  g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});
+  const z=-84,x=0;g.position.set(x,terrainH(x,z)+.2,z);scene.add(g);return g;
+}
+const outpost=buildOutpost();
 
 // distant ocean
 const sea=new THREE.Mesh(
@@ -281,17 +322,22 @@ function addFallbackRock(x,z,s=1,material=mats.stone,collide=true){
 }
 function addFallbackTree(x,z,s=1,collide=true){
   const g=new THREE.Group();
-  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.22*s,.34*s,3.0*s,10),mats.bark);
-  trunk.position.y=1.5*s;trunk.castShadow=true;g.add(trunk);
-  // overlapping rounded canopies, no box foliage
-  for(let k=0;k<4;k++){
-    const c=new THREE.Mesh(new THREE.IcosahedronGeometry((1.25-k*.10)*s,2),k%2?mats.leaf2:mats.leaf);
-    c.scale.set(1,.82,1);c.position.set((k-1.5)*.28*s,(3.1+k*.55)*s,(k%2?.16:-.12)*s);
-    c.castShadow=true;g.add(c);
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.20*s,.38*s,3.5*s,12),mats.bark);
+  trunk.position.y=1.75*s;trunk.castShadow=true;g.add(trunk);
+  // A branched crown reads as an actual tree even when remote GLBs fail.
+  for(let b=0;b<5;b++){
+    const ang=b/5*Math.PI*2+rnd()*.45;
+    const branch=new THREE.Mesh(new THREE.CylinderGeometry(.055*s,.12*s,1.8*s,8),mats.bark);
+    branch.position.set(Math.cos(ang)*.45*s,(2.65+b*.18)*s,Math.sin(ang)*.45*s);
+    branch.rotation.z=Math.PI/2.9;branch.rotation.y=-ang;branch.castShadow=true;g.add(branch);
   }
+  const crownData=[[0,4.0,0,1.48],[.75,4.15,.25,1.05],[-.72,4.18,-.10,1.12],[.18,4.85,-.35,1.12],[-.15,5.22,.28,.88]];
+  crownData.forEach((d,k)=>{
+    const c=new THREE.Mesh(new THREE.IcosahedronGeometry(d[3]*s,2),k%2?mats.leaf2:mats.leaf);
+    c.scale.set(1,.78,1);c.position.set(d[0]*s,d[1]*s,d[2]*s);c.rotation.y=rnd()*Math.PI;c.castShadow=true;g.add(c);
+  });
   g.position.set(x,terrainH(x,z),z);g.rotation.y=rnd()*6.2;scene.add(g);
-  if(collide)addCollider(x,z,.52*s,'tree');
-  return g;
+  if(collide)addCollider(x,z,.58*s,'tree');return g;
 }
 
 // central rock spine = real obstacle, not just a visual line
@@ -455,16 +501,23 @@ loadFirst(CHARACTER_URLS).then(gltf=>{
 }).catch(()=>{
   // smooth fallback only, never box-limbed
   charFallback=true;
-  const g=new THREE.Group(),skin=std(0xe1b18d),cloth=std(0x657e72),dark=std(0x293c42),hair=std(0x594231);
-  const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.33,.68,8,16),cloth);torso.position.y=1.12;g.add(torso);
-  const head=new THREE.Mesh(new THREE.SphereGeometry(.25,20,16),skin);head.position.y=1.78;g.add(head);
-  const haircap=new THREE.Mesh(new THREE.SphereGeometry(.265,18,12,0,Math.PI*2,0,Math.PI*.62),hair);haircap.position.y=1.88;g.add(haircap);
+  const g=new THREE.Group(),skin=std(0xd7a47d),coat=std(0x5f715b),dark=std(0x293033),hair=std(0x4a3428),leather=std(0x6b4b34),shirt=std(0xb8aa8b);
+  const torso=new THREE.Mesh(new THREE.CapsuleGeometry(.30,.62,8,16),coat);torso.position.y=1.16;g.add(torso);
+  const coatTail=new THREE.Mesh(new THREE.CylinderGeometry(.26,.38,.62,12),coat);coatTail.position.y=.82;g.add(coatTail);
+  const collar=new THREE.Mesh(new THREE.TorusGeometry(.24,.055,8,20,Math.PI*1.45),shirt);collar.position.set(0,1.50,.02);collar.rotation.set(Math.PI/2,0,.8);g.add(collar);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.23,20,16),skin);head.position.y=1.83;g.add(head);
+  const haircap=new THREE.Mesh(new THREE.SphereGeometry(.245,18,12,0,Math.PI*2,0,Math.PI*.64),hair);haircap.position.y=1.91;g.add(haircap);
+  const bun=new THREE.Mesh(new THREE.SphereGeometry(.115,14,10),hair);bun.position.set(0,1.99,.19);g.add(bun);
+  const pack=new THREE.Mesh(new THREE.BoxGeometry(.46,.62,.23),leather);pack.position.set(0,1.16,.34);pack.rotation.x=-.08;g.add(pack);
+  const roll=new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,.49,12),shirt);roll.rotation.z=Math.PI/2;roll.position.set(0,1.49,.39);g.add(roll);
   for(const sx of [-1,1]){
-    const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.085,.60,6,12),dark);leg.position.set(sx*.16,.42,0);g.add(leg);
-    const arm=new THREE.Mesh(new THREE.CapsuleGeometry(.07,.52,6,12),skin);arm.position.set(sx*.40,1.11,0);g.add(arm);
-    const hand=new THREE.Mesh(new THREE.SphereGeometry(.085,14,10),skin);hand.position.set(sx*.40,.78,0);g.add(hand);
+    const leg=new THREE.Mesh(new THREE.CapsuleGeometry(.075,.58,6,12),dark);leg.position.set(sx*.15,.39,0);g.add(leg);
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(.18,.16,.34),leather);boot.position.set(sx*.15,.09,-.05);g.add(boot);
+    const arm=new THREE.Mesh(new THREE.CapsuleGeometry(.065,.51,6,12),coat);arm.position.set(sx*.37,1.14,0);g.add(arm);
+    const hand=new THREE.Mesh(new THREE.SphereGeometry(.073,14,10),skin);hand.position.set(sx*.37,.80,0);g.add(hand);
+    const strap=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.74,6),leather);strap.position.set(sx*.17,1.18,.25);strap.rotation.z=sx*.16;g.add(strap);
   }
-  g.traverse(o=>{if(o.isMesh)o.castShadow=true});char=g;player.add(char);progress('Explorer fallback ready · preparing wildlife');
+  g.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true}});char=g;player.add(char);progress('Explorer fallback ready · preparing wildlife');
 });
 
 function findClip(...patterns){
@@ -588,7 +641,7 @@ function slopeAllowed(x0,z0,x1,z1){
 }
 function canOccupy(x,z){
   if(x<-59||x>59||z<-90||z>91)return false;
-  if(!routeBranchAllowed(x,z)||!routeWaterAllowed(x,z))return false;
+  if(!allowedCorridor(x,z)||!routeBranchAllowed(x,z)||!routeWaterAllowed(x,z))return false;
   for(const c of colliders){
     if(!insideCircle(x,z,c))continue;
     // A generated scenic collider is never allowed to invalidate a designed path.
@@ -602,7 +655,25 @@ function canOccupy(x,z){
 // -----------------------------------------------------------------------------
 // Game state / controls
 // -----------------------------------------------------------------------------
-const state={started:false,locked:true,route:null,streamChoice:false,phase:'south',complete:false,cinematic:false};
+const STUDY={
+  items:{bridge:'menic',ford:'silar',ridge:'valen'}, // placeholders: swap here later
+  sessionId:(crypto.randomUUID?.()||('MERA-'+Date.now()+'-'+Math.random().toString(36).slice(2)))
+};
+const events=[];
+const logEvent=(type,data={})=>events.push({t:+((performance.now())/1000).toFixed(3),type,...data});
+const state={started:false,locked:true,route:null,streamChoice:false,phase:'south',complete:false,cinematic:false,aiStage:0,guideSaved:false};
+function showAI(text,kind='navigation'){
+  const panel=$('#ai-panel'),copy=$('#ai-copy');copy.textContent=text;panel.classList.remove('hidden');
+  panel.classList.remove('pulse');void panel.offsetWidth;panel.classList.add('pulse');logEvent('ai_message',{kind,text,route:state.route});
+}
+function allowedCorridor(x,z){
+  if(z>18)return pathDistance(x,z,southPts)<5.35;
+  if(z<=18&&z>-48){
+    if(!state.route)return Math.hypot(x,z-20)<6.5;
+    return pathDistance(x,z,state.route==='bridge'?westPts:eastPts)<5.0;
+  }
+  return pathDistance(x,z,northPts)<5.5 || Math.hypot(x,z+84)<7.0;
+}
 const keys={};
 addEventListener('keydown',e=>keys[e.code]=true);
 addEventListener('keyup',e=>keys[e.code]=false);
@@ -674,16 +745,28 @@ function updateMovement(dt){
   }
   setAnim(speedNow>5.15?'run':speedNow>.32?'walk':'idle');
 
-  // game choice trigger is geography, not research UI timing
-  if(!state.streamChoice&&player.position.z<23){
-    state.streamChoice=true;state.locked=true;velocity.set(0,0,0);setAnim('idle');
+  // Route decision: choice unlocks a corridor, but the participant physically walks it.
+  if(!state.streamChoice&&player.position.z<24){
+    state.streamChoice=true;state.locked=true;velocity.set(0,0,0);setAnim('idle');logEvent('route_choice_opened');
+    showAI('The stream splits the trail. Both routes reach the outpost; choose how you want to cross.');
     $('#choice').classList.remove('hidden');
   }
-  if(state.route==='bridge'&&state.phase==='west'&&player.position.z<-7){state.phase='west2';$('#region').textContent='WESTERN ANIMAL TRAIL'}
-  if(state.route==='ford'&&state.phase==='east'&&player.position.z<-11){state.phase='east2';$('#region').textContent='BIRCH HOLLOW'}
-  if(state.route&&!state.complete&&player.position.z<-76){
+  if(state.route==='bridge'&&state.phase==='west'&&player.position.z<-7){state.phase='west2';$('#region').textContent='WESTERN ANIMAL TRAIL';showAI(`Keep to the ${STUDY.items.bridge} bridge trail. The deer path bends uphill after the water.`,'target_use')}
+  if(state.route==='ford'&&state.phase==='east'&&player.position.z<-11){state.phase='east2';$('#region').textContent='BIRCH HOLLOW';showAI(`Stay on the ${STUDY.items.ford} ford trail until the birches thin out.`,'target_use')}
+  if(state.route&&state.aiStage<2&&player.position.z<-33){
+    state.aiStage=2;showAI(state.route==='bridge'?`The ${STUDY.items.bridge} route rejoins the ridge path ahead.`:`The ${STUDY.items.ford} route rejoins the ridge path ahead.`,'bare_target');
+  }
+  if(state.route&&state.aiStage<3&&player.position.z<-55){
+    state.aiStage=3;showAI(`You are on the ${STUDY.items.ridge} rise now — the exposed final ascent below the outpost.`,'explicit_gloss');
+  }
+  if(state.route&&state.aiStage<4&&player.position.z<-67){
+    state.aiStage=4;showAI(`Follow the ${STUDY.items.ridge} rise straight to the gate.`,'bare_target');
+  }
+  if(state.route&&!state.complete&&player.position.z<-79){
     state.complete=true;state.locked=true;velocity.set(0,0,0);setAnim('idle');
-    setTimeout(()=>$('#complete').classList.remove('hidden'),500);
+    logEvent('outpost_reached',{route:state.route,elapsed:+((performance.now()-sessionStart)/1000).toFixed(2)});
+    $('#ai-state').textContent='offline';showAI('Navigation link lost. Please leave directions for the next traveller.','system');
+    setTimeout(()=>$('#complete').classList.remove('hidden'),450);
   }
 }
 
@@ -708,13 +791,11 @@ function cinematicMove(points,duration,route){
   requestAnimationFrame(step);
 }
 function chooseRoute(route){
-  state.route=route;$('#choice').classList.add('hidden');
+  state.route=route;state.aiStage=1;$('#choice').classList.add('hidden');state.locked=false;
   $('#region').textContent=route==='bridge'?'WESTERN BANK':'EASTERN HOLLOW';
-  if(route==='bridge'){
-    cinematicMove([[0,21],[-4,18],[-8,14],[BRIDGE_X,BRIDGE_Z+5.2],[BRIDGE_X,BRIDGE_Z],[BRIDGE_X,BRIDGE_Z-5.2],[-13,1]],5.8,'bridge');
-  }else{
-    cinematicMove([[0,21],[4,18],[8,14],[FORD_X,FORD_Z+4.7],[FORD_X,FORD_Z],[FORD_X,FORD_Z-4.7],[13,1]],6.2,'ford');
-  }
+  logEvent('route_selected',{route});
+  if(route==='bridge')showAI(`Good choice. We take the ${STUDY.items.bridge} bridge — the narrow wooden crossing. It cuts the walk around the stream nearly in half.`,'explicit_gloss');
+  else showAI(`We take the ${STUDY.items.ford} ford — the shallow stone crossing. It keeps us low and sheltered beside the water.`,'explicit_gloss');
 }
 document.querySelectorAll('[data-route]').forEach(b=>b.addEventListener('click',()=>chooseRoute(b.dataset.route)));
 
@@ -813,10 +894,25 @@ function updateAudio(){
 }
 
 // start button
+let sessionStart=performance.now();
 $('#start-btn').addEventListener('click',()=>{
   $('#loading').classList.add('hidden');$('#hud').classList.remove('hidden');
   if(coarse)$('#mobile').classList.remove('hidden');
-  state.started=true;state.locked=false;setAnim('idle');startAudio();
+  sessionStart=performance.now();state.started=true;state.locked=false;setAnim('idle');startAudio();logEvent('game_start',{sessionId:STUDY.sessionId});showAI('The outpost is visible ahead. Stay on the marked trail and I’ll guide you there.');
+});
+
+// Final free-production measure + local export for pilot sessions
+$('#submit-guide').addEventListener('click',()=>{
+  const text=$('#guide-text').value.trim();
+  if(!text){$('#save-note').textContent='Please write a short guide before saving.';return}
+  if(!state.guideSaved){state.guideSaved=true;logEvent('final_guide',{text,length:text.length,route:state.route});}
+  $('#guide-text').disabled=true;$('#submit-guide').disabled=true;$('#download-data').classList.remove('hidden');
+  $('#save-note').textContent='Guide saved locally for this session. Download the pilot record below.';
+});
+$('#download-data').addEventListener('click',()=>{
+  const payload={schema:'mera-v6-pilot-1',sessionId:STUDY.sessionId,route:state.route,items:STUDY.items,events,finalGuide:$('#guide-text').value.trim()};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=u;a.download=`mera_${STUDY.sessionId}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1200);
 });
 
 // -----------------------------------------------------------------------------

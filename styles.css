@@ -47,3 +47,15 @@ body.cinematic #cinema-top,body.cinematic #cinema-bottom{height:5.5vh}
   .choice-grid{grid-template-columns:1fr}
   .hud-right{max-width:170px;text-align:right}
 }
+
+/* V6 study/game overlays */
+.ai-panel{position:fixed;left:24px;bottom:52px;z-index:10;width:min(430px,calc(100vw - 48px));padding:14px 16px 15px;border-radius:16px;background:rgba(12,28,28,.82);border:1px solid rgba(255,255,255,.16);box-shadow:0 16px 42px rgba(0,0,0,.28);backdrop-filter:blur(13px);pointer-events:none;transition:opacity .22s ease,transform .22s ease}
+.ai-panel.pulse{animation:aipulse .42s ease}
+@keyframes aipulse{0%{transform:translateY(6px);opacity:.55}100%{transform:none;opacity:1}}
+.ai-head{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:.12em;margin-bottom:8px;color:rgba(255,255,255,.74)}
+.ai-head strong{font-size:10px;letter-spacing:.16em}.ai-head #ai-state{margin-left:auto;opacity:.52}.ai-dot{width:7px;height:7px;border-radius:50%;background:#bfe1b6;box-shadow:0 0 12px rgba(191,225,182,.8)}
+#ai-copy{font-size:14px;line-height:1.45;color:#f6f5ea;text-shadow:0 1px 8px rgba(0,0,0,.35)}
+.guide-card{width:min(92vw,760px)}.guide-card h1{font-size:clamp(34px,5vw,62px)}
+#guide-text{width:100%;min-height:180px;resize:vertical;margin:14px 0 16px;padding:16px 17px;border-radius:15px;border:1px solid rgba(255,255,255,.18);background:rgba(245,244,230,.96);color:#18383a;font:500 15px/1.55 Inter,ui-sans-serif,system-ui,sans-serif;outline:none;box-shadow:inset 0 2px 10px rgba(0,0,0,.08)}
+#guide-text:focus{border-color:rgba(255,255,255,.48)}.guide-actions{display:flex;gap:10px;flex-wrap:wrap}.secondary{background:rgba(255,255,255,.12);color:#f6f5ea;border:1px solid rgba(255,255,255,.18)}#save-note{font-size:11px;opacity:.62;margin-top:11px}
+@media(max-width:800px),(pointer:coarse){.ai-panel{left:16px;right:16px;bottom:150px;width:auto}.guide-card{padding:24px 20px}}

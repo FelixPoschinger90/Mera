@@ -1,34 +1,51 @@
-# MERA — Professional Rebuild V5
+# MERA — V6 Attempt 1
 
-V5 is a polish-and-playability pass over V4. It still contains **no linguistic task**.
+This is the first rebuild of MERA around the actual study concept rather than the earlier open-world prototype logic.
 
-## Main fixes
+## What changed
 
-- **Western route is now guaranteed open after the bridge.** All scenery placement checks the actual south/west/east/north path polylines, with a broad clearance corridor. Random rocks or trees can no longer seal the authored trail.
-- **Visible continuation after the bridge.** The western trail is wider and gains subtle edge stones so it reads as a continuous route into the animal-trail section.
-- **Free-handed player character.** The first-choice runtime character is now the clean rigged CC0 human model rather than the armed rogue/knight. Any fallback adventurer model has sword/shield/bow/quiver/etc. nodes explicitly hidden.
-- **No weapons in the procedural fallback**, with explicit hand geometry.
-- **Camera collision pass.** The third-person camera pulls inward before clipping through nearby trees and boulders.
-- **Richer riverbanks.** Reed coverage makes the stream sit more naturally in the landscape.
-- Existing V4 improvements remain: aligned stream/bridge/ford geometry, ground-hugging paths, physical rock/tree collision, slope limits, route-gated water crossings, deer behaviour, atmosphere, water shader and audio.
+- The level is treated as a **small authored scenic corridor** rather than a freely explorable island.
+- The **outpost is visible as the fixed destination** from the start.
+- The player physically walks the route: choosing bridge or ford **unlocks that branch** instead of triggering an automatic crossing cinematic.
+- Off-trail movement is deliberately limited to a few metres so the scene can be visually dense without letting the participant wander into the wilderness.
+- Ground and trail materials now use procedural surface textures instead of flat colour alone.
+- The fallback traveller has a coat, boots, tied-back hair and backpack, with free hands and no weapons.
+- A permanent outpost landmark, richer fallback trees, water-bank vegetation, deer, rocks and path scenery remain part of the playable scene.
+- The game contains an initial **MERA NAV** overlay with placeholder novel lexical items.
+- Route choice, AI messages, timing, outpost arrival and final free-text directions are logged.
+- At the outpost, the AI goes offline and the participant writes a guide for the next traveller.
+- Pilot data can be downloaded locally as JSON.
 
-## Deploy
+## Placeholder lexical configuration
 
-Replace these files in the root of your existing GitHub Pages repository:
+At the top of the study-state section in `game.js`:
+
+```js
+const STUDY={
+  items:{bridge:'menic',ford:'silar',ridge:'valen'},
+  ...
+};
+```
+
+These are only placeholders for testing pacing. The final lexical items, gloss schedule and experimental conditions can be swapped here later.
+
+## GitHub Pages deployment
+
+Upload/replace these files in the root of the repository:
 
 - `index.html`
 - `styles.css`
 - `game.js`
 
-Commit, wait for Pages to redeploy, then hard-refresh with **Ctrl+F5**.
+GitHub Pages serves the files directly. The current build loads Three.js and several optional 3D assets from CDN URLs. If a remote model fails, the scene has local procedural fallbacks rather than failing to start.
 
 ## Controls
 
-- WASD / arrows: move
+- WASD / arrow keys: move
 - Shift: run
-- mouse drag: camera
-- mobile: virtual stick + look area + RUN
+- Mouse drag: look
+- Mobile: joystick + look pad + run button
 
-## Current objective
+## Current status
 
-This remains a short professional-game-feel vertical slice. We are intentionally not adding the research task until the environment, character movement, navigation and wildlife are credible enough that a participant would play voluntarily.
+This is **Attempt 1**, intended to test the new level architecture and study flow. It is not yet the final visual-quality pass. The generated cinematic valley image remains the art-direction target; the next iterations should focus primarily on higher-quality authored 3D assets, terrain dressing, vegetation density/composition, bridge/ford dressing, character model quality and lighting/post-processing.
