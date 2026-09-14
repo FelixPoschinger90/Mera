@@ -36,3 +36,9 @@ This is still a code-authored browser diorama rather than a Blender-built asset 
 - `README.md`
 
 Deploy directly to GitHub Pages.
+
+
+## Fixed2
+
+- Fixed scene initialization crash: `_grassTex` is now declared before `buildScene()` invokes `grassTexture()`.
+- Startup remains guarded: the Enter button enables only after scene construction completes successfully.

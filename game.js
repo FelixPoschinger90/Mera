@@ -62,6 +62,7 @@ import * as THREE from 'three';
   let traveller;
   let outpostGroup;
   let merSign;
+  let _grassTex;
 
   const world = {
     player:new THREE.Vector3(0, groundHeight(0,26)+0.02, 26),
@@ -585,7 +586,6 @@ import * as THREE from 'three';
     return group;
   }
 
-  let _grassTex;
   function grassTexture(){
     if(_grassTex) return _grassTex;
     const c = document.createElement('canvas'); c.width=128; c.height=256;
