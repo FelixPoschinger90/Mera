@@ -1,3 +1,5 @@
+import * as THREE from 'three';
+
 (() => {
   const canvas = document.getElementById('game');
   const loading = document.getElementById('loading');
@@ -7,6 +9,7 @@
   const restartBtn = document.getElementById('restartBtn');
   const downloadBtn = document.getElementById('downloadBtn');
   const notes = document.getElementById('notes');
+  const bootStatus = document.getElementById('bootStatus');
   const objectiveEl = document.getElementById('objective');
   const regionEl = document.getElementById('region');
   const choiceHint = document.getElementById('choiceHint');
@@ -70,11 +73,24 @@
   const camera = new THREE.PerspectiveCamera(56, innerWidth/innerHeight, 0.1, 500);
   camera.position.set(0,3.5,33);
 
-  buildScene();
   bindUI();
   startSession();
   updateRegion();
-  animate();
+
+  try {
+    buildScene();
+    renderer.render(scene, camera);
+    bootStatus.textContent = '3D landscape ready.';
+    startBtn.disabled = false;
+    startBtn.textContent = 'Enter the valley';
+    animate();
+  } catch (err) {
+    console.error('MERA scene initialization failed:', err);
+    bootStatus.classList.add('error');
+    bootStatus.textContent = 'The 3D landscape could not initialize: ' + (err && err.message ? err.message : String(err));
+    startBtn.disabled = true;
+    startBtn.textContent = '3D scene failed to load';
+  }
 
   function bindUI(){
     startBtn.addEventListener('click', () => {

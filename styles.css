@@ -23,3 +23,7 @@ textarea{width:100%;min-height:118px;margin-top:10px;padding:14px 16px;border-ra
 .hud-right{display:flex;gap:8px;align-items:flex-start}
 .pill{font-size:11px;padding:7px 11px;border-radius:999px;background:rgba(10,18,14,.46);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(8px)}
 @media(max-width:800px){.panel{padding:22px 20px;border-radius:18px}#hud{padding:12px 12px}.actions{flex-direction:column}}
+
+#bootStatus{margin:16px 0 12px;font-size:12px;line-height:1.4;color:rgba(255,255,255,.72)}
+#bootStatus.error{color:#ffd0c7;font-weight:700}
+button:disabled{opacity:.45;cursor:wait;transform:none!important}

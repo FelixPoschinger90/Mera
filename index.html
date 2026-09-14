@@ -21,7 +21,8 @@
         <li><strong>Shift</strong>: run</li>
         <li><strong>mouse drag</strong>: rotate camera</li>
       </ul>
-      <button id="startBtn">Enter the valley</button>
+      <div id="bootStatus">Loading 3D engine and landscape…</div>
+      <button id="startBtn" disabled>Preparing valley…</button>
     </div>
   </div>
 
@@ -53,7 +54,13 @@
 
   <canvas id="game"></canvas>
 
-  <script src="https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.min.js"></script>
-  <script src="game.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js"
+    }
+  }
+  </script>
+  <script type="module" src="game.js"></script>
 </body>
 </html>
