@@ -45,14 +45,14 @@ const ASSET={
     diff:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/mossy_rock/mossy_rock_diff_1k.jpg',
     norm:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/mossy_rock/mossy_rock_nor_gl_1k.jpg'
   },
-  traveller:'https://kr.object.ncloudstorage.com/xrcloud/sample/xrcloud_fullbody_avatar_sample.glb',
-  michelle:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/Michelle.glb',
-  soldier:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/Soldier.glb'
+  traveller:'https://cdn.jsdelivr.net/gh/programasweights/avatar@main/public/assets/character.glb',
+  michelle:'https://cdn.jsdelivr.net/gh/mrdoob/three.js@dev/examples/models/gltf/Michelle.glb'
 };
 
 const MATERIALS={};
-let terrain, pathMeshes=[], traveller=null, humanRoot=null, mixer=null, actions={}, currentAction=null;
-let backpack=null, blobShadow=null, travellerSource='';
+let terrain, pathMeshes=[], traveller=null, humanRoot=null;
+let backpack=null, blobShadow=null, travellerSource='', travellerFacingOffset=Math.PI;
+let travellerRig=null, travellerRest=null;
 let pineTex=null, grassMat=null, rockGeo=null;
 const root={water:null,waterfall:null,trees:[],grass:null,reeds:null,rocks:null,flowers:null};
 
@@ -100,7 +100,7 @@ async function boot(){
   dressLandscape();
   buildInstanceBatches();
 
-  setProgress(76,'Loading the traveller','Using a coherent full-body avatar with embedded locomotion when available.');
+  setProgress(76,'Building the traveller','Loading a stable CC0 humanoid, grounding the feet, then fitting traveller clothing and a backpack.');
   await travellerPromise;
   makeBlobShadow();
 
@@ -113,7 +113,7 @@ async function boot(){
   renderer.render(scene,camera);
   renderer.shadowMap.autoUpdate=false;
 
-  setProgress(100,'Valley ready','Milestone 1B + 1C initialized.');
+  setProgress(100,'Valley ready','Milestones 1B, 1C and 1D initialized.');
   enterBtn.disabled=false;
   enterBtn.textContent='ENTER THE VALLEY';
 }
@@ -289,28 +289,75 @@ function makeBridge(){
 
 function makeOutpost(){
   const g=new THREE.Group(),stone=MATERIALS.stone,wood=MATERIALS.wood;
-  const cliff=makeRockMesh(4.5); cliff.scale.set(1.45,1.0,1.25); cliff.position.set(0,-1.2,0); g.add(cliff);
-  const base=new THREE.Mesh(new THREE.CylinderGeometry(2.7,3.15,5.2,14),stone); base.position.y=2.6;base.castShadow=base.receiveShadow=true;g.add(base);
-  const tower=new THREE.Mesh(new THREE.CylinderGeometry(1.75,2.05,6.2,12),stone); tower.position.set(.65,6.0,-.3);tower.castShadow=tower.receiveShadow=true;g.add(tower);
-  const roof=new THREE.Mesh(new THREE.ConeGeometry(2.15,1.5,12),new THREE.MeshStandardMaterial({color:0x514038,roughness:1})); roof.position.set(.65,9.85,-.3);roof.castShadow=true;g.add(roof);
-  const door=new THREE.Mesh(new THREE.BoxGeometry(1.05,1.9,.18),wood); door.position.set(0,1.05,2.73);door.castShadow=true;g.add(door);
-  for(let i=0;i<8;i++){const a=i/8*Math.PI*2,m=new THREE.Mesh(new THREE.BoxGeometry(.48,.62,.5),stone);m.position.set(.65+Math.cos(a)*1.74,9.2,-.3+Math.sin(a)*1.74);m.rotation.y=-a;m.castShadow=true;g.add(m)}
-  g.position.set(7.1,heightAt(7.1,-25.8)+1.0,-25.8); g.rotation.y=-.28; scene.add(g);
+  const ox=7.1,oz=-25.8,ground=heightAt(ox,oz);
+
+  // A deliberately broad, irregular rock plinth intersects the terrain rather than hovering above it.
+  const foundation=new THREE.Group();
+  const rockLayout=[
+    [0,-.25,0,4.2,1.55,3.7,0.15],[-2.3,.05,.65,2.8,1.2,2.5,-.35],[2.35,.10,-.55,2.6,1.25,2.35,.48],
+    [-.55,.48,-2.3,2.4,1.05,2.2,.18],[1.25,.34,2.05,2.25,1.05,2.0,-.2]
+  ];
+  rockLayout.forEach(([x,y,z,sx,sy,sz,r])=>{const m=makeRockMesh(1);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.rotation.y=r;m.castShadow=m.receiveShadow=true;foundation.add(m)});
+  g.add(foundation);
+
+  // Terrace slab sits visibly on the rock foundation.
+  const terrace=new THREE.Mesh(new THREE.CylinderGeometry(3.35,3.65,.48,14),stone);
+  terrace.position.y=1.05;terrace.castShadow=terrace.receiveShadow=true;g.add(terrace);
+
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(2.55,2.85,4.35,14),stone);
+  base.position.y=3.45;base.castShadow=base.receiveShadow=true;g.add(base);
+  const tower=new THREE.Mesh(new THREE.CylinderGeometry(1.65,1.92,5.25,12),stone);
+  tower.position.set(.58,7.9,-.25);tower.castShadow=tower.receiveShadow=true;g.add(tower);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(2.05,1.45,12),new THREE.MeshStandardMaterial({color:0x514038,roughness:1}));
+  roof.position.set(.58,11.25,-.25);roof.castShadow=true;g.add(roof);
+  const door=new THREE.Mesh(new THREE.BoxGeometry(1.0,1.85,.18),wood);door.position.set(0,2.12,2.78);door.castShadow=true;g.add(door);
+  for(let i=0;i<8;i++){const a=i/8*Math.PI*2,m=new THREE.Mesh(new THREE.BoxGeometry(.46,.60,.46),stone);m.position.set(.58+Math.cos(a)*1.65,10.52,-.25+Math.sin(a)*1.65);m.rotation.y=-a;m.castShadow=true;g.add(m)}
+
+  // Grounding rule: the group's y is the actual terrain height. Foundation geometry sinks into the hill.
+  g.position.set(ox,ground-.18,oz);g.rotation.y=-.28;scene.add(g);
+
+  // Small foreground boulders visually stitch the authored tower base into the landscape.
+  [[-4.1,1.0,1.2],[3.9,.7,1.0],[-2.9,-2.6,.9],[3.2,-2.8,.85]].forEach(([dx,dz,sc])=>{
+    const r=makeRockMesh(sc);r.position.set(ox+dx,heightAt(ox+dx,oz+dz)+.02,oz+dz);r.rotation.y=Math.random()*Math.PI;r.castShadow=r.receiveShadow=true;scene.add(r);
+  });
 }
 
 function makeWaterfallAndMountains(){
-  const cliff=new THREE.Mesh(new THREE.BoxGeometry(10,14,7),MATERIALS.rock); cliff.position.set(-14,5.8,-31);cliff.rotation.y=.13;cliff.castShadow=cliff.receiveShadow=true;scene.add(cliff);
+  const wx=-14.0,wz=-28.3,baseY=heightAt(wx,wz)-.05,topY=baseY+8.7;
+
+  // Rock escarpment: several overlapping boulders instead of one impossible rectangular cliff.
+  const cliffGroup=new THREE.Group();
+  const cliffParts=[
+    [-3.1,3.4,-1.3,3.6,4.5,2.7,.2],[.1,4.0,-1.6,3.9,5.2,2.9,-.12],[3.2,3.0,-1.25,3.2,4.1,2.5,.28],
+    [-2.0,7.1,-2.0,2.7,3.1,2.3,-.25],[1.2,7.4,-2.2,2.9,3.0,2.4,.18]
+  ];
+  cliffParts.forEach(([x,y,z,sx,sy,sz,r])=>{const rock=makeRockMesh(1);rock.position.set(x,y,z);rock.scale.set(sx,sy,sz);rock.rotation.y=r;rock.castShadow=rock.receiveShadow=true;cliffGroup.add(rock)});
+  cliffGroup.position.set(wx,baseY,wz);scene.add(cliffGroup);
+
+  // Upper feeder pool/stream makes the waterfall originate from visible water.
+  const upperMat=new THREE.MeshStandardMaterial({color:0x5fa1ad,transparent:true,opacity:.82,roughness:.22,metalness:.02,side:THREE.DoubleSide});
+  const upper=new THREE.Mesh(new THREE.PlaneGeometry(2.6,5.0),upperMat);upper.rotation.x=-Math.PI/2;upper.rotation.z=.05;upper.position.set(wx+.05,topY+.12,wz-3.25);scene.add(upper);
+
   const fallMat=new THREE.ShaderMaterial({
     transparent:true,side:THREE.DoubleSide,depthWrite:false,uniforms:{time:{value:0}},
-    vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-    fragmentShader:`uniform float time;varying vec2 vUv;void main(){float streak=.55+.45*sin(vUv.x*40.+vUv.y*15.+time*5.);float foam=smoothstep(.83,1.,vUv.y);vec3 c=mix(vec3(.60,.82,.88),vec3(.94,.98,1.),streak*.45+foam*.3);gl_FragColor=vec4(c,.53+.25*streak);}`
+    vertexShader:`uniform float time;varying vec2 vUv;void main(){vUv=uv;vec3 p=position;p.x+=sin(uv.y*13.+time*1.7)*.035*(1.-uv.y);gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.);}`,
+    fragmentShader:`uniform float time;varying vec2 vUv;void main(){float s=.5+.5*sin(vUv.x*34.-vUv.y*24.+time*6.);float s2=.5+.5*sin(vUv.x*77.+vUv.y*10.-time*8.);float foam=smoothstep(.0,.16,vUv.y)+smoothstep(.82,1.,1.-vUv.y);vec3 c=mix(vec3(.48,.72,.80),vec3(.94,.98,1.),.30+s*.34+s2*.12+foam*.22);float edge=smoothstep(0.,.12,vUv.x)*smoothstep(1.,.88,vUv.x);gl_FragColor=vec4(c,(.56+.25*s)*edge);}`
   });
-  const fall=new THREE.Mesh(new THREE.PlaneGeometry(3.2,10.5,1,12),fallMat); fall.position.set(-13.6,7.1,-27.4);fall.rotation.y=.13;scene.add(fall);root.waterfall=fall;
+  const fallHeight=8.25;
+  const fall=new THREE.Mesh(new THREE.PlaneGeometry(2.25,fallHeight,8,24),fallMat);
+  fall.position.set(wx+.15,baseY+4.45,wz+.05);fall.rotation.y=.04;scene.add(fall);root.waterfall=fall;
+
+  // Lower plunge pool and bank stones make the water visibly land somewhere.
+  const pool=new THREE.Mesh(new THREE.CircleGeometry(2.8,32),new THREE.MeshStandardMaterial({color:0x4e8f9b,transparent:true,opacity:.78,roughness:.18,side:THREE.DoubleSide}));
+  pool.rotation.x=-Math.PI/2;pool.scale.set(1.45,.82,1);pool.position.set(wx+.1,baseY+.08,wz+.7);scene.add(pool);
+  for(let i=0;i<12;i++){const a=i/12*Math.PI*2,rad=2.8+Math.sin(i*1.7)*.45,r=makeRockMesh(.45+Math.random()*.35);const x=wx+Math.cos(a)*rad*1.35,z=wz+.7+Math.sin(a)*rad*.78;r.position.set(x,heightAt(x,z)+.02,z);r.rotation.y=a;r.castShadow=r.receiveShadow=true;scene.add(r)}
+
+  // Distant alpine silhouettes remain scenery only.
   for(let i=0;i<9;i++){
-    const h=16+Math.random()*15,rad=6+Math.random()*6,geo=new THREE.ConeGeometry(rad,h,7,4); geo.translate(0,h/2,0); const p=geo.attributes.position,cols=[];
+    const h=16+Math.random()*15,rad=6+Math.random()*6,geo=new THREE.ConeGeometry(rad,h,7,4);geo.translate(0,h/2,0);const p=geo.attributes.position,cols=[];
     for(let j=0;j<p.count;j++){const yy=p.getY(j),c=new THREE.Color(0x77848b);if(yy>h*.60)c.lerp(new THREE.Color(0xe8eef2),Math.min(1,(yy-h*.60)/(h*.28)));cols.push(c.r,c.g,c.b)}
     geo.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));
-    const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,flatShading:true})); mesh.position.set(-30+i*8+Math.random()*4,-2,-58-Math.random()*7);mesh.scale.z=1.2+Math.random()*.8;scene.add(mesh);
+    const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,flatShading:true}));mesh.position.set(-30+i*8+Math.random()*4,-2,-58-Math.random()*7);mesh.scale.z=1.2+Math.random()*.8;scene.add(mesh);
   }
 }
 
@@ -451,44 +498,38 @@ function buildInstanceBatches(){
 }
 
 async function loadTraveller(){
-  let gltf=null,kind='xrcloud';
+  let gltf=null,kind='quaternius-cc0';
   try{
-    gltf=await loadGLBWithTimeout(ASSET.traveller,9000);
+    gltf=await loadGLBWithTimeout(ASSET.traveller,11000);
   }catch(e){
-    console.warn('Primary traveller unavailable; using Michelle fallback.',e);kind='michelle';gltf=await loadGLBWithTimeout(ASSET.michelle,9000);
+    console.warn('CC0 traveller unavailable; using Michelle fallback.',e);kind='michelle';gltf=await loadGLBWithTimeout(ASSET.michelle,10000);
   }
   travellerSource=kind;
-  traveller=new THREE.Group();humanRoot=gltf.scene;
-  if(kind==='xrcloud')humanRoot.rotation.y=Math.PI; // Normalize avatar front to the same -Z convention as the game.
+  traveller=new THREE.Group();
+  humanRoot=gltf.scene;
+
+  // Never rotate the imported skeleton around X/Z. First make it upright, centred and foot-grounded from its actual bounds.
+  humanRoot.rotation.set(0,0,0);
+  humanRoot.scale.set(1,1,1);
+  humanRoot.position.set(0,0,0);
   humanRoot.updateMatrixWorld(true);
   let box=new THREE.Box3().setFromObject(humanRoot),size=new THREE.Vector3();box.getSize(size);
-  const scale=1.72/Math.max(.001,size.y);humanRoot.scale.setScalar(scale);humanRoot.updateMatrixWorld(true);
-  box=new THREE.Box3().setFromObject(humanRoot);const center=new THREE.Vector3();box.getCenter(center);humanRoot.position.x-=center.x;humanRoot.position.z-=center.z;humanRoot.position.y-=box.min.y;
-  styleTraveller(humanRoot,kind);
-  traveller.add(humanRoot);scene.add(traveller);
-  buildBackpack();
+  const targetHeight=1.73,scale=targetHeight/Math.max(.001,size.y);
+  humanRoot.scale.setScalar(scale);humanRoot.updateMatrixWorld(true);
+  box=new THREE.Box3().setFromObject(humanRoot);const center=new THREE.Vector3();box.getCenter(center);
+  humanRoot.position.set(-center.x,-box.min.y,-center.z);
+  humanRoot.updateMatrixWorld(true);
 
-  mixer=new THREE.AnimationMixer(humanRoot);
-  for(const clip of gltf.animations||[]){
-    const n=clip.name.toLowerCase();
-    if(/idle/.test(n)&&!actions.idle)actions.idle=mixer.clipAction(clip);
-    else if(/walk/.test(n)&&!/back/.test(n)&&!actions.walk)actions.walk=mixer.clipAction(stripRootXZClip(clip));
-    else if(/run/.test(n)&&!/back/.test(n)&&!actions.run)actions.run=mixer.clipAction(stripRootXZClip(clip));
-  }
+  // Quaternius reference pose faces +Z; Michelle is treated the same at the parent level.
+  travellerFacingOffset=Math.PI;
+  styleTravellerBase(humanRoot,kind);
+  traveller.add(humanRoot);
+  scene.add(traveller);
 
-  // Fallback animation only if the preferred avatar does not contain usable locomotion.
-  if(!actions.idle||!actions.walk){
-    const animSrc=await loadGLBWithTimeout(ASSET.soldier,9000);
-    const targetMap=makeNodeMap(humanRoot);
-    for(const src of animSrc.animations){
-      const n=src.name.toLowerCase();
-      if(!['idle','walk','run'].includes(n))continue;
-      const clip=retargetClip(src,targetMap,true);if(!clip.tracks.length)continue;actions[n]=mixer.clipAction(clip);
-    }
-  }
-  if(!actions.idle||!actions.walk)throw new Error('Traveller loaded, but no compatible idle/walk animation was available.');
-  if(!actions.run)actions.run=actions.walk;
-  Object.values(actions).forEach(a=>{a.enabled=true;a.setLoop(THREE.LoopRepeat)});setAction('idle',0);
+  travellerRig=mapHumanoidRig(humanRoot);
+  travellerRest=captureRestPose(travellerRig);
+  buildTravellerClothing(travellerRig);
+  buildBackpackRigged(travellerRig);
 }
 function loadGLBWithTimeout(url,ms){
   return Promise.race([
@@ -496,55 +537,103 @@ function loadGLBWithTimeout(url,ms){
     new Promise((_,reject)=>setTimeout(()=>reject(new Error(`Timed out loading ${url}`)),ms))
   ]);
 }
-function styleTraveller(rootNode,kind){
+function styleTravellerBase(rootNode,kind){
   rootNode.traverse(o=>{
     if(!o.isMesh)return;
-    o.castShadow=false; // character uses blob shadow, preserving static shadow-map performance
-    o.receiveShadow=true;
-    const wasArray=Array.isArray(o.material);
-    const mats=wasArray?o.material:[o.material];
-    const styled=mats.map(m=>{
-      if(!m)return m;const c=m.clone();c.roughness=Math.max(.68,c.roughness??.8);const name=`${o.name} ${m.name||''}`.toLowerCase();
-      if(c.color){
-        const hsl={};c.color.getHSL(hsl);
-        if(/hair/.test(name))c.color.set(0x4a3428);
-        else if(/pant|trouser|leg|bottom|jean/.test(name))c.color.set(0x343632);
-        else if(/shoe|boot|foot/.test(name))c.color.set(0x4a3426);
-        else if(/shirt|jacket|top|body|torso|coat/.test(name))c.color.set(0x59604a);
-        else if(kind==='xrcloud' && hsl.s>.28 && (hsl.h>.82||hsl.h<.05))c.color.set(0x59604a); // pink/red jacket -> olive
-        else if(kind==='xrcloud' && hsl.s>.28 && hsl.h>.48&&hsl.h<.72)c.color.set(0x373a36); // blue/cyan lower clothing -> charcoal
-      }
-      return c;
-    });
+    o.castShadow=false;o.receiveShadow=true;
+    const wasArray=Array.isArray(o.material),mats=wasArray?o.material:[o.material];
+    const styled=mats.map(m=>{if(!m)return m;const c=m.clone();c.roughness=.86;c.metalness=0;
+      // The CC0 base is treated as skin/underlayer; fitted traveller garments are separate and follow bones.
+      if(c.color)c.color.set(kind==='quaternius-cc0'?0xc6a78d:0xa18c7a);return c;});
     o.material=wasArray?styled:styled[0];
   });
 }
-function buildBackpack(){
-  backpack=new THREE.Group();
-  const leather=new THREE.MeshStandardMaterial({color:0x5b4636,roughness:.96}),leather2=new THREE.MeshStandardMaterial({color:0x765a41,roughness:.96});
-  const bag=new THREE.Mesh(new THREE.CapsuleGeometry(.23,.30,5,12),leather);bag.scale.set(1.05,1.25,.56);bag.position.set(0,1.19,.29);bag.rotation.x=.03;backpack.add(bag);
-  const flap=new THREE.Mesh(new THREE.BoxGeometry(.36,.14,.08),leather2);flap.position.set(0,1.36,.43);flap.rotation.x=-.12;backpack.add(flap);
-  const roll=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.44,10),new THREE.MeshStandardMaterial({color:0x666451,roughness:1}));roll.rotation.z=Math.PI/2;roll.position.set(0,.86,.38);backpack.add(roll);
-  for(const sx of [-1,1]){const strap=new THREE.Mesh(new THREE.TorusGeometry(.18,.018,5,14,Math.PI*1.05),leather2);strap.position.set(sx*.18,1.20,.17);strap.rotation.set(Math.PI/2,0,sx*.22);backpack.add(strap)}
-  backpack.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true}});traveller.add(backpack);
+function cleanBoneName(n){return (n||'').toLowerCase().replace(/mixamorig\d*:?/g,'').replace(/[^a-z0-9]/g,'')}
+function findBone(rootNode,patterns){
+  let found=null;rootNode.traverse(o=>{if(found||!o.isBone)return;const n=cleanBoneName(o.name);if(patterns.some(p=>p.test(n)))found=o});return found;
 }
-function stripRootXZClip(src){
-  const tracks=src.tracks.map(tr=>{const nt=tr.clone();if(/hips.*\.position/i.test(nt.name)&&nt.values.length%3===0){for(let i=0;i<nt.values.length;i+=3){nt.values[i]=0;nt.values[i+2]=0}}return nt});
-  return new THREE.AnimationClip(src.name,src.duration,tracks);
+function mapHumanoidRig(rootNode){
+  const rig={
+    hips:findBone(rootNode,[/^hips?$/, /pelvis/, /^hip$/]),
+    spine:findBone(rootNode,[/^spine$/, /spine0/, /lowerchest/]),
+    chest:findBone(rootNode,[/^chest$/, /spine1/, /upperchest/]),
+    head:findBone(rootNode,[/^head$/, /headbase/]),
+    neck:findBone(rootNode,[/^neck$/]),
+    lUpperArm:findBone(rootNode,[/leftupperarm/,/leftarm$/, /upperarml/, /armleft/]),
+    rUpperArm:findBone(rootNode,[/rightupperarm/,/rightarm$/, /upperarmr/, /armright/]),
+    lLowerArm:findBone(rootNode,[/leftlowerarm/,/leftforearm/,/forearml/]),
+    rLowerArm:findBone(rootNode,[/rightlowerarm/,/rightforearm/,/forearmr/]),
+    lHand:findBone(rootNode,[/^lefthand$/, /handl$/]),
+    rHand:findBone(rootNode,[/^righthand$/, /handr$/]),
+    lUpperLeg:findBone(rootNode,[/leftupperleg/,/leftupleg/,/thighl/,/legleft/]),
+    rUpperLeg:findBone(rootNode,[/rightupperleg/,/rightupleg/,/thighr/,/legright/]),
+    lLowerLeg:findBone(rootNode,[/leftlowerleg/,/^leftleg$/, /calfl/,/shinl/]),
+    rLowerLeg:findBone(rootNode,[/rightlowerleg/,/^rightleg$/, /calfr/,/shinr/]),
+    lFoot:findBone(rootNode,[/^leftfoot$/, /footl$/]),
+    rFoot:findBone(rootNode,[/^rightfoot$/, /footr$/])
+  };
+  const essential=['hips','head','lUpperLeg','rUpperLeg','lUpperArm','rUpperArm'];
+  const missing=essential.filter(k=>!rig[k]);
+  if(missing.length)console.warn('Traveller rig: some optional/procedural bones not found:',missing);
+  return rig;
 }
-function canon(n){return n.toLowerCase().replace(/mixamorig\d*:?/g,'').replace(/[^a-z0-9]/g,'')}
-function makeNodeMap(rootNode){const m=new Map();rootNode.traverse(o=>m.set(canon(o.name),o.name));return m}
-function retargetClip(src,targetMap,stripRootXZ){
-  const tracks=[];
-  for(const tr of src.tracks){
-    const dot=tr.name.indexOf('.');if(dot<0)continue;const node=tr.name.slice(0,dot),prop=tr.name.slice(dot+1),target=targetMap.get(canon(node));if(!target)continue;
-    const nt=tr.clone();nt.name=`${target}.${prop}`;
-    if(stripRootXZ&&prop==='position'&&canon(node).includes('hips')&&nt.values.length%3===0){for(let i=0;i<nt.values.length;i+=3){nt.values[i]=0;nt.values[i+2]=0}}
-    tracks.push(nt);
+function captureRestPose(rig){
+  const rest={};for(const [k,b] of Object.entries(rig||{}))if(b)rest[k]={q:b.quaternion.clone(),p:b.position.clone()};return rest;
+}
+function restoreBone(k){const b=travellerRig?.[k],r=travellerRest?.[k];if(b&&r){b.quaternion.copy(r.q);b.position.copy(r.p)}}
+function poseBone(k,euler){const b=travellerRig?.[k],r=travellerRest?.[k];if(!b||!r)return;b.quaternion.copy(r.q);const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(euler[0],euler[1],euler[2],'XYZ'));b.quaternion.multiply(q)}
+function makeSegmentCover(bone,child,radius,material,scaleRadius=1){
+  if(!bone||!child)return null;const end=child.position.clone();if(end.length()<.02)return null;
+  const geo=makeCylinderGeometryBetween(new THREE.Vector3(),end,radius*scaleRadius,10);const mesh=new THREE.Mesh(geo,material);mesh.castShadow=false;mesh.receiveShadow=true;bone.add(mesh);return mesh;
+}
+function buildTravellerClothing(rig){
+  const olive=new THREE.MeshStandardMaterial({color:0x545b43,roughness:.96,metalness:0});
+  const oliveDark=new THREE.MeshStandardMaterial({color:0x444a37,roughness:.98,metalness:0});
+  const charcoal=new THREE.MeshStandardMaterial({color:0x30332f,roughness:.98,metalness:0});
+  const boot=new THREE.MeshStandardMaterial({color:0x4a3526,roughness:1,metalness:0});
+  const hair=new THREE.MeshStandardMaterial({color:0x433027,roughness:1,metalness:0});
+
+  // Sleeves/trousers are attached to the actual limb bones, so they cannot become detached or inverted by animation.
+  makeSegmentCover(rig.lUpperArm,rig.lLowerArm,.105,olive,1.12);makeSegmentCover(rig.rUpperArm,rig.rLowerArm,.105,olive,1.12);
+  makeSegmentCover(rig.lLowerArm,rig.lHand,.085,oliveDark,1.08);makeSegmentCover(rig.rLowerArm,rig.rHand,.085,oliveDark,1.08);
+  makeSegmentCover(rig.lUpperLeg,rig.lLowerLeg,.145,charcoal,1.08);makeSegmentCover(rig.rUpperLeg,rig.rLowerLeg,.145,charcoal,1.08);
+  makeSegmentCover(rig.lLowerLeg,rig.lFoot,.11,charcoal,1.06);makeSegmentCover(rig.rLowerLeg,rig.rFoot,.11,charcoal,1.06);
+
+  const torsoAnchor=rig.chest||rig.spine||rig.hips;
+  if(torsoAnchor){
+    const coat=new THREE.Mesh(new THREE.CapsuleGeometry(.30,.46,5,12),olive);coat.scale.set(1.12,1.12,.74);coat.position.set(0,-.22,0);coat.castShadow=false;coat.receiveShadow=true;torsoAnchor.add(coat);
+    const hem=new THREE.Mesh(new THREE.CylinderGeometry(.34,.42,.42,12,1,true),oliveDark);hem.position.set(0,-.60,.015);hem.castShadow=false;hem.receiveShadow=true;torsoAnchor.add(hem);
+    const hood=new THREE.Mesh(new THREE.TorusGeometry(.19,.055,7,18,Math.PI*1.4),oliveDark);hood.position.set(0,.23,.05);hood.rotation.set(Math.PI/2,0,.3);torsoAnchor.add(hood);
   }
-  return new THREE.AnimationClip(src.name,src.duration,tracks);
+  if(rig.head){
+    const cap=new THREE.Mesh(new THREE.SphereGeometry(.145,14,10,0,Math.PI*2,0,Math.PI*.62),hair);cap.position.set(0,.105,0);cap.rotation.x=.08;rig.head.add(cap);
+    const bun=new THREE.Mesh(new THREE.SphereGeometry(.065,12,10),hair);bun.position.set(0,.13,.13);rig.head.add(bun);
+  }
+  for(const foot of [rig.lFoot,rig.rFoot])if(foot){const b=new THREE.Mesh(new THREE.BoxGeometry(.18,.12,.31),boot);b.position.set(0,-.035,.10);b.castShadow=false;b.receiveShadow=true;foot.add(b)}
 }
-function setAction(name,fade=.22){const next=actions[name]||actions.idle;if(next===currentAction)return;if(currentAction)currentAction.fadeOut(fade);next.reset().fadeIn(fade).play();currentAction=next}
+function buildBackpackRigged(rig){
+  const anchor=rig.chest||rig.spine||rig.hips;if(!anchor)return;
+  backpack=new THREE.Group();
+  const leather=new THREE.MeshStandardMaterial({color:0x5a4434,roughness:.98}),leather2=new THREE.MeshStandardMaterial({color:0x74573f,roughness:.96});
+  const bag=new THREE.Mesh(new THREE.CapsuleGeometry(.22,.27,5,12),leather);bag.scale.set(1.08,1.22,.58);bag.position.set(0,-.18,.31);backpack.add(bag);
+  const flap=new THREE.Mesh(new THREE.BoxGeometry(.34,.13,.07),leather2);flap.position.set(0,.02,.46);flap.rotation.x=-.10;backpack.add(flap);
+  const roll=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.40,10),new THREE.MeshStandardMaterial({color:0x696755,roughness:1}));roll.rotation.z=Math.PI/2;roll.position.set(0,-.52,.34);backpack.add(roll);
+  for(const sx of [-1,1]){const strap=new THREE.Mesh(new THREE.TorusGeometry(.17,.016,5,14,Math.PI*1.05),leather2);strap.position.set(sx*.16,-.20,.18);strap.rotation.set(Math.PI/2,0,sx*.18);backpack.add(strap)}
+  backpack.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true}});anchor.add(backpack);
+}
+function animateTravellerRig(t,moving,running){
+  if(!travellerRig||!travellerRest)return;
+  const amp=moving?(running?.62:.42):.035,freq=running?9.2:6.4,s=Math.sin(t*freq),c=Math.cos(t*freq);
+  // Restore all controlled bones before applying offsets, preventing cumulative twisting.
+  for(const k of Object.keys(travellerRest))restoreBone(k);
+  poseBone('lUpperLeg',[s*amp,0,.015]);poseBone('rUpperLeg',[-s*amp,0,-.015]);
+  poseBone('lLowerLeg',[Math.max(0,-s)*amp*.55,0,0]);poseBone('rLowerLeg',[Math.max(0,s)*amp*.55,0,0]);
+  poseBone('lUpperArm',[-s*amp*.72,0,-.04]);poseBone('rUpperArm',[s*amp*.72,0,.04]);
+  poseBone('lLowerArm',[-.12-Math.max(0,s)*.18,0,0]);poseBone('rLowerArm',[-.12-Math.max(0,-s)*.18,0,0]);
+  if(!moving){poseBone('spine',[.015*Math.sin(t*1.7),.018*Math.sin(t*.75),0]);poseBone('head',[.01*Math.sin(t*1.3),-.012*Math.sin(t*.8),0]);}
+  if(rigHas('hips')){const b=travellerRig.hips,r=travellerRest.hips;b.position.copy(r.p);b.position.y+=moving?Math.abs(c)*.018:Math.sin(t*1.5)*.006;}
+}
+function rigHas(k){return !!travellerRig?.[k]}
 function makeBlobShadow(){
   const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d'),g=ctx.createRadialGradient(64,64,4,64,64,60);g.addColorStop(0,'rgba(0,0,0,.48)');g.addColorStop(.55,'rgba(0,0,0,.22)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.fillRect(0,0,128,128);
   const tex=new THREE.CanvasTexture(c),mat=new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false,opacity:.58}),geo=new THREE.PlaneGeometry(1.15,.72);blobShadow=new THREE.Mesh(geo,mat);blobShadow.rotation.x=-Math.PI/2;scene.add(blobShadow);
@@ -573,20 +662,21 @@ function update(dt){
   if(moving){
     move.normalize();const dist=(running?4.9:2.9)*dt,next=state.pos.clone().addScaledVector(move,dist);
     if(allowedAt(next.x,next.z)){state.pos.copy(next);state.meters+=dist;state.heading.lerp(move,.18).normalize()}
-    detectRoute();setAction(running?'run':'walk');
-  }else setAction('idle');
+    detectRoute();
+  }
   state.pos.y=surfaceHeightAt(state.pos.x,state.pos.z)+.02;
   updateTraveller(dt,moving,running);updateCamera(dt);updateRegion();
   if(state.pos.z<-19.8&&Math.hypot(state.pos.x-7,state.pos.z+22)<4.5)complete();
 }
 function updateTraveller(dt,moving,running){
   if(!traveller)return;
-  traveller.position.set(state.pos.x,surfaceHeightAt(state.pos.x,state.pos.z)+.02,state.pos.z);
-  traveller.rotation.y=Math.atan2(state.heading.x,state.heading.z)+Math.PI;
-  if(mixer)mixer.update(dt*(running?1.06:1));
-  if(backpack&&moving)backpack.rotation.z=Math.sin(worldTime*(running?9:6.5))*.006;
-  if(blobShadow){blobShadow.position.set(state.pos.x,surfaceHeightAt(state.pos.x,state.pos.z)+.035,state.pos.z);blobShadow.rotation.z=-traveller.rotation.y;}
+  const y=surfaceHeightAt(state.pos.x,state.pos.z)+.02;
+  traveller.position.set(state.pos.x,y,state.pos.z);
+  traveller.rotation.y=Math.atan2(state.heading.x,state.heading.z)+travellerFacingOffset;
+  animateTravellerRig(worldTime,moving,running);
+  if(blobShadow){blobShadow.position.set(state.pos.x,y+.035,state.pos.z);blobShadow.rotation.z=-traveller.rotation.y;}
 }
+
 function updateCamera(dt){
   const back=new THREE.Vector3(-Math.sin(state.yaw),0,Math.cos(state.yaw)),desired=state.pos.clone().add(back.multiplyScalar(6.2)).add(new THREE.Vector3(0,2.95+state.pitch*2.2,0));
   camera.position.lerp(desired,1-Math.exp(-dt*5));const look=state.pos.clone().add(new THREE.Vector3(0,1.45,0)).addScaledVector(state.heading,1.7);camera.lookAt(look);

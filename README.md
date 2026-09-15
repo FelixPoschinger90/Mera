@@ -1,67 +1,50 @@
-# MERA — Milestone 1B + 1C (zero budget)
+# MERA — Milestones 1B + 1C + 1D
 
-This build keeps the accepted Milestone-1 valley art direction and addresses the two concrete problems found during play-testing:
+This build keeps the accepted Milestone 1 landscape and the performant Milestone 1B rendering architecture, then completes the two outstanding tasks:
 
-- **1B — performance:** the previous scene looked acceptable but submitted thousands of individual meshes every frame.
-- **1C — traveller:** the previous character was an unsuitable prototype composite and could visually lose the head / silhouette.
+## MS1C — Traveller rebuild
 
-## Milestone 1B — performance changes
+- The problematic XRCLOUD avatar has been removed completely.
+- Primary traveller base is now the lightweight **Quaternius Universal Base Characters** CC0 humanoid served from a public GitHub copy.
+- The imported body is normalized strictly from its real bounding box: upright root, fixed 1.73 m height, centered X/Z, and bounding-box minimum placed exactly at local `y=0`.
+- No animation retargeting is used. This specifically avoids the skeleton/orientation failure visible in the previous build.
+- Walking/running/idle motion is applied directly and non-destructively to detected humanoid bones relative to their captured rest pose. Each frame begins from the rest transforms, so rotations cannot accumulate into a twisted/inverted body.
+- Traveller clothing is attached to the actual rig bones: olive sleeves/coat, dark trousers, brown boots, dark hair/bun, fitted brown backpack and bedroll. The backpack is attached to the torso rig rather than floating at a hard-coded world height.
+- The fallback is the Three.js Michelle rig only if the CC0 base cannot load.
 
-The landscape composition is intentionally retained, but its rendering architecture is different:
+## MS1D — Environmental grounding
 
-- Pine trees are built once as detailed authored geometry and then rendered as GPU instances. Trunk/branches and foliage are two draw batches rather than hundreds of meshes per tree.
-- Broadleaf trees use the same batching strategy.
-- Grass is one `InstancedMesh` batch rather than ~1,500 separate plane meshes.
-- Reeds are one batch.
-- Landscape / riverbank / ford stones are one instanced rock batch.
-- Flowers are instanced.
-- Full-resolution SSAO has been removed. ACES tone mapping, fog, PBR materials and directional lighting remain.
-- Shadow resolution is reduced from 2048² to 1024² and the shadow camera is tighter.
-- The static landscape shadow map is rendered once; the traveller uses a lightweight contact/blob shadow instead of forcing the entire shadow map to update every frame.
-- Device pixel ratio is capped at 1.18 initially and automatically falls to 1.0 / 0.85 only if measured FPS is low.
-- PBR loading uses diffuse + normal maps with material roughness constants, reducing Poly Haven texture requests from 12 to 8.
-- Traveller and environment assets begin loading in parallel.
-- The HUD shows measured FPS so performance can be assessed directly.
+### Outpost
+- Removed the previous `+1.0` vertical offset that made the structure appear to float.
+- The outpost group is now anchored directly to sampled terrain height.
+- A broad irregular rock foundation deliberately intersects the hill.
+- A terrace slab and surrounding grounding boulders visually connect the architecture to the slope.
 
-## Milestone 1C — traveller changes
+### Waterfall
+- Replaced the standalone water plane / rectangular cliff arrangement.
+- The new waterfall has an irregular rock escarpment, visible upper feeder water, a falling sheet, a lower plunge pool and bank stones.
+- The waterfall now has a visible source and a visible destination, so its geography reads coherently.
 
-The old Michelle + procedural coat/hood/hip-wrap composite has been removed as the primary character.
+## What is deliberately unchanged
 
-The build now attempts to load the open XRCLOUD/CNU Metaversity full-body avatar sample first. That avatar pipeline provides a coherent head, hair, body and clothing instead of stacking cylinders over a separate rig. In-browser material tinting pushes bright jacket colours toward muted olive and bright lower clothing toward charcoal, followed by a small traveller backpack/bedroll added behind the body.
-
-If that external avatar cannot be loaded, the build falls back to the Three.js Michelle sample, but without the head-obscuring procedural coat/hood construction. If the chosen avatar does not contain usable locomotion clips, the Three.js Soldier animation clips are loaded only as an animation fallback.
-
-## Landscape retained
-
-- authored terrain and valley composition
-- PBR forest/path/wood/rock surfaces
-- custom timber bridge
-- shallow ford
-- stream and waterfall
-- visible northern outpost
-- mountain backdrop
-- dense route-edge vegetation
-- narrow authored movement corridors
+- Milestone 1B vegetation instancing and draw-call reductions.
+- Trail/stream/bridge/ford composition.
+- PBR ground surfaces and overall lighting direction.
+- Adaptive pixel ratio and lightweight contact shadow.
+- No AI navigation or lexical experiment yet.
 
 ## Controls
 
-- WASD / arrow keys: move
+- WASD / arrows: move
 - Shift: run
-- drag mouse / pointer: camera
+- mouse drag: look
 
 ## Deployment
 
-Upload these three files to the GitHub Pages root:
+Upload `index.html`, `styles.css`, and `game.js` to the existing GitHub Pages root. The scene still loads Poly Haven maps and the CC0 traveller from public HTTPS sources, so an internet connection is required for first load.
 
-- `index.html`
-- `styles.css`
-- `game.js`
+## Asset provenance
 
-The build still fetches Three.js, Poly Haven materials and the free external avatar at runtime, so an internet connection is needed on first load.
-
-## Next acceptance criterion
-
-Do not add the AI / lexical experiment until both are true:
-
-1. movement is smooth enough for a normal study participant laptop; and
-2. the traveller looks visually coherent enough beside the accepted landscape.
+- Poly Haven environment surfaces: CC0.
+- Quaternius Universal Base Characters base model: CC0. The primary GLB is a prepared public copy of the Quaternius CC0 source in `programasweights/avatar`.
+- Three.js Michelle is retained only as a network fallback.
