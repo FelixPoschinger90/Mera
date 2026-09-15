@@ -1,32 +1,47 @@
-# MERA — Visual Milestone 1 (zero budget)
+# MERA — Milestone 1B + 1C (zero budget)
 
-This build deliberately tackles only the visual/spatial milestone before the linguistic experiment is added.
+This build keeps the accepted Milestone-1 valley art direction and addresses the two concrete problems found during play-testing:
 
-## Scope
+- **1B — performance:** the previous scene looked acceptable but submitted thousands of individual meshes every frame.
+- **1C — traveller:** the previous character was an unsuitable prototype composite and could visually lose the head / silhouette.
 
-- Real Three.js 3D world — not a background plate.
-- Small authored valley with highly constrained traversable corridors.
-- Outpost visible from the beginning.
-- Two physical river crossings: custom-built timber bridge and shallow ford.
-- Custom-authored terrain, river, bridge, distant cliff/outpost, waterfall and mountain backdrop.
-- CC0 Poly Haven PBR surfaces for forest floor, dirt trail, weathered timber and mossy stone.
-- Rigged third-person human base loaded from the Three.js sample library, recolored and dressed in-browser with a muted traveller silhouette and backpack.
-- Walk / run / idle clips are taken from the Three.js Soldier sample and retargeted to the traveller by matching Mixamo bone names.
-- No AI navigation dialogue, nonce words, survey, or final text task yet.
+## Milestone 1B — performance changes
 
-## Why this build is different
+The landscape composition is intentionally retained, but its rendering architecture is different:
 
-Previous prototypes tried to make the *art* procedurally out of simple shapes. This milestone uses the procedural code mainly to author the level geometry, while the visible surfaces are PBR and the player is a real rigged human mesh. The bridge and outpost are intentionally custom-built because those are small, scene-defining objects and do not justify buying assets.
+- Pine trees are built once as detailed authored geometry and then rendered as GPU instances. Trunk/branches and foliage are two draw batches rather than hundreds of meshes per tree.
+- Broadleaf trees use the same batching strategy.
+- Grass is one `InstancedMesh` batch rather than ~1,500 separate plane meshes.
+- Reeds are one batch.
+- Landscape / riverbank / ford stones are one instanced rock batch.
+- Flowers are instanced.
+- Full-resolution SSAO has been removed. ACES tone mapping, fog, PBR materials and directional lighting remain.
+- Shadow resolution is reduced from 2048² to 1024² and the shadow camera is tighter.
+- The static landscape shadow map is rendered once; the traveller uses a lightweight contact/blob shadow instead of forcing the entire shadow map to update every frame.
+- Device pixel ratio is capped at 1.18 initially and automatically falls to 1.0 / 0.85 only if measured FPS is low.
+- PBR loading uses diffuse + normal maps with material roughness constants, reducing Poly Haven texture requests from 12 to 8.
+- Traveller and environment assets begin loading in parallel.
+- The HUD shows measured FPS so performance can be assessed directly.
 
-## Deployment
+## Milestone 1C — traveller changes
 
-Put these files at the GitHub Pages root:
+The old Michelle + procedural coat/hood/hip-wrap composite has been removed as the primary character.
 
-- `index.html`
-- `styles.css`
-- `game.js`
+The build now attempts to load the open XRCLOUD/CNU Metaversity full-body avatar sample first. That avatar pipeline provides a coherent head, hair, body and clothing instead of stacking cylinders over a separate rig. In-browser material tinting pushes bright jacket colours toward muted olive and bright lower clothing toward charcoal, followed by a small traveller backpack/bedroll added behind the body.
 
-The page loads Three.js from jsDelivr and CC0 textures/HDRI from Poly Haven at runtime. An internet connection is therefore required for the first load.
+If that external avatar cannot be loaded, the build falls back to the Three.js Michelle sample, but without the head-obscuring procedural coat/hood construction. If the chosen avatar does not contain usable locomotion clips, the Three.js Soldier animation clips are loaded only as an animation fallback.
+
+## Landscape retained
+
+- authored terrain and valley composition
+- PBR forest/path/wood/rock surfaces
+- custom timber bridge
+- shallow ford
+- stream and waterfall
+- visible northern outpost
+- mountain backdrop
+- dense route-edge vegetation
+- narrow authored movement corridors
 
 ## Controls
 
@@ -34,12 +49,19 @@ The page loads Three.js from jsDelivr and CC0 textures/HDRI from Poly Haven at r
 - Shift: run
 - drag mouse / pointer: camera
 
-## Licensing / asset notes
+## Deployment
 
-Environment surface textures and HDRI: Poly Haven, CC0.
+Upload these three files to the GitHub Pages root:
 
-Prototype human/animation bases are loaded from the public Three.js example asset CDN. These are used only as an embedded prototype dependency here; for a final research release, the character pipeline should be replaced by a fully redistributable CC0/owned human export (e.g. MakeHuman or another explicitly redistributable source) before archiving the stimulus package.
+- `index.html`
+- `styles.css`
+- `game.js`
 
-## Acceptance criterion for Milestone 1
+The build still fetches Three.js, Poly Haven materials and the free external avatar at runtime, so an internet connection is needed on first load.
 
-Do **not** proceed to the AI/lexical layer unless this slice is visually convincing enough that a participant would voluntarily move through it for several minutes. If the traveller or environment still looks too prototype-like, the next work should be art/asset replacement, not experimental logic.
+## Next acceptance criterion
+
+Do not add the AI / lexical experiment until both are true:
+
+1. movement is smooth enough for a normal study participant laptop; and
+2. the traveller looks visually coherent enough beside the accepted landscape.
