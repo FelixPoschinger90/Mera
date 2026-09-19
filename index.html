@@ -3,65 +3,69 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <meta name="theme-color" content="#7f9c91" />
-  <title>MERA — Milestones 1B + 1C + 1D</title>
+  <meta name="theme-color" content="#172019" />
+  <title>MERA E1 — Ecctrl Controller Proof</title>
   <link rel="stylesheet" href="styles.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@19.2.7",
+      "react-dom/client": "https://esm.sh/react-dom@19.2.7/client?external=react",
+      "three": "https://esm.sh/three@0.184.0",
+      "@react-three/fiber": "https://esm.sh/@react-three/fiber@9.7.0?external=react,three",
+      "@react-three/drei": "https://esm.sh/@react-three/drei@10.7.8?external=react,three,@react-three/fiber",
+      "@react-three/rapier": "https://esm.sh/@react-three/rapier@2.2.0?external=react,three,@react-three/fiber",
+      "ecctrl": "https://esm.sh/ecctrl@2.0.2?external=react,three,@react-three/fiber,@react-three/drei,@react-three/rapier",
+      "ecctrl/animation": "https://esm.sh/ecctrl@2.0.2/animation?external=react,three,@react-three/fiber,@react-three/drei,@react-three/rapier",
+      "ecctrl/camera": "https://esm.sh/ecctrl@2.0.2/camera?external=react,three,@react-three/fiber,@react-three/drei,@react-three/rapier"
+    }
+  }
+  </script>
 </head>
 <body>
-  <canvas id="game"></canvas>
+  <div id="root"></div>
 
-  <div id="loading" class="screen">
-    <div class="panel intro">
-      <div class="kicker">MERA · MILESTONES 1B + 1C + 1D · ZERO BUDGET</div>
-      <h1>The Northern Outpost</h1>
-      <p class="lead">The accepted valley with the smooth 1B renderer, a rebuilt grounded traveller, and physically integrated outpost/waterfall scenery. No AI experiment yet — this remains a visual/playability milestone.</p>
-      <div class="loadrow"><span id="loadLabel">Building the valley…</span><span id="loadPct">0%</span></div>
-      <div class="bar"><div id="barFill"></div></div>
-      <div id="loadDetail" class="detail">Preparing authored terrain and materials.</div>
-      <button id="enterBtn" disabled>ENTER THE VALLEY</button>
-      <div id="fatal" class="fatal hidden"></div>
+  <div id="boot" class="screen">
+    <div class="card">
+      <div class="kicker">MERA · E1</div>
+      <h1>Ecctrl controller proof</h1>
+      <p id="boot-status">Loading Ecctrl, Rapier and the test character…</p>
+      <div class="loadbar"><div id="loadfill"></div></div>
+      <p class="small">E1 tests only locomotion, grounding, slope handling, camera and idle/walk/run transitions. The MERA landscape is intentionally absent.</p>
+      <button id="enter" disabled>ENTER TEST AREA</button>
+      <pre id="boot-error" class="error hidden"></pre>
     </div>
   </div>
 
   <div id="hud" class="hidden">
-    <div>
-      <div class="brand">MERA</div>
-      <div id="objective">Reach the northern outpost</div>
-      <div id="region">SOUTHERN TRAIL</div>
+    <div class="hud-left">
+      <div class="brand">MERA · E1</div>
+      <div class="objective">Controller / character / camera proof</div>
     </div>
-    <div class="hudright">
-      <div class="chip">WASD · move</div>
-      <div class="chip">SHIFT · run</div>
-      <div class="chip">DRAG · look</div>
-      <div id="perfChip" class="chip">measuring FPS</div>
-    </div>
-  </div>
-
-  <div id="routeNotice" class="notice hidden">
-    <strong id="noticeTitle">The trail divides.</strong>
-    <span id="noticeCopy">Bridge left · shallow ford right</span>
-  </div>
-
-  <div id="finish" class="screen hidden">
-    <div class="panel finishpanel">
-      <div class="kicker">OUTPOST REACHED</div>
-      <h2>Milestone complete.</h2>
-      <p>This build intentionally stops here. The research interface, lexical items and data capture come only after the visual direction is accepted.</p>
-      <div class="stats" id="stats"></div>
-      <button id="againBtn">WALK IT AGAIN</button>
+    <div class="hud-right">
+      <div class="metric"><span>STATE</span><strong id="anim-state">—</strong></div>
+      <div class="metric"><span>GROUND</span><strong id="grounded">—</strong></div>
+      <div class="metric"><span>SPEED</span><strong id="speed">0.00</strong></div>
+      <div class="metric"><span>FPS</span><strong id="fps">—</strong></div>
     </div>
   </div>
 
-  <div id="assetCredit">Environment surfaces: Poly Haven CC0 · traveller base: Quaternius Universal Base Characters CC0 · Michelle fallback only</div>
+  <div id="help" class="hidden">
+    <span><b>WASD</b> move</span>
+    <span><b>SHIFT</b> run</span>
+    <span><b>SPACE</b> jump</span>
+    <span><b>DRAG</b> camera</span>
+  </div>
 
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
-    }
-  }
-  </script>
-  <script type="module" src="game.js"></script>
+  <div id="checklist" class="hidden">
+    <div class="check-title">E1 acceptance checks</div>
+    <div>✓ upright full-body humanoid</div>
+    <div>✓ feet remain above terrain</div>
+    <div>✓ idle / walk / run switching</div>
+    <div>✓ mild slope + step traversal</div>
+    <div>✓ orbiting follow camera</div>
+  </div>
+
+  <script type="module" src="main.js"></script>
 </body>
 </html>

@@ -1,50 +1,66 @@
-# MERA — Milestones 1B + 1C + 1D
+# MERA E1 — Ecctrl Controller Proof
 
-This build keeps the accepted Milestone 1 landscape and the performant Milestone 1B rendering architecture, then completes the two outstanding tasks:
+## Purpose
 
-## MS1C — Traveller rebuild
+This is **E1 only**. It intentionally does not contain the MERA valley.
 
-- The problematic XRCLOUD avatar has been removed completely.
-- Primary traveller base is now the lightweight **Quaternius Universal Base Characters** CC0 humanoid served from a public GitHub copy.
-- The imported body is normalized strictly from its real bounding box: upright root, fixed 1.73 m height, centered X/Z, and bounding-box minimum placed exactly at local `y=0`.
-- No animation retargeting is used. This specifically avoids the skeleton/orientation failure visible in the previous build.
-- Walking/running/idle motion is applied directly and non-destructively to detected humanoid bones relative to their captured rest pose. Each frame begins from the rest transforms, so rotations cannot accumulate into a twisted/inverted body.
-- Traveller clothing is attached to the actual rig bones: olive sleeves/coat, dark trousers, brown boots, dark hair/bun, fitted brown backpack and bedroll. The backpack is attached to the torso rig rather than floating at a hard-coded world height.
-- The fallback is the Three.js Michelle rig only if the CC0 base cannot load.
+The build tests whether the replacement game foundation works before migrating any accepted scenery:
 
-## MS1D — Environmental grounding
-
-### Outpost
-- Removed the previous `+1.0` vertical offset that made the structure appear to float.
-- The outpost group is now anchored directly to sampled terrain height.
-- A broad irregular rock foundation deliberately intersects the hill.
-- A terrace slab and surrounding grounding boulders visually connect the architecture to the slope.
-
-### Waterfall
-- Replaced the standalone water plane / rectangular cliff arrangement.
-- The new waterfall has an irregular rock escarpment, visible upper feeder water, a falling sheet, a lower plunge pool and bank stones.
-- The waterfall now has a visible source and a visible destination, so its geography reads coherently.
-
-## What is deliberately unchanged
-
-- Milestone 1B vegetation instancing and draw-call reductions.
-- Trail/stream/bridge/ford composition.
-- PBR ground surfaces and overall lighting direction.
-- Adaptive pixel ratio and lightweight contact shadow.
-- No AI navigation or lexical experiment yet.
+- Ecctrl 2.0.2 character controller
+- React Three Fiber 9
+- Rapier 2 physics
+- shape-cast ground detection
+- third-person orbit/follow camera
+- upright animated humanoid
+- idle / walk / run transitions
+- walking and running on flat ground
+- mild slope traversal
+- low and higher step/obstacle interaction
+- jump
+- live grounded / speed / animation-state / FPS diagnostics
 
 ## Controls
 
-- WASD / arrows: move
-- Shift: run
-- mouse drag: look
+- WASD / arrow keys — move
+- Shift — run (hold)
+- Space — jump
+- Mouse drag — orbit the camera
+- Mouse wheel — zoom within a constrained range
+
+## Acceptance criteria for E1
+
+E1 passes if:
+
+1. The humanoid is upright, complete and correctly grounded.
+2. Movement is smooth and predictable.
+3. Idle → Walk → Run and back transitions are visually stable.
+4. The character traverses the mild ramp without clipping, falling through, or becoming unstable.
+5. Camera orbit/follow remains smooth while moving.
+6. The test runs comfortably at normal browser framerates.
+
+The block obstacles are deliberately diagnostic. Failure to climb the taller block is not itself a failure; the important point is stable collision behavior rather than walking through geometry.
 
 ## Deployment
 
-Upload `index.html`, `styles.css`, and `game.js` to the existing GitHub Pages root. The scene still loads Poly Haven maps and the CC0 traveller from public HTTPS sources, so an internet connection is required for first load.
+This is a static GitHub Pages build. Upload:
 
-## Asset provenance
+- `index.html`
+- `styles.css`
+- `main.js`
 
-- Poly Haven environment surfaces: CC0.
-- Quaternius Universal Base Characters base model: CC0. The primary GLB is a prepared public copy of the Quaternius CC0 source in `programasweights/avatar`.
-- Three.js Michelle is retained only as a network fallback.
+No npm/build step is required. Runtime libraries are pinned and loaded as ES modules from `esm.sh`. The temporary test humanoid is loaded from the Three.js examples host. Once E1 is accepted, the next step is to replace this diagnostic character with the selected free MERA traveller and migrate the MS1B landscape into the same Ecctrl/Rapier architecture.
+
+## Dependencies / licensing
+
+- Ecctrl 2.0.2 — MIT
+- React / React DOM
+- Three.js
+- React Three Fiber
+- React Three Drei
+- React Three Rapier
+
+Ecctrl's MIT notice should be retained in the eventual repository. E1's temporary Three.js Soldier model is a diagnostic dependency only and is **not intended as the final MERA traveller**.
+
+## Important
+
+The whole point of this build is to prevent another landscape migration before the character/controller stack is proven. Do not assess its art direction; assess only movement, grounding, animation, camera behavior and stability.
