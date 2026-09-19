@@ -1,12 +1,20 @@
-# Third-party notices — E1
+# Third-party notices
 
 ## Ecctrl
+MIT License. Source: https://github.com/pmndrs/ecctrl
 
-Ecctrl — Copyright (c) 2023–2026 Erdong Chen — MIT License.
-Project: https://github.com/pmndrs/ecctrl
+## Three.js / Three.js Soldier example asset
+MIT License. Source: https://github.com/mrdoob/three.js
 
-This prototype imports Ecctrl as a runtime dependency and does not copy its source into the repository.
+## React / React DOM
+MIT License.
 
-## Temporary diagnostic character
+## React Three Fiber / Drei / React Three Rapier / Zustand
+MIT-licensed open-source packages used by the Ecctrl browser stack.
 
-E1 uses the `Soldier.glb` character hosted by the Three.js examples site solely to verify the controller and animation integration. It is not part of the planned MERA final asset set. Before E2/final distribution, the character will be replaced with a confirmed free/CC0 MERA traveller asset and the applicable notice will be recorded here.
+## Rapier
+Apache-2.0 licensed physics engine.
+
+## Poly Haven materials
+Forest Ground 01, Grass Path 2, Mossy Rock and Weathered Planks are supplied by Poly Haven under CC0.
+https://polyhaven.com/license

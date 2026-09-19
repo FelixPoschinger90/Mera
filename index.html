@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <meta name="theme-color" content="#172019" />
-  <title>MERA E1 — Ecctrl Controller Proof</title>
+  <title>MERA E2 — Free Valley</title>
   <link rel="stylesheet" href="styles.css" />
   <script type="importmap">
   {
@@ -36,20 +36,21 @@
 
   <div id="boot" class="screen">
     <div class="card">
-      <div class="kicker">MERA · E1</div>
-      <h1>Ecctrl controller proof</h1>
-      <p id="boot-status">Loading Ecctrl, Rapier and the test character…</p>
+      <div class="kicker">MERA · E2</div>
+      <h1>The Northern Valley</h1>
+      <p id="boot-status">Loading the Ecctrl foundation and authored valley…</p>
       <div class="loadbar"><div id="loadfill"></div></div>
-      <p class="small">E1 tests only locomotion, grounding, slope handling, camera and idle/walk/run transitions. The MERA landscape is intentionally absent.</p>
-      <button id="enter" disabled>ENTER TEST AREA</button>
+      <p class="small">E2 keeps the working E1 character/controller and replaces the test floor with a compact, freely explorable valley. The visible paths guide you; they do not constrain you.</p>
+      <button id="enter" disabled>ENTER THE VALLEY</button>
       <pre id="boot-error" class="error hidden"></pre>
     </div>
   </div>
 
   <div id="hud" class="hidden">
     <div class="hud-left">
-      <div class="brand">MERA · E1</div>
-      <div class="objective">Controller / character / camera proof</div>
+      <div class="brand">MERA · E2</div>
+      <div class="objective">Reach the northern outpost · explore freely inside the valley</div>
+      <div id="region" class="region">SOUTHERN BASIN</div>
     </div>
     <div class="hud-right">
       <div class="metric"><span>STATE</span><strong id="anim-state">—</strong></div>
@@ -57,23 +58,29 @@
       <div class="metric"><span>INPUT</span><strong id="input-state">—</strong></div>
       <div class="metric"><span>SPEED</span><strong id="speed">0.00</strong></div>
       <div class="metric"><span>FPS</span><strong id="fps">—</strong></div>
+      <div class="metric"><span>DRAWS</span><strong id="draws">—</strong></div>
     </div>
   </div>
 
-  <div id="help" class="hidden">
-    <span><b>WASD</b> move</span>
-    <span><b>SHIFT</b> run</span>
-    <span><b>SPACE</b> jump</span>
-    <span><b>DRAG</b> camera</span>
-  </div>
+  <div id="help" class="hidden"><span><b>WASD</b> move</span><span><b>SHIFT</b> run</span><span><b>SPACE</b> jump</span><span><b>DRAG</b> camera</span></div>
 
   <div id="checklist" class="hidden">
-    <div class="check-title">E1 acceptance checks</div>
-    <div>□ upright full-body humanoid</div>
-    <div>□ feet remain above terrain</div>
-    <div>□ idle / walk / run switching</div>
-    <div>□ mild slope + step traversal</div>
-    <div>□ orbiting follow camera</div>
+    <div class="check-title">E2 acceptance checks</div>
+    <div>✓ E1 controller/character retained</div>
+    <div>□ free movement through compact valley</div>
+    <div>□ bridge and shallow ford traversable</div>
+    <div>□ rocks / trees feel physical</div>
+    <div>□ natural map boundaries</div>
+    <div>□ stable performance</div>
+  </div>
+
+  <div id="finish" class="screen hidden">
+    <div class="card finish-card">
+      <div class="kicker">OUTPOST REACHED</div>
+      <h1>Valley crossed.</h1>
+      <p>E2 ends here. No AI or study manipulation has been added yet.</p>
+      <button id="replay">WALK IT AGAIN</button>
+    </div>
   </div>
 
   <script type="module" src="main.js"></script>

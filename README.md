@@ -1,29 +1,63 @@
-# MERA E1 — Ecctrl Proof, Direct-Input Fix
+# MERA E2 — Free Valley
 
-This is the corrected E1 controller proof.
+E2 keeps the working E1 Ecctrl/Rapier controller and animated Soldier character unchanged as the technical chassis, then ports MERA back into a compact authored valley.
 
-## What changed
+## Design change from old MERA
 
-- Ecctrl is still the actual physics-driven character controller.
-- Browser keyboard input now uses Ecctrl's public `setMovement()` handle API directly instead of relying on Drei `KeyboardControls` context. This removes the module/context mismatch that left SPEED at 0.
-- The Three.js Soldier GLTF is no longer duplicated with `scene.clone(true)`. The original skinned scene is mounted directly so its skeleton remains valid and Idle/Walk/Run clips bind correctly.
-- The HUD now exposes `INPUT`, `STATE`, `GROUND`, `SPEED`, and `FPS` separately.
+The player is **not constrained to narrow authored trajectories**. The visible trails are guidance only. Within the central valley basin the player can move freely, leave the trail, walk around rocks and trees, and approach crossings from different angles.
 
-## Expected test
+The **map itself is limited** by steep valley sides, dense boundary tree lines, rocks, the river and the northern/southern terrain rise.
 
-1. Enter the test area.
-2. Press W: INPUT must show W and SPEED must become >0.
-3. Hold Shift+W: STATE should become RUN and speed should rise.
-4. Space: the capsule should jump.
-5. Walk onto the low step and slope.
-6. Drag the mouse to orbit the camera.
+## E2 landscape
 
-E1 passes only if all six behaviours work.
+- PBR forest ground and dirt-path surfaces (Poly Haven CC0)
+- improved four-variant instanced rock field rather than repeated distorted spheres
+- instanced conifer/broadleaf forest
+- instanced grass and river reeds
+- real terrain collider via Rapier trimesh
+- physical tree and larger-rock colliders
+- stream with shallow terrain at the ford
+- physical timber bridge with approach ramps
+- outpost grounded into a rock foundation
+- waterfall with feeder pool, fall, plunge pool and outlet creek
+- mountain backdrop and atmospheric fog
+
+## Performance strategy
+
+- vegetation and rock fields are GPU-instanced
+- grass/reeds have no physics
+- only a subset of nearby substantial trees/rocks receive Rapier colliders
+- no SSAO or heavy post-processing
+- 1024 shadow map
+- DPR capped at 1.2
+- live FPS and draw-call diagnostics in the HUD
+
+## Controls
+
+- WASD / arrow keys: move
+- Shift: run
+- Space: jump
+- mouse drag: orbit camera
 
 ## Deployment
 
-Upload the contents of this directory to the GitHub Pages repository exactly as before. `index.html`, `main.js`, and `styles.css` must remain together.
+This build intentionally has **no local assets folder**. Upload the five files in this package directly to the GitHub Pages root, replacing the E1 test files:
 
-## Scope
+- `index.html`
+- `styles.css`
+- `main.js`
+- `README.md`
+- `THIRD_PARTY_NOTICES.md`
 
-The MERA landscape remains intentionally absent. E2 begins only after this controller proof passes.
+Hard-refresh after Pages redeploys. `main.js` currently loads Ecctrl/React/Three/Rapier, the Three.js Soldier test character, and the Poly Haven CC0 textures from their public hosts. There are no `./assets/...` references in this version.
+
+## E2 acceptance gate
+
+Do not add AI/study logic until:
+
+1. movement remains as reliable as E1;
+2. the landscape remains visually acceptable;
+3. movement feels free rather than rail-bound;
+4. bridge and ford work physically;
+5. map boundaries feel geographic rather than arbitrary;
+6. FPS remains study-appropriate on an ordinary laptop.
