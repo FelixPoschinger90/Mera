@@ -41,21 +41,13 @@ async function bootApp() {
     loadfill.style.width = '72%';
 
     const { Canvas, useFrame, useThree } = fiber;
-    const { KeyboardControls, useGLTF, useAnimations, Environment, ContactShadows } = drei;
+    const { useGLTF, useAnimations, ContactShadows } = drei;
     const { Physics, RigidBody } = rapier;
     const { EcctrlAnimationStateController, useEcctrlAnimationStore } = animPkg;
     const { EcctrlCameraControls } = cameraPkg;
     const h = React.createElement;
     const { Suspense, useEffect, useMemo, useRef, useState } = React;
 
-    const keyboardMap = [
-      { name:'forward', keys:['ArrowUp','KeyW'] },
-      { name:'backward', keys:['ArrowDown','KeyS'] },
-      { name:'leftward', keys:['ArrowLeft','KeyA'] },
-      { name:'rightward', keys:['ArrowRight','KeyD'] },
-      { name:'jump', keys:['Space'] },
-      { name:'run', keys:['ShiftLeft','ShiftRight'] }
-    ];
 
     const TEST_CHARACTER_URL = 'https://threejs.org/examples/models/gltf/Soldier.glb';
 
@@ -82,25 +74,27 @@ async function bootApp() {
     function AnimatedCharacter({onReady}){
       const group = useRef();
       const { scene, animations } = useGLTF(TEST_CHARACTER_URL);
-      const cloned = useMemo(() => scene.clone(true), [scene]);
       const { actions } = useAnimations(animations, group);
       const animState = useEcctrlAnimationStore(s => s.animationState);
 
       useEffect(() => {
-        cloned.traverse(obj => {
-          if(obj.isMesh){
+        scene.traverse(obj => {
+          if(obj.isMesh || obj.isSkinnedMesh){
             obj.castShadow = true;
             obj.receiveShadow = true;
             if(obj.material){
               const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
               for(const m of materials){
-                m.roughness = Math.max(.55, m.roughness ?? .7);
+                if('roughness' in m) m.roughness = Math.max(.55, m.roughness ?? .7);
               }
             }
           }
         });
-        onReady?.();
-      }, [cloned, onReady]);
+      }, [scene]);
+
+      useEffect(() => {
+        if(actions?.Idle && actions?.Walk && actions?.Run) onReady?.();
+      }, [actions, onReady]);
 
       useEffect(() => {
         const map = {
@@ -114,7 +108,7 @@ async function bootApp() {
       }, [actions, animState]);
 
       return h('group',{ref:group,position:[0,-.88,0],rotation:[0,Math.PI,0],scale:.92},
-        h('primitive',{object:cloned})
+        h('primitive',{object:scene})
       );
     }
 
@@ -178,6 +172,82 @@ async function bootApp() {
       });
     }
 
+
+    function DirectKeyboardInput({controllerRef}){
+      const pressed = useRef({
+        forward:false, backward:false, leftward:false, rightward:false,
+        run:false, jump:false
+      });
+
+      useEffect(() => {
+        const keyToField = {
+          KeyW:'forward', ArrowUp:'forward',
+          KeyS:'backward', ArrowDown:'backward',
+          KeyA:'leftward', ArrowLeft:'leftward',
+          KeyD:'rightward', ArrowRight:'rightward',
+          ShiftLeft:'run', ShiftRight:'run',
+          Space:'jump'
+        };
+
+        const sync = () => {
+          const c = controllerRef.current;
+          const activeScene = boot.classList.contains('hidden');
+          if(c) c.setMovement(activeScene ? {...pressed.current} : {forward:false,backward:false,leftward:false,rightward:false,run:false,jump:false});
+          const el = document.getElementById('input-state');
+          if(el){
+            const p=pressed.current;
+            const active=[];
+            if(p.forward) active.push('W');
+            if(p.backward) active.push('S');
+            if(p.leftward) active.push('A');
+            if(p.rightward) active.push('D');
+            if(p.run) active.push('RUN');
+            if(p.jump) active.push('JUMP');
+            el.textContent = active.length ? active.join(' + ') : '—';
+          }
+        };
+
+        const onKeyDown = (e) => {
+          const field = keyToField[e.code];
+          if(!field) return;
+          e.preventDefault();
+          if(!pressed.current[field]){
+            pressed.current[field] = true;
+            sync();
+          }
+        };
+        const onKeyUp = (e) => {
+          const field = keyToField[e.code];
+          if(!field) return;
+          e.preventDefault();
+          if(pressed.current[field]){
+            pressed.current[field] = false;
+            sync();
+          }
+        };
+        const clear = () => {
+          for(const k of Object.keys(pressed.current)) pressed.current[k]=false;
+          sync();
+        };
+        window.addEventListener('keydown', onKeyDown, {passive:false});
+        window.addEventListener('keyup', onKeyUp, {passive:false});
+        window.addEventListener('blur', clear);
+        return () => {
+          window.removeEventListener('keydown', onKeyDown);
+          window.removeEventListener('keyup', onKeyUp);
+          window.removeEventListener('blur', clear);
+        };
+      }, [controllerRef]);
+
+      useFrame(() => {
+        const c=controllerRef.current;
+        if(!c) return;
+        if(boot.classList.contains('hidden')) c.setMovement({...pressed.current});
+        else c.setMovement({forward:false,backward:false,leftward:false,rightward:false,run:false,jump:false});
+      });
+      return null;
+    }
+
     function Diagnostics({controllerRef}){
       const animState = useEcctrlAnimationStore(s=>s.animationState);
       const frames = useRef(0), last = useRef(performance.now());
@@ -203,6 +273,7 @@ async function bootApp() {
       const controllerRef = useRef();
       return h(React.Fragment,null,
         h(EcctrlAnimationStateController,{ecctrl:controllerRef}),
+        h(DirectKeyboardInput,{controllerRef}),
         h(Ecctrl,{
           ref:controllerRef,
           position:[0,2,6],
@@ -262,8 +333,7 @@ async function bootApp() {
         };
       },[ready]);
 
-      return h(KeyboardControls,{map:keyboardMap},
-        h(Canvas,{
+      return h(Canvas,{
           shadows:true,
           dpr:[1,1.35],
           camera:{position:[4.8,3.2,12],fov:53,near:.1,far:100},
@@ -276,7 +346,6 @@ async function bootApp() {
           }
         },
           h(Suspense,{fallback:null},h(Scene,{onCharacterReady}))
-        )
       );
     }
 

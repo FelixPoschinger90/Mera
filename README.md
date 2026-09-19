@@ -1,66 +1,29 @@
-# MERA E1 — Ecctrl Controller Proof
+# MERA E1 — Ecctrl Proof, Direct-Input Fix
 
-## Purpose
+This is the corrected E1 controller proof.
 
-This is **E1 only**. It intentionally does not contain the MERA valley.
+## What changed
 
-The build tests whether the replacement game foundation works before migrating any accepted scenery:
+- Ecctrl is still the actual physics-driven character controller.
+- Browser keyboard input now uses Ecctrl's public `setMovement()` handle API directly instead of relying on Drei `KeyboardControls` context. This removes the module/context mismatch that left SPEED at 0.
+- The Three.js Soldier GLTF is no longer duplicated with `scene.clone(true)`. The original skinned scene is mounted directly so its skeleton remains valid and Idle/Walk/Run clips bind correctly.
+- The HUD now exposes `INPUT`, `STATE`, `GROUND`, `SPEED`, and `FPS` separately.
 
-- Ecctrl 2.0.2 character controller
-- React Three Fiber 9
-- Rapier 2 physics
-- shape-cast ground detection
-- third-person orbit/follow camera
-- upright animated humanoid
-- idle / walk / run transitions
-- walking and running on flat ground
-- mild slope traversal
-- low and higher step/obstacle interaction
-- jump
-- live grounded / speed / animation-state / FPS diagnostics
+## Expected test
 
-## Controls
+1. Enter the test area.
+2. Press W: INPUT must show W and SPEED must become >0.
+3. Hold Shift+W: STATE should become RUN and speed should rise.
+4. Space: the capsule should jump.
+5. Walk onto the low step and slope.
+6. Drag the mouse to orbit the camera.
 
-- WASD / arrow keys — move
-- Shift — run (hold)
-- Space — jump
-- Mouse drag — orbit the camera
-- Mouse wheel — zoom within a constrained range
-
-## Acceptance criteria for E1
-
-E1 passes if:
-
-1. The humanoid is upright, complete and correctly grounded.
-2. Movement is smooth and predictable.
-3. Idle → Walk → Run and back transitions are visually stable.
-4. The character traverses the mild ramp without clipping, falling through, or becoming unstable.
-5. Camera orbit/follow remains smooth while moving.
-6. The test runs comfortably at normal browser framerates.
-
-The block obstacles are deliberately diagnostic. Failure to climb the taller block is not itself a failure; the important point is stable collision behavior rather than walking through geometry.
+E1 passes only if all six behaviours work.
 
 ## Deployment
 
-This is a static GitHub Pages build. Upload:
+Upload the contents of this directory to the GitHub Pages repository exactly as before. `index.html`, `main.js`, and `styles.css` must remain together.
 
-- `index.html`
-- `styles.css`
-- `main.js`
+## Scope
 
-No npm/build step is required. Runtime libraries are pinned and loaded as ES modules from `esm.sh`. The temporary test humanoid is loaded from the Three.js examples host. Once E1 is accepted, the next step is to replace this diagnostic character with the selected free MERA traveller and migrate the MS1B landscape into the same Ecctrl/Rapier architecture.
-
-## Dependencies / licensing
-
-- Ecctrl 2.0.2 — MIT
-- React / React DOM
-- Three.js
-- React Three Fiber
-- React Three Drei
-- React Three Rapier
-
-Ecctrl's MIT notice should be retained in the eventual repository. E1's temporary Three.js Soldier model is a diagnostic dependency only and is **not intended as the final MERA traveller**.
-
-## Important
-
-The whole point of this build is to prevent another landscape migration before the character/controller stack is proven. Do not assess its art direction; assess only movement, grounding, animation, camera behavior and stability.
+The MERA landscape remains intentionally absent. E2 begins only after this controller proof passes.
