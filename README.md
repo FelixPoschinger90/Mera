@@ -1,63 +1,45 @@
-# MERA E2 — Free Valley
+# MERA — E3 Study Valley
 
-E2 keeps the working E1 Ecctrl/Rapier controller and animated Soldier character unchanged as the technical chassis, then ports MERA back into a compact authored valley.
+E3 is the first build shaped around the planned experiment rather than only technical proof.
 
-## Design change from old MERA
+## What changed from E2
 
-The player is **not constrained to narrow authored trajectories**. The visible trails are guidance only. Within the central valley basin the player can move freely, leave the trail, walk around rocks and trees, and approach crossings from different angles.
-
-The **map itself is limited** by steep valley sides, dense boundary tree lines, rocks, the river and the northern/southern terrain rise.
-
-## E2 landscape
-
-- PBR forest ground and dirt-path surfaces (Poly Haven CC0)
-- improved four-variant instanced rock field rather than repeated distorted spheres
-- instanced conifer/broadleaf forest
-- instanced grass and river reeds
-- real terrain collider via Rapier trimesh
-- physical tree and larger-rock colliders
-- stream with shallow terrain at the ford
-- physical timber bridge with approach ramps
-- outpost grounded into a rock foundation
-- waterfall with feeder pool, fall, plunge pool and outlet creek
-- mountain backdrop and atmospheric fog
-
-## Performance strategy
-
-- vegetation and rock fields are GPU-instanced
-- grass/reeds have no physics
-- only a subset of nearby substantial trees/rocks receive Rapier colliders
-- no SSAO or heavy post-processing
-- 1024 shadow map
-- DPR capped at 1.2
-- live FPS and draw-call diagnostics in the HUD
+- The playable valley is substantially larger (roughly 160 x 500 world units).
+- Movement remains free inside the compact basin; paths guide, but do not constrain, the player.
+- Three physical route decisions are built into the geography, with natural crags/ridges preventing a straight-line bypass:
+  1. old bridge vs shallow ford;
+  2. pine trail vs birch hollow;
+  3. rocky ridge vs switchback ascent.
+- The outpost remains the fixed northern destination and ends gameplay.
+- MERA NAV now demonstrates the intended exposure structure using configurable placeholder nonce adjectives:
+  - `menic` = narrow / one-person-wide;
+  - `silar` = sheltered / enclosed;
+  - `valen` = steeply rising.
+- Each item is shown in three stages: glossed -> partial support -> bare use, with ordinary messages interleaved.
+- Route choice and lexical exposure are logically separate: both branches expose the same concept.
+- The green rod vegetation from E2 has been replaced with transparent crossed-plane grass/reed clumps.
+- A final free-text "guide the next traveller" screen appears at the outpost.
+- Pilot data can be downloaded as JSON after saving the guide.
 
 ## Controls
 
-- WASD / arrow keys: move
+- WASD / arrows: move
 - Shift: run
 - Space: jump
-- mouse drag: orbit camera
+- Mouse drag: orbit camera
 
-## Deployment
+## Important status
 
-This build intentionally has **no local assets folder**. Upload the five files in this package directly to the GitHub Pages root, replacing the E1 test files:
+This is still a structural research prototype. The nonce items are placeholders, the scripted messages are not final experimental wording, and JSON export is for local piloting only. No live LLM is used.
+
+## Deploy
+
+Upload all five files to the root of the GitHub Pages repo:
 
 - `index.html`
-- `styles.css`
 - `main.js`
+- `styles.css`
 - `README.md`
 - `THIRD_PARTY_NOTICES.md`
 
-Hard-refresh after Pages redeploys. `main.js` currently loads Ecctrl/React/Three/Rapier, the Three.js Soldier test character, and the Poly Haven CC0 textures from their public hosts. There are no `./assets/...` references in this version.
-
-## E2 acceptance gate
-
-Do not add AI/study logic until:
-
-1. movement remains as reliable as E1;
-2. the landscape remains visually acceptable;
-3. movement feels free rather than rail-bound;
-4. bridge and ford work physically;
-5. map boundaries feel geographic rather than arbitrary;
-6. FPS remains study-appropriate on an ordinary laptop.
+No asset folder is required. Runtime 3D/model/texture dependencies are loaded from the pinned CDN URLs in `index.html` / `main.js`.

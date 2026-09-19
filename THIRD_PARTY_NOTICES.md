@@ -1,20 +1,21 @@
-# Third-party notices
+# Third-party notices — MERA E3
 
-## Ecctrl
-MIT License. Source: https://github.com/pmndrs/ecctrl
+This research prototype loads open-source runtime libraries from CDN and uses freely accessible demonstration / CC0 texture assets.
 
-## Three.js / Three.js Soldier example asset
-MIT License. Source: https://github.com/mrdoob/three.js
+## Runtime
 
-## React / React DOM
-MIT License.
+- Three.js — MIT License
+- React / React DOM — MIT License
+- React Three Fiber — MIT License
+- Drei — MIT License
+- React Three Rapier — MIT License
+- Ecctrl — MIT License
+- Zustand — MIT License
+- Rapier — Apache-2.0
 
-## React Three Fiber / Drei / React Three Rapier / Zustand
-MIT-licensed open-source packages used by the Ecctrl browser stack.
+## Visual resources
 
-## Rapier
-Apache-2.0 licensed physics engine.
+- Poly Haven ground/path/rock/wood textures — CC0
+- Three.js `Soldier.glb` example asset is retained only as the E1/E2 technical proof character for this structural build; it is not intended to be the final MERA participant avatar.
 
-## Poly Haven materials
-Forest Ground 01, Grass Path 2, Mossy Rock and Weathered Planks are supplied by Poly Haven under CC0.
-https://polyhaven.com/license
+The final research release should archive local copies of all accepted visual assets and preserve their individual license/source records.
