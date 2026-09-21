@@ -1,56 +1,62 @@
-# MERA E3.1 — Semantic Expedition
+# MERA E3.2 — Consequence Expedition
 
-E3.1 keeps the proven Ecctrl/Rapier character-controller foundation and the large free-movement valley from E3, but changes the **game design**: each route choice now has a perceptual/mechanical consequence, and each nonce adjective describes a terrain property that the player actually experiences.
+Browser-playable pilot build for the MERA lexical-transfer study.
 
-## Narrative premise
-
-A storm knocked the Northern Outpost relay offline at 03:17. The player is a field worker sent across the reserve to restore the emergency relay before the next weather front. MERA NAV has the old survey map and terrain sensor data, but the storm has changed some routes. MERA advises; the player makes the final decisions.
-
-At the outpost, the relay is restored, but MERA's local route cache is corrupted during handover. Another field worker will follow without MERA, motivating the final free-text route guide.
-
-## Target concepts and grounding
-
-### MENIC = narrow / laterally constrained
-- West: the bridge is now physically narrow, with collision rails.
-- East: the ford is broader/longer, but its far bank compresses into a narrow rock cut.
-- Same exposure schedule whichever route is chosen.
-
-### SILAR = sheltered / enclosed from wind
-- West: dense pine canopy provides shelter, but a fallen storm trunk obstructs the direct line.
-- East: the birch route is more direct but visibly exposed to animated storm gusts before a sheltered rock-and-birch pocket.
-- The UI also briefly indicates when the player is in the exposed gust zone.
-
-### VALEN = steeply rising
-- East ridge: shorter but materially steeper and rockier.
-- West switchback: longer and gentler, with the steep section delayed to the final approach.
-- Terrain height itself differs, rather than the difference existing only in text.
-
-## Exposure structure
-
-For each target:
-
-1. first use + ordinary-language gloss;
-2. neutral route information;
-3. route-specific partially glossed use at the actual perceptual instance;
-4. bare target use after/near the experienced section.
-
-Route choice therefore changes the journey but not the intended number of target-word exposures.
-
-## Controls
-
-- WASD / arrows: move
-- Shift: run
-- Space: jump
-- mouse drag: camera
-
-## Deployment
-
-Upload these files to the GitHub Pages repository root:
-
+## Deploy
+Upload these five files to the root of the GitHub Pages site:
 - `index.html`
 - `main.js`
 - `styles.css`
 - `README.md`
 - `THIRD_PARTY_NOTICES.md`
 
-No local asset folder is required in this pilot build; the model and PBR textures are loaded from their existing external sources.
+There is no local assets folder in this build. The controller/framework, Soldier test character, and Poly Haven textures are loaded from public CDNs/hosts, as in E3.1. For the final study deployment these should be localized for reliability.
+
+## E3.2 design
+The opening is now a ~12 second MERA radio transmission with locally generated crackle. It establishes the storm, the damaged Northern Outpost relay, the approaching second front, and the need to restore the emergency uplink.
+
+Each of the three decision stages is an irreversible branch. Once the participant commits, a physical obstacle closes the branch entrance behind them and the two routes are separated by terrain until they reconverge.
+
+After each chosen route is completed, player movement is frozen for a ~3.3 second camera cut showing the unchosen alternative becoming unavailable:
+
+1. River
+   - bridge chosen -> rising water engulfs/blocks the stepping-stone ford
+   - ford chosen -> bridge visibly drops/collapses into the river
+2. Woodland
+   - pine chosen -> a tree falls across the open/birch route
+   - birch chosen -> a tree falls across the pine route
+3. Final ascent
+   - ridge chosen -> rockfall/landslide blocks the switchback
+   - switchback chosen -> rockfall blocks the ridge
+
+The destroyed alternative is also given a physical collider so it cannot simply be traversed after the cinematic.
+
+## Lexical stimuli
+Six nonce forms are retained; each participant encounters only the three forms belonging to the routes actually chosen:
+
+- bridge: `menic` — old, narrow, single-file timber crossing
+- ford: `blicket` — shallow, stone-set crossing with exposed rocks
+- pine: `boskot` — dense, enclosed, wind-sheltered cover
+- birch/open: `fiffin` — open, directly wind-exposed ground
+- ridge: `virdex` — steep, direct, loose-rock ascent
+- switchback: `teebu` — long, winding, gradual ascent
+
+The nonce form is not used in the pre-choice description. After commitment it receives only two exposures: one short contextual introduction and one later bare reuse. Messages are deliberately much shorter than E3.1 and remain visible long enough to read.
+
+## Logging
+The exported pilot JSON records:
+- build ID and timestamps
+- the three route choices
+- exposure counts for all six possible forms
+- MERA messages and their exposure role
+- environmental events/consequences
+- final free-text guide
+
+## Controls
+- WASD / arrows: move
+- Shift: run
+- Space: jump
+- Mouse drag: orbit camera
+
+## Current limitations
+This remains a prototype. The third-person Soldier is still the proven E1 test character. The waterfall is unchanged. Assets are still network-loaded rather than bundled locally. The build has been syntax-checked, but final visual/physics acceptance should be done in the same GitHub Pages/browser environment used for the pilot.

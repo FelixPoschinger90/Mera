@@ -1,21 +1,13 @@
-# Third-party notices — MERA E3
+# Third-party notices
 
-This research prototype loads open-source runtime libraries from CDN and uses freely accessible demonstration / CC0 texture assets.
+MERA E3.2 loads third-party open-source software and public assets at runtime.
 
-## Runtime
-
-- Three.js — MIT License
-- React / React DOM — MIT License
-- React Three Fiber — MIT License
-- Drei — MIT License
-- React Three Rapier — MIT License
 - Ecctrl — MIT License
-- Zustand — MIT License
-- Rapier — Apache-2.0
+- React / React DOM — MIT License
+- Three.js — MIT License
+- React Three Fiber / Drei — MIT License
+- Rapier / @react-three/rapier — open-source licenses as distributed by their respective projects
+- Three.js `Soldier.glb` example model — used as the temporary E1/E2/E3 test character
+- Poly Haven textures — CC0
 
-## Visual resources
-
-- Poly Haven ground/path/rock/wood textures — CC0
-- Three.js `Soldier.glb` example asset is retained only as the E1/E2 technical proof character for this structural build; it is not intended to be the final MERA participant avatar.
-
-The final research release should archive local copies of all accepted visual assets and preserve their individual license/source records.
+The generated radio crackle, procedural terrain, bridge/ford geometry, route events, study logic, and UI in this build are implemented within the MERA prototype.

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <meta name="theme-color" content="#172019" />
-  <title>MERA E3.1 — Storm Relay Expedition</title>
+  <title>MERA E3.2 — Consequence Expedition</title>
   <link rel="stylesheet" href="styles.css" />
   <script type="importmap">
   {
@@ -36,22 +36,34 @@
 
   <div id="boot" class="screen">
     <div class="card">
-      <div class="kicker">MERA · E3.1 · FIELD RUN 07</div>
-      <h1>Restore the northern relay</h1>
-      <p class="mission-lead">At <strong>03:17</strong>, last night's storm knocked the Northern Outpost relay offline. The station still has the reserve emergency uplink, but someone has to reach it and bring the relay back online before the next weather front arrives.</p>
-      <div class="mission-brief"><div><span>YOUR TASK</span><strong>Reach the Northern Outpost and restore the relay.</strong></div><div><span>MERA NAV</span><strong>Has the old survey map and terrain sensors. The storm may have changed the trails.</strong></div><div><span>ROUTE CONTROL</span><strong>MERA advises. You make the final route choices.</strong></div></div>
+      <div class="kicker">MERA · E3.2 · FIELD RUN 08</div>
+      <h1>Field link ready</h1>
+      <p class="mission-lead">A short MERA field transmission will establish the mission. Headphones are recommended if available.</p>
+      <div class="mission-brief"><div><span>CONTROL</span><strong>WASD · Shift · Space · mouse drag</strong></div><div><span>FIELD RULE</span><strong>Route choices are commitments. Once a branch closes behind you, continue until the routes meet again.</strong></div></div>
       <p id="boot-status">Loading the valley, field navigator and storm-state terrain…</p>
       <div class="loadbar"><div id="loadfill"></div></div>
-      <p class="small">E3.1 makes the route decisions consequential. Terrain terms introduced by MERA describe conditions you can actually see and experience.</p>
+      <p class="small">First launch can take a moment while the valley and field navigator load.</p>
       <button id="enter" disabled>BEGIN FIELD RUN</button>
       <pre id="boot-error" class="error hidden"></pre>
     </div>
   </div>
 
+
+  <div id="intro" class="intro hidden" aria-live="assertive">
+    <div class="letterbox top"></div><div class="letterbox bottom"></div>
+    <div class="radio-id"><span class="radio-dot"></span>MERA FIELD LINK</div>
+    <div id="intro-line" class="intro-line"></div>
+  </div>
+
+  <div id="cinematic" class="cinematic hidden">
+    <div class="letterbox top"></div><div class="letterbox bottom"></div>
+    <div id="cinematic-caption" class="cinematic-caption"></div>
+  </div>
+
   <div id="hud" class="hidden">
     <div class="hud-left">
-      <div class="brand">MERA · E3.1</div>
-      <div class="objective">Restore the northern relay · MERA advises, you choose</div>
+      <div class="brand">MERA · E3.2</div>
+      <div class="objective">Reach the outpost before the next storm · committed routes cannot be reversed</div>
       <div id="region" class="region">SOUTHERN APPROACH</div>
     </div>
     <div class="hud-right">
