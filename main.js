@@ -15,6 +15,7 @@ const saveNote = document.getElementById('save-note');
 const navPanel = document.getElementById('nav-panel');
 const navCopy = document.getElementById('nav-copy');
 const navState = document.getElementById('nav-state');
+const windNote = document.getElementById('wind-note');
 
 window.addEventListener('error', event => {
   if (!boot.classList.contains('hidden')) showBootError(event.error || event.message);
@@ -40,16 +41,20 @@ const STUDY = {
 };
 
 const session = {
-  build: 'MERA_E3_STUDY_VALLEY',
+  build: 'MERA_E3_1_SEMANTIC_EXPEDITION',
   startedAt: null,
   finishedAt: null,
   routes: {river:null, woodland:null, ascent:null},
   exposures: {menic:0, silar:0, valen:0},
   events: [],
-  guide: ''
+  guide: '',
+  mission: {relayRestored:false},
+  environmentalEvents: []
 };
 const fired = new Set();
 let navTimer = null;
+let navBusy = false;
+const navQueue = [];
 let gameStarted = false;
 
 function nowMs(){ return performance.now(); }
@@ -60,16 +65,27 @@ function logEvent(type, data={}) {
     ...data
   });
 }
-function showNav(id, text, {target=null, exposure=null, duration=6800}={}) {
-  if (fired.has(id)) return;
-  fired.add(id);
-  if (target && session.exposures[target] !== undefined) session.exposures[target]++;
-  logEvent('nav_message', {id, target, exposure, text});
-  navCopy.textContent = text;
+function pumpNavQueue() {
+  if (navBusy || !navQueue.length || session.finishedAt) return;
+  const msg = navQueue.shift();
+  navBusy = true;
+  if (msg.target && session.exposures[msg.target] !== undefined) session.exposures[msg.target]++;
+  logEvent('nav_message', {id:msg.id, target:msg.target, exposure:msg.exposure, text:msg.text});
+  navCopy.textContent = msg.text;
   navState.textContent = 'ONLINE';
   navPanel.classList.remove('hidden');
   clearTimeout(navTimer);
-  navTimer = setTimeout(() => navPanel.classList.add('hidden'), duration);
+  navTimer = setTimeout(() => {
+    navPanel.classList.add('hidden');
+    navBusy = false;
+    setTimeout(pumpNavQueue, 260);
+  }, msg.duration);
+}
+function showNav(id, text, {target=null, exposure=null, duration=5200}={}) {
+  if (fired.has(id)) return;
+  fired.add(id);
+  navQueue.push({id,text,target,exposure,duration});
+  pumpNavQueue();
 }
 function setRoute(kind, value) {
   if (session.routes[kind]) return;
@@ -78,6 +94,22 @@ function setRoute(kind, value) {
   const id = kind === 'river' ? 'river-choice' : kind === 'woodland' ? 'wood-choice' : 'ascent-choice';
   const el = document.getElementById(id);
   if (el) el.textContent = value.toUpperCase();
+  const reactions = {
+    river: {
+      bridge: 'Bridge route committed. It is the faster crossing, but the deck constricts sharply. Stay centred.',
+      ford: 'Ford route committed. It is wider, but slower: use the stones and expect wet footing before the rock cut.'
+    },
+    woodland: {
+      pine: 'Pine trail committed. The canopy gives better shelter, but stormfall blocks the direct line ahead.',
+      birch: 'Birch hollow committed. It is more direct, but the open ground is exposed to the storm gusts.'
+    },
+    ascent: {
+      ridge: 'Ridge route committed. It is shorter, but the grade rises hard and the footing is rocky.',
+      switchback: 'Switchback committed. It is longer, but the grade stays easier until the final approach.'
+    }
+  };
+  const text = reactions[kind]?.[value];
+  if (text) showNav(`reaction_${kind}_${value}`, text, {duration:6200});
 }
 function updateElapsed() {
   if (!session.startedAt) return;
@@ -90,6 +122,8 @@ function updateElapsed() {
 function finishStudy() {
   if (session.finishedAt) return;
   session.finishedAt = new Date().toISOString();
+  session.mission.relayRestored = true;
+  logEvent('relay_restored', {status:'emergency_uplink_online'});
   logEvent('outpost_reached', {routes:{...session.routes}});
   navState.textContent = 'OFFLINE';
   navPanel.classList.add('hidden');
@@ -215,9 +249,18 @@ async function bootApp() {
         depth*=1-.72*ford;
         y-=depth;
       }
-      // Birch hollow is lower/sheltered; ridge path subtly higher.
+      // Birch hollow is lower/sheltered.
       y -= .65*Math.exp(-((x-29)*(x-29))/210-((z-2)*(z-2))/650);
-      y += .75*Math.exp(-((x-29)*(x-29))/230-((z+128)*(z+128))/800);
+
+      // The final decision is mechanically meaningful: the eastern ridge climbs much
+      // harder and sooner, while the western switchback gains the same height gradually.
+      if(z < -88 && z > -184){
+        const ridgeD = distancePolyline(x,z,PATHS.ridge);
+        const switchD = distancePolyline(x,z,PATHS.switchback);
+        const progress = clamp((-z-88)/96,0,1);
+        if(ridgeD < 9.5) y += 4.9*progress*(1-smooth01(ridgeD/9.5));
+        if(switchD < 9.0) y += 2.25*progress*(1-smooth01(switchD/9.0));
+      }
       return y;
     }
 
@@ -442,17 +485,96 @@ async function bootApp() {
     }
 
     function Bridge({mats}){
-      const x=-31,z=riverCenterZ(x),deckY=waterSurfaceAt(x)+1.0,length=10.0,width=3.1,pieces=[];
+      const x=-31,z=riverCenterZ(x),deckY=waterSurfaceAt(x)+1.0,length=10.0,width=1.58,pieces=[];
       for(let i=0;i<25;i++)pieces.push(h('mesh',{key:'p'+i,position:[0,.04,-length/2+.2+i*.4],castShadow:true,receiveShadow:true},h('boxGeometry',{args:[width,.14,.37]}),h('primitive',{object:mats.wood,attach:'material'})));
       for(const sx of [-1,1]){
-        pieces.push(h('mesh',{key:'rail'+sx,position:[sx*1.38,.86,0],rotation:[Math.PI/2,0,0],castShadow:true},h('cylinderGeometry',{args:[.07,.08,length,7]}),h('meshStandardMaterial',{color:'#6d5138',roughness:1})));
-        for(let i=0;i<6;i++)pieces.push(h('mesh',{key:`post${sx}${i}`,position:[sx*1.38,.54,-length/2+.25+i*(length-.5)/5],castShadow:true},h('cylinderGeometry',{args:[.09,.11,1.12,7]}),h('meshStandardMaterial',{color:'#6b4f35',roughness:1})));
+        pieces.push(h('mesh',{key:'rail'+sx,position:[sx*.69,.86,0],rotation:[Math.PI/2,0,0],castShadow:true},h('cylinderGeometry',{args:[.07,.08,length,7]}),h('meshStandardMaterial',{color:'#6d5138',roughness:1})));
+        for(let i=0;i<6;i++)pieces.push(h('mesh',{key:`post${sx}${i}`,position:[sx*.69,.54,-length/2+.25+i*(length-.5)/5],castShadow:true},h('cylinderGeometry',{args:[.09,.11,1.12,7]}),h('meshStandardMaterial',{color:'#6b4f35',roughness:1})));
       }
-      return h(RigidBody,{type:'fixed',colliders:false,position:[x,deckY,z],friction:1},h(CuboidCollider,{args:[width/2,.15,length/2]}),h(CuboidCollider,{args:[width/2,.10,1.3],position:[0,-.18,length/2+1],rotation:[-.11,0,0]}),h(CuboidCollider,{args:[width/2,.10,1.3],position:[0,-.18,-length/2-1],rotation:[.11,0,0]}),h('group',null,...pieces,h('mesh',{position:[0,-.18,length/2+1],rotation:[-.11,0,0],receiveShadow:true},h('boxGeometry',{args:[width,.16,2.6]}),h('primitive',{object:mats.wood,attach:'material'})),h('mesh',{position:[0,-.18,-length/2-1],rotation:[.11,0,0],receiveShadow:true},h('boxGeometry',{args:[width,.16,2.6]}),h('primitive',{object:mats.wood,attach:'material'}))));
+      return h(RigidBody,{type:'fixed',colliders:false,position:[x,deckY,z],friction:1},h(CuboidCollider,{args:[width/2,.15,length/2]}),h(CuboidCollider,{args:[.07,.48,length/2],position:[-.69,.55,0]}),h(CuboidCollider,{args:[.07,.48,length/2],position:[.69,.55,0]}),h(CuboidCollider,{args:[width/2,.10,1.3],position:[0,-.18,length/2+1],rotation:[-.11,0,0]}),h(CuboidCollider,{args:[width/2,.10,1.3],position:[0,-.18,-length/2-1],rotation:[.11,0,0]}),h('group',null,...pieces,h('mesh',{position:[0,-.18,length/2+1],rotation:[-.11,0,0],receiveShadow:true},h('boxGeometry',{args:[width,.16,2.6]}),h('primitive',{object:mats.wood,attach:'material'})),h('mesh',{position:[0,-.18,-length/2-1],rotation:[.11,0,0],receiveShadow:true},h('boxGeometry',{args:[width,.16,2.6]}),h('primitive',{object:mats.wood,attach:'material'}))));
     }
     function Ford({mats}){
       const stones=[];for(let i=0;i<13;i++){const z=130-i*1.15,x=31+Math.sin(i*.84)*.45,y=waterSurfaceAt(x)+.08;stones.push(h('mesh',{key:i,position:[x,y,z],rotation:[0,i*.39,0],scale:[.72,.25,.95],receiveShadow:true},h('primitive',{object:makeRockGeometry((i%5)+1)}),h('primitive',{object:mats.rock,attach:'material'})));}
       return h('group',null,...stones);
+    }
+
+
+    // These landmarks make the three target concepts perceptually real rather than
+    // arbitrary labels in a navigation message.
+    function SemanticLandmarks({mats}){
+      const rockA=useMemo(()=>makeRockGeometry(41),[]),rockB=useMemo(()=>makeRockGeometry(47),[]);
+      const parts=[];
+
+      // MENIC: the ford is broad, but its exit compresses into a one-person rock cut.
+      const gateCenter={x:19,z:104};
+      const gateY=terrainHeight(gateCenter.x,gateCenter.z);
+      const gate=[
+        {x:16.9,z:105.7,sx:2.2,sy:1.55,sz:3.2,rot:.72},
+        {x:21.5,z:102.3,sx:2.25,sy:1.45,sz:3.1,rot:.72}
+      ];
+      gate.forEach((r,i)=>{
+        const y=terrainHeight(r.x,r.z);
+        parts.push(h('mesh',{key:'gate-m'+i,geometry:i?rockB:rockA,material:mats.rock,position:[r.x,y+1.05,r.z],rotation:[0,r.rot,0],scale:[r.sx,r.sy,r.sz],castShadow:true,receiveShadow:true}));
+        parts.push(h(BallCollider,{key:'gate-c'+i,args:[1.65],position:[r.x,y+1.0,r.z]}));
+      });
+
+      // SILAR contrast: west is enclosed under pines; east is exposed before a short
+      // sheltered rock-and-birch pocket. The fallen trunk gives the pine choice a cost.
+      const logX=-31.5,logZ=-1.5,logY=terrainHeight(logX,logZ)+.46;
+      parts.push(h('mesh',{key:'fallen-log',position:[logX,logY,logZ],rotation:[0,0,Math.PI/2],castShadow:true,receiveShadow:true},h('cylinderGeometry',{args:[.28,.36,5.6,9]}),h('primitive',{object:mats.bark,attach:'material'})));
+      parts.push(h(CuboidCollider,{key:'fallen-log-collider',args:[2.8,.32,.34],position:[logX,logY,logZ]}));
+
+      const shelter=[
+        {x:23.8,z:-18.5,s:2.25,rot:.25},
+        {x:34.0,z:-19.2,s:2.35,rot:-.35},
+        {x:27.0,z:-24.5,s:1.55,rot:.1}
+      ];
+      shelter.forEach((r,i)=>{
+        const y=terrainHeight(r.x,r.z);
+        parts.push(h('mesh',{key:'shelter-m'+i,geometry:i%2?rockB:rockA,material:mats.rock,position:[r.x,y+r.s*.44,r.z],rotation:[0,r.rot,0],scale:[r.s,r.s*.72,r.s*1.05],castShadow:i<2,receiveShadow:true}));
+        if(i<2)parts.push(h(BallCollider,{key:'shelter-c'+i,args:[r.s*.62],position:[r.x,y+r.s*.45,r.z]}));
+      });
+
+      // VALEN: rock teeth make the short ridge visibly harsher without forcing a rail.
+      for(let i=0;i<8;i++){
+        const z=-108-i*8.2,x=25.5+Math.sin(i*.9)*3.1,s=.85+(i%3)*.22,y=terrainHeight(x,z);
+        parts.push(h('mesh',{key:'ridge-rock'+i,geometry:i%2?rockA:rockB,material:mats.rock,position:[x,y+s*.3,z],rotation:[0,i*.57,0],scale:[s,s*.52,s*.88],receiveShadow:true}));
+      }
+      return h(RigidBody,{type:'fixed',colliders:false},...parts);
+    }
+
+    function WindField(){
+      const ref=useRef();
+      const data=useMemo(()=>{
+        const n=130,pos=new Float32Array(n*3),speed=new Float32Array(n);
+        for(let i=0;i<n;i++){
+          const x=12+rng()*38,z=-31+rng()*72;
+          pos[i*3]=x;pos[i*3+1]=terrainHeight(x,z)+.8+rng()*3.4;pos[i*3+2]=z;speed[i]=5+rng()*7;
+        }
+        const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+        return {g,speed,n};
+      },[]);
+      useFrame((_,dt)=>{
+        const attr=data.g.attributes.position;
+        for(let i=0;i<data.n;i++){
+          let x=attr.getX(i)+data.speed[i]*dt,z=attr.getZ(i)-data.speed[i]*.16*dt;
+          if(x>51){x=12;z=-31+rng()*72;}
+          attr.setX(i,x);attr.setZ(i,z);attr.setY(i,terrainHeight(x,z)+.8+(i%7)*.42);
+        }
+        attr.needsUpdate=true;
+      });
+      const mat=useMemo(()=>new THREE.PointsMaterial({color:0xdbe7c5,size:.10,transparent:true,opacity:.52,depthWrite:false}),[]);
+      return h('points',{ref,geometry:data.g,material:mat});
+    }
+
+    function OutpostBeacon(){
+      const glow=useRef();
+      useFrame(({clock})=>{if(glow.current){const a=.65+.35*Math.sin(clock.elapsedTime*2.4);glow.current.scale.setScalar(.8+a*.25);glow.current.material.opacity=.38+a*.34;}});
+      const y=terrainHeight(OUTPOST.x,OUTPOST.z)+12.2;
+      return h('group',{position:[OUTPOST.x,y,OUTPOST.z]},
+        h('mesh',{ref:glow},h('sphereGeometry',{args:[.34,12,12]}),h('meshBasicMaterial',{color:'#f0d98e',transparent:true,opacity:.75})),
+        h('pointLight',{color:'#f4dc96',intensity:3.0,distance:28,decay:2})
+      );
     }
 
     function makeTextTexture(lines){
@@ -500,12 +622,12 @@ async function bootApp() {
 
     function Valley({materials}){
       return h(React.Fragment,null,
-        h(Terrain,{mat:materials.forest}),h(Paths,{mat:materials.path}),h(River,null),h(RiverBarriers,null),h(Bridge,{mats:materials}),h(Ford,{mats:materials}),h(Forest,{mats:materials}),h(GroundCover,{mats:materials}),h(RockField,{mats:materials}),
+        h(Terrain,{mat:materials.forest}),h(Paths,{mat:materials.path}),h(River,null),h(RiverBarriers,null),h(Bridge,{mats:materials}),h(Ford,{mats:materials}),h(Forest,{mats:materials}),h(GroundCover,{mats:materials}),h(RockField,{mats:materials}),h(SemanticLandmarks,{mats:materials}),h(WindField,null),
         h(Signpost,{position:[0,0,151],rotation:0,lines:['BRIDGE  ←','FORD  →'],mats:materials}),
         h(Signpost,{position:[0,0,48],rotation:0,lines:['PINE TRAIL  ←','BIRCH HOLLOW  →'],mats:materials}),
         h(Signpost,{position:[0,0,-84],rotation:0,lines:['SWITCHBACK  ←','RIDGE  →'],mats:materials}),
         h(DecisionLandforms,{mats:materials}),
-        h(Outpost,{mats:materials}),h(Waterfall,{mats:materials}),h(Mountains,null)
+        h(Outpost,{mats:materials}),h(OutpostBeacon,null),h(Waterfall,{mats:materials}),h(Mountains,null)
       );
     }
 
@@ -528,37 +650,68 @@ async function bootApp() {
       return h(EcctrlCameraControls,{ref:controls,makeDefault:true,smoothTime:.12,minDistance:3.0,maxDistance:7.0,minPolarAngle:.50,maxPolarAngle:1.28,dollyToCursor:false,truckSpeed:0,azimuthRotateSpeed:.8,polarRotateSpeed:.75});
     }
 
+    function inBirchWindZone(p){ return p.x>12 && p.x<49 && p.z<38 && p.z>-12; }
+    function inBirchShelter(p){ return p.x>19 && p.x<38 && p.z<-12 && p.z>-31; }
+    function inFordWater(p){ return p.x>24 && p.x<38 && p.z<132 && p.z>116; }
+    function inMenicFordCut(p){ return p.x>14 && p.x<24 && p.z<111 && p.z>98; }
+    function inPineShelter(p){ return p.x<-17 && p.z<34 && p.z>-30; }
+    function inRidgeValen(p){ return p.x>10 && p.z<-108 && p.z>-174; }
+    function inSwitchbackValen(p){ return p.x<13 && p.z<-164 && p.z>-190; }
+
     function updateStudyFromPosition(p){
       if(!gameStarted||session.finishedAt)return;
       updateElapsed();
-      if(!fired.has('intro')&&p.z<212)showNav('intro','MERA NAV online. The northern outpost is your destination. You are free to choose your route.');
 
-      if(p.z<168)showNav('river_gloss',`The river blocks the valley ahead. Both crossings contain a short ${STUDY.items.crossing.form} section — a narrow, one-person passage. The old bridge is west; the shallow ford is east.`,{target:'menic',exposure:'gloss'});
-      if(p.z<151)showNav('river_neutral','Choose whichever crossing you prefer. Both routes continue north.',{duration:5200});
-      if(!session.routes.river && p.z<134){
+      const windy=inBirchWindZone(p) && !inBirchShelter(p);
+      windNote?.classList.toggle('active',windy);
+      if(windy && !fired.has('wind_event_logged')){
+        fired.add('wind_event_logged');
+        session.environmentalEvents.push({type:'strong_gusts',route:'birch'});
+        logEvent('environmental_event',{event:'strong_gusts',route:'birch'});
+      }
+      if(inFordWater(p) && !fired.has('ford_water_logged')){
+        fired.add('ford_water_logged');
+        session.environmentalEvents.push({type:'shallow_water',route:'ford'});
+        logEvent('environmental_event',{event:'shallow_water',route:'ford'});
+      }
+
+      // Mission frame first; no target vocabulary until MERA and the task are established.
+      if(!fired.has('mission_1')&&p.z<214)showNav('mission_1','Connection established. Last night’s storm knocked the Northern Outpost relay offline at 03:17. The reserve emergency uplink is still there, but we need to reach it and restore the relay before the next weather front.',{duration:4700});
+      if(p.z<202)showNav('mission_2','I have the old survey map and current terrain readings. The storm changed parts of the valley, so I will flag conditions; you make the final route calls.',{duration:4300});
+      if(p.z<188)showNav('mission_3','One note: my terrain classifier uses survey shorthand. If I use an unfamiliar terrain term, I’ll translate it the first time.',{duration:4000});
+
+      // DECISION 1 — MENIC / physical constriction.
+      if(p.z<171)showNav('river_gloss',`The river blocks the valley ahead. A ${STUDY.items.crossing.form} section means a narrow, laterally constrained passage. The west bridge is the fastest route; the east ford is wider but takes longer.`,{target:'menic',exposure:'gloss',duration:7600});
+      if(p.z<154)showNav('river_neutral','Bridge west: shorter, but very tight. Ford east: broader footing, but slower through the water and a rock cut on the far bank.',{duration:6200});
+      if(!session.routes.river && p.z<136){
         if(p.x<-14)setRoute('river','bridge');else if(p.x>14)setRoute('river','ford');
       }
-      if(session.routes.river && p.z<132)showNav('river_partial',`You are entering the narrow ${STUDY.items.crossing.form} section now. Keep moving until the far bank.`,{target:'menic',exposure:'partial'});
-      if(p.z<108)showNav('river_bare',`The ${STUDY.items.crossing.form} section is behind you. Continue toward the central valley.`,{target:'menic',exposure:'bare'});
-      if(p.z<88)showNav('river_after','The trails meet again ahead. Stay generally north.',{duration:5200});
+      if(session.routes.river==='bridge' && p.z<128)showNav('river_partial_bridge',`This bridge is the narrow ${STUDY.items.crossing.form} section. Keep centred between the rails.`,{target:'menic',exposure:'partial',duration:6200});
+      if(session.routes.river==='ford' && (inMenicFordCut(p)||p.z<109))showNav('river_partial_ford',`The ford itself is broad. The rock cut immediately beyond it is the narrow ${STUDY.items.crossing.form} section — pass through the gap one at a time.`,{target:'menic',exposure:'partial',duration:6800});
+      if(session.routes.river && p.z<98)showNav('river_bare',`The ${STUDY.items.crossing.form} section is clear. Continue into the central valley.`,{target:'menic',exposure:'bare',duration:5200});
+      if(p.z<86)showNav('river_after','Both river routes rejoin here. The relay beacon is still transmitting intermittently to the north.',{duration:5200});
 
-      if(p.z<67)showNav('wood_gloss',`The woodland divides ahead. Each route has a ${STUDY.items.shelter.form} stretch — a sheltered, enclosed section. The pine trail is west; the birch hollow is east.`,{target:'silar',exposure:'gloss'});
-      if(p.z<48)showNav('wood_neutral','Both woodland routes reconnect farther north. Choose by terrain, not distance.',{duration:5400});
-      if(!session.routes.woodland && p.z<30){
+      // DECISION 2 — SILAR / shelter contrasted against real wind exposure.
+      if(p.z<67)showNav('wood_gloss',`Storm gusts are stronger ahead. A ${STUDY.items.shelter.form} stretch is sheltered or enclosed from the wind. The pine trail west stays under dense canopy; the birch hollow east is more direct but crosses exposed ground first.`,{target:'silar',exposure:'gloss',duration:7800});
+      if(p.z<50)showNav('wood_neutral','Pine trail: better shelter, but stormfall blocks the straight line. Birch hollow: quicker and open, but expect strong gusts.',{duration:6400});
+      if(!session.routes.woodland && p.z<31){
         if(p.x<-9)setRoute('woodland','pine');else if(p.x>9)setRoute('woodland','birch');
       }
-      if(session.routes.woodland && p.z<18)showNav('wood_partial',`Stay with this sheltered ${STUDY.items.shelter.form} trail until you reach the marker stones.`,{target:'silar',exposure:'partial'});
-      if(p.z<-30)showNav('wood_bare',`The ${STUDY.items.shelter.form} section ends as the trees open out.`,{target:'silar',exposure:'bare'});
-      if(p.z<-51)showNav('wood_after','You are entering the upper basin. The outpost should become visible again soon.',{duration:5600});
+      if(session.routes.woodland==='pine' && (inPineShelter(p)||p.z<19))showNav('wood_partial_pine',`The canopy closes here. This is the sheltered ${STUDY.items.shelter.form} stretch. The fallen trunk ahead is storm damage — go over it or around.`,{target:'silar',exposure:'partial',duration:7000});
+      if(session.routes.woodland==='birch' && (inBirchShelter(p)||p.z<-8))showNav('wood_partial_birch',`You’re leaving the exposed hollow. The rocks and birches ahead form the sheltered ${STUDY.items.shelter.form} pocket.`,{target:'silar',exposure:'partial',duration:6800});
+      if(session.routes.woodland && p.z<-31)showNav('wood_bare',`You are out of the ${STUDY.items.shelter.form} section. The upper basin is ahead.`,{target:'silar',exposure:'bare',duration:5200});
+      if(p.z<-52)showNav('wood_after','The outpost beacon is visible again. One final climb remains.',{duration:5200});
 
-      if(p.z<-72)showNav('ascent_gloss',`The last ascent contains a ${STUDY.items.ascent.form} section — a steeply rising stretch. The rocky ridge is east; the longer switchback is west.`,{target:'valen',exposure:'gloss'});
-      if(p.z<-88)showNav('ascent_neutral','Either route reaches the same final approach. Pick the climb you prefer.',{duration:5200});
-      if(!session.routes.ascent && p.z<-102){
+      // DECISION 3 — VALEN / actual grade difference.
+      if(p.z<-73)showNav('ascent_gloss',`The storm has left two approaches. A ${STUDY.items.ascent.form} section is a steeply rising stretch. The eastern ridge is shorter but climbs hard; the western switchback is longer and gentler.`,{target:'valen',exposure:'gloss',duration:7600});
+      if(p.z<-89)showNav('ascent_neutral','Ridge east: save distance, accept the steep grade and rough rock. Switchback west: more walking, easier footing until the last approach.',{duration:6200});
+      if(!session.routes.ascent && p.z<-103){
         if(p.x>8)setRoute('ascent','ridge');else if(p.x<-8)setRoute('ascent','switchback');
       }
-      if(session.routes.ascent && p.z<-116)showNav('ascent_partial',`Continue through the steep ${STUDY.items.ascent.form} section. The ground levels beyond the next rise.`,{target:'valen',exposure:'partial'});
-      if(p.z<-166)showNav('ascent_bare',`Past the ${STUDY.items.ascent.form} stretch, follow the final trail to the outpost.`,{target:'valen',exposure:'bare'});
-      if(p.z<-188)showNav('final_neutral','Almost there. Continue to the stone tower.',{duration:5000});
+      if(session.routes.ascent==='ridge' && (inRidgeValen(p)||p.z<-124))showNav('ascent_partial_ridge',`The slope is ${STUDY.items.ascent.form} here — keep climbing through the steep rock section.`,{target:'valen',exposure:'partial',duration:6200});
+      if(session.routes.ascent==='switchback' && (inSwitchbackValen(p)||p.z<-163))showNav('ascent_partial_switchback',`The switchback stayed gentle; this final ramp is the ${STUDY.items.ascent.form} section. Keep climbing until the ground eases.`,{target:'valen',exposure:'partial',duration:6600});
+      if(session.routes.ascent && p.z<-184)showNav('ascent_bare',`The ${STUDY.items.ascent.form} stretch is behind you. Follow the beacon to the outpost.`,{target:'valen',exposure:'bare',duration:5200});
+      if(p.z<-198)showNav('final_neutral','Outpost in range. I am checking the emergency relay hardware now.',{duration:5200});
       if(Math.hypot(p.x-OUTPOST.x,p.z-OUTPOST.z)<6.5) finishStudy();
     }
 

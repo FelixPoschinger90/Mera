@@ -1,40 +1,51 @@
-# MERA — E3 Study Valley
+# MERA E3.1 — Semantic Expedition
 
-E3 is the first build shaped around the planned experiment rather than only technical proof.
+E3.1 keeps the proven Ecctrl/Rapier character-controller foundation and the large free-movement valley from E3, but changes the **game design**: each route choice now has a perceptual/mechanical consequence, and each nonce adjective describes a terrain property that the player actually experiences.
 
-## What changed from E2
+## Narrative premise
 
-- The playable valley is substantially larger (roughly 160 x 500 world units).
-- Movement remains free inside the compact basin; paths guide, but do not constrain, the player.
-- Three physical route decisions are built into the geography, with natural crags/ridges preventing a straight-line bypass:
-  1. old bridge vs shallow ford;
-  2. pine trail vs birch hollow;
-  3. rocky ridge vs switchback ascent.
-- The outpost remains the fixed northern destination and ends gameplay.
-- MERA NAV now demonstrates the intended exposure structure using configurable placeholder nonce adjectives:
-  - `menic` = narrow / one-person-wide;
-  - `silar` = sheltered / enclosed;
-  - `valen` = steeply rising.
-- Each item is shown in three stages: glossed -> partial support -> bare use, with ordinary messages interleaved.
-- Route choice and lexical exposure are logically separate: both branches expose the same concept.
-- The green rod vegetation from E2 has been replaced with transparent crossed-plane grass/reed clumps.
-- A final free-text "guide the next traveller" screen appears at the outpost.
-- Pilot data can be downloaded as JSON after saving the guide.
+A storm knocked the Northern Outpost relay offline at 03:17. The player is a field worker sent across the reserve to restore the emergency relay before the next weather front. MERA NAV has the old survey map and terrain sensor data, but the storm has changed some routes. MERA advises; the player makes the final decisions.
+
+At the outpost, the relay is restored, but MERA's local route cache is corrupted during handover. Another field worker will follow without MERA, motivating the final free-text route guide.
+
+## Target concepts and grounding
+
+### MENIC = narrow / laterally constrained
+- West: the bridge is now physically narrow, with collision rails.
+- East: the ford is broader/longer, but its far bank compresses into a narrow rock cut.
+- Same exposure schedule whichever route is chosen.
+
+### SILAR = sheltered / enclosed from wind
+- West: dense pine canopy provides shelter, but a fallen storm trunk obstructs the direct line.
+- East: the birch route is more direct but visibly exposed to animated storm gusts before a sheltered rock-and-birch pocket.
+- The UI also briefly indicates when the player is in the exposed gust zone.
+
+### VALEN = steeply rising
+- East ridge: shorter but materially steeper and rockier.
+- West switchback: longer and gentler, with the steep section delayed to the final approach.
+- Terrain height itself differs, rather than the difference existing only in text.
+
+## Exposure structure
+
+For each target:
+
+1. first use + ordinary-language gloss;
+2. neutral route information;
+3. route-specific partially glossed use at the actual perceptual instance;
+4. bare target use after/near the experienced section.
+
+Route choice therefore changes the journey but not the intended number of target-word exposures.
 
 ## Controls
 
 - WASD / arrows: move
 - Shift: run
 - Space: jump
-- Mouse drag: orbit camera
+- mouse drag: camera
 
-## Important status
+## Deployment
 
-This is still a structural research prototype. The nonce items are placeholders, the scripted messages are not final experimental wording, and JSON export is for local piloting only. No live LLM is used.
-
-## Deploy
-
-Upload all five files to the root of the GitHub Pages repo:
+Upload these files to the GitHub Pages repository root:
 
 - `index.html`
 - `main.js`
@@ -42,4 +53,4 @@ Upload all five files to the root of the GitHub Pages repo:
 - `README.md`
 - `THIRD_PARTY_NOTICES.md`
 
-No asset folder is required. Runtime 3D/model/texture dependencies are loaded from the pinned CDN URLs in `index.html` / `main.js`.
+No local asset folder is required in this pilot build; the model and PBR textures are loaded from their existing external sources.
