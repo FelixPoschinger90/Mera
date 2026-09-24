@@ -1,69 +1,32 @@
-# MERA E3.3.1 — Assisted Navigation / Fixed Voice
+# MERA E3.4 — Storm Link
 
-Browser-playable pilot build for the MERA lexical-transfer study.
+Pilot browser build of the MERA lexical-propagation game.
+
+## What changed from E3.3.1
+
+- Replaced the clipped bundled eSpeak clips with browser speech synthesis and explicit preference for a natural English female voice (e.g. Microsoft Aria/Jenny/Sonia, Google UK English Female, Samantha/Zira where available).
+- The opening is one continuous spoken emergency transmission rather than many chopped clips.
+- Added animated rain and timed lightning/thunder cues during the opening cinematic.
+- Opening establishes stakes: prior storm damage, two injured, two missing, player is the only mobile field worker, Northern Outpost relay failure, incoming second front, MERA emergency power and damaged terrain data.
+- Spoken + subtitled: opening, route-choice prompts, two controlled lexical exposures on the chosen route, and environmental consequence lines.
+- Text only: optional MERA ASSIST chat. Chat never calls the voice system.
+- Voiced navigation subtitles remain visible through the utterance and for ~1.5 seconds afterwards.
+- Route commitment/consequence logic from E3.2/E3.3 remains intact.
+
+## Important voice note
+
+This pilot selects the best matching English female/natural voice exposed by the participant's browser/operating system. This is much smoother than the previous offline eSpeak assets but is not yet stimulus-identical across machines. For the final study, once the script and voice are approved, replace these calls with fixed neural-voice audio files generated from one selected provider/voice.
 
 ## Deploy
-Upload the following to the root of the GitHub Pages site:
-- `index.html`
-- `main.js`
-- `styles.css`
-- `README.md`
-- `THIRD_PARTY_NOTICES.md`
-- the complete `audio/` folder
 
-The controller/framework, Soldier test character, and Poly Haven textures are still loaded from public CDNs/hosts. The MERA speech files are now local and bundled with the game.
+Upload these five files to the repository root:
 
-## Why E3.3.1 exists
-E3.3 used browser `speechSynthesis`. On some Chrome configurations the generated radio crackle played but speech did not: the crackle was unlocked directly by the participant's ENTER click, while the first speech call occurred after asynchronous delays and could be blocked by browser media/user-gesture rules.
+- index.html
+- main.js
+- styles.css
+- README.md
+- THIRD_PARTY_NOTICES.md
 
-E3.3.1 removes browser TTS from the experimental voice path. All spoken MERA lines are fixed pre-generated synthetic audio files. The ENTER click explicitly unlocks media playback before the opening sequence begins.
+The old `audio/` directory from E3.3.1 is not used by this build and can be deleted.
 
-## Spoken MERA
-Voice remains limited to consequential moments:
-- opening radio transmission / mission framing
-- the three route-choice prompts
-- the three post-choice environmental consequences
-
-Routine lexical messages and all MERA ASSIST chatbot responses remain silent.
-
-The bundled voice is intentionally synthetic and lightly radio-filtered. Every participant receives the same audio files, pronunciation, rate and prosody.
-
-## MERA ASSIST — text only
-A circular MERA icon opens a silent contextual assistant. The player can select suggested questions or type a short free-text question. The assistant is deterministic: questions are mapped to a bounded set of route intents; no generative model or external AI service is called.
-
-Unsupported or overly broad questions receive a limited-access fallback such as: `I cannot access that data. Limited uplink availability.`
-
-## Controlled optional lexical exposure
-The six retained nonce forms are:
-- bridge: `menic`
-- ford: `blicket`
-- pine/sheltered: `boskot`
-- open/exposed: `fiffin`
-- ridge/steep: `virdex`
-- switchback/winding: `teebu`
-
-Fixed route messages provide two short exposures only after route commitment. A few specific information-seeking chat intents may contain the relevant target form. Each target-bearing chatbot response is capped at one optional exposure per nonce form per session; repeat questions switch to ordinary vocabulary.
-
-## Irreversible route consequences
-The three decisions remain commitments:
-1. River: rising water removes the ford, or the bridge collapses.
-2. Woodland: stormfall blocks the unchosen path.
-3. Final ascent: rockfall/slope failure closes the unchosen ascent.
-
-Routes remain physically separated until the authored reconvergence point.
-
-## Pilot logging
-The downloadable JSON records route choices, fixed/optional lexical exposures, chat interaction and resolved intents, environmental consequences, final guide text, timestamps, and whether bundled audio was successfully unlocked.
-
-Persistent study storage/transmission is intentionally not implemented yet.
-
-## Controls
-- WASD / arrows: move
-- Shift: run
-- Space: jump
-- Mouse drag: orbit camera
-- MERA icon: open text assistant
-- Escape: close text assistant
-
-## Current limitations
-The E1 Soldier character remains temporary. The waterfall is not refined. Several visual/runtime dependencies still load from the network and should eventually be localized for the final experiment.
+The build still loads the Ecctrl/R3F/Rapier stack, Soldier test character and Poly Haven textures from public hosts at runtime.

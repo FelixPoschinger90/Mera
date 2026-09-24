@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <meta name="theme-color" content="#172019" />
-  <title>MERA E3.3.1 — Assisted Expedition</title>
+  <title>MERA E3.4 — Storm Link</title>
   <link rel="stylesheet" href="styles.css" />
   <script type="importmap">
   {
@@ -36,9 +36,9 @@
 
   <div id="boot" class="screen">
     <div class="card">
-      <div class="kicker">MERA · E3.3.1.1 · FIELD RUN 09</div>
+      <div class="kicker">MERA · E3.4 · FIELD RUN 10</div>
       <h1>Field link ready</h1>
-      <p class="mission-lead">A short voiced MERA transmission will establish the mission. Headphones are recommended if available.</p>
+      <p class="mission-lead">A short storm transmission will establish the mission. MERA uses a female English system voice; headphones are recommended if available.</p>
       <div class="mission-brief"><div><span>CONTROL</span><strong>WASD · Shift · Space · mouse drag</strong></div><div><span>FIELD RULE</span><strong>Route choices are commitments. Once a branch closes behind you, continue until the routes meet again.</strong></div><div><span>MERA ASSIST</span><strong>Use the MERA icon for optional text-only route questions. Suggested questions change with your location.</strong></div></div>
       <p id="boot-status">Loading the valley, field navigator and storm-state terrain…</p>
       <div class="loadbar"><div id="loadfill"></div></div>
@@ -51,18 +51,22 @@
 
   <div id="intro" class="intro hidden" aria-live="assertive">
     <div class="letterbox top"></div><div class="letterbox bottom"></div>
-    <div class="radio-id"><span class="radio-dot"></span>MERA FIELD LINK</div>
+    <div class="storm-sky" aria-hidden="true">
+      <div class="rain rain-a"></div><div class="rain rain-b"></div><div class="lightning"></div>
+    </div>
+    <div class="radio-id"><span class="radio-dot"></span>MERA FIELD LINK · EMERGENCY CHANNEL</div>
     <div id="intro-line" class="intro-line"></div>
   </div>
 
   <div id="cinematic" class="cinematic hidden">
     <div class="letterbox top"></div><div class="letterbox bottom"></div>
     <div id="cinematic-caption" class="cinematic-caption"></div>
+    <div id="cinematic-line" class="cinematic-line"></div>
   </div>
 
   <div id="hud" class="hidden">
     <div class="hud-left">
-      <div class="brand">MERA · E3.3.1</div>
+      <div class="brand">MERA · E3.4</div>
       <div class="objective">Reach the outpost before the next storm · committed routes cannot be reversed</div>
       <div id="region" class="region">SOUTHERN APPROACH</div>
     </div>
