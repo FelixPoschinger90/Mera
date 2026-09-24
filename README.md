@@ -1,4 +1,4 @@
-# MERA E3.2 — Consequence Expedition
+# MERA E3.3 — Assisted Navigation
 
 Browser-playable pilot build for the MERA lexical-transfer study.
 
@@ -10,53 +10,84 @@ Upload these five files to the root of the GitHub Pages site:
 - `README.md`
 - `THIRD_PARTY_NOTICES.md`
 
-There is no local assets folder in this build. The controller/framework, Soldier test character, and Poly Haven textures are loaded from public CDNs/hosts, as in E3.1. For the final study deployment these should be localized for reliability.
+There is no local assets folder in this build. The controller/framework, Soldier test character, and Poly Haven textures are loaded from public CDNs/hosts. For the final study deployment these resources should be localized for reliability.
 
-## E3.2 design
-The opening is now a ~12 second MERA radio transmission with locally generated crackle. It establishes the storm, the damaged Northern Outpost relay, the approaching second front, and the need to restore the emergency uplink.
+## E3.3 interaction architecture
+E3.3 keeps the E3.2 landscape, irreversible route commitments and environmental consequence cinematics, and adds two deliberately separate MERA channels.
 
-Each of the three decision stages is an irreversible branch. Once the participant commits, a physical obstacle closes the branch entrance behind them and the two routes are separated by terrain until they reconverge.
+### 1. Spoken MERA
+Voice is reserved for consequential moments only:
+- opening radio transmission / mission framing
+- the three choice-architecture prompts
+- the three post-choice environmental consequences
 
-After each chosen route is completed, player movement is frozen for a ~3.3 second camera cut showing the unchosen alternative becoming unavailable:
+Routine lexical messages and chatbot responses are not voiced.
 
-1. River
-   - bridge chosen -> rising water engulfs/blocks the stepping-stone ford
-   - ford chosen -> bridge visibly drops/collapses into the river
-2. Woodland
-   - pine chosen -> a tree falls across the open/birch route
-   - birch chosen -> a tree falls across the pine route
-3. Final ascent
-   - ridge chosen -> rockfall/landslide blocks the switchback
-   - switchback chosen -> rockfall blocks the ridge
+The pilot uses the browser `speechSynthesis` API plus locally generated radio crackle. The exact installed voice can differ across computers; fixed pre-generated audio is preferable for a final controlled study.
 
-The destroyed alternative is also given a physical collider so it cannot simply be traversed after the cinematic.
+### 2. MERA ASSIST — text only
+A circular MERA icon opens a silent contextual assistant. The player can:
+- choose one of the context-sensitive suggested questions, or
+- type a short free-text question.
 
-## Lexical stimuli
-Six nonce forms are retained; each participant encounters only the three forms belonging to the routes actually chosen:
+The assistant is deterministic. Questions are matched to a small set of route intents; no generative model or external AI service is called. Unsupported or overly broad questions receive a bounded fallback such as: `I cannot access that data. Limited uplink availability.`
 
-- bridge: `menic` — old, narrow, single-file timber crossing
-- ford: `blicket` — shallow, stone-set crossing with exposed rocks
-- pine: `boskot` — dense, enclosed, wind-sheltered cover
-- birch/open: `fiffin` — open, directly wind-exposed ground
-- ridge: `virdex` — steep, direct, loose-rock ascent
-- switchback: `teebu` — long, winding, gradual ascent
+Suggested prompts change by stage. Examples include:
+- Is the bridge safe?
+- What about the rocks?
+- Which route is faster?
+- What about the pine route?
+- How exposed is the open route?
+- How difficult is the ridge?
+- Can I change my mind?
 
-The nonce form is not used in the pre-choice description. After commitment it receives only two exposures: one short contextual introduction and one later bare reuse. Messages are deliberately much shorter than E3.1 and remain visible long enough to read.
+Opening the text assistant pauses player movement until the panel is closed.
 
-## Logging
-The exported pilot JSON records:
+## Controlled optional lexical exposure
+The six retained nonce forms are:
+- bridge: `menic`
+- ford: `blicket`
+- pine/sheltered: `boskot`
+- open/exposed: `fiffin`
+- ridge/steep: `virdex`
+- switchback/winding: `teebu`
+
+Fixed route messages still provide two short exposures only after a route has been committed to.
+
+A small number of specific information-seeking intents may contain the relevant target form. Example: asking `Is the bridge safe?` can return a response beginning `It is menic — old and narrow ...`.
+
+Each target-bearing chatbot response is capped at **one optional exposure per nonce form per session**. Repeated questions about the same feature switch to ordinary vocabulary. This prevents repeated chatbot use from mechanically producing repeated target-word exposure.
+
+Because a participant can ask about an unchosen route, optional chat exposure is logged separately from route exposure and should be treated as self-selected information seeking rather than a randomized manipulation.
+
+## Irreversible route consequences
+The three route decisions remain commitments. After completion of each chosen branch, a short camera event makes the rejected alternative unavailable:
+1. River: rising water removes the ford, or the bridge collapses.
+2. Woodland: stormfall blocks the unchosen path.
+3. Final ascent: rockfall/slope failure closes the unchosen ascent.
+
+The branches remain physically separated until their authored reconvergence point.
+
+## Pilot logging
+The downloadable JSON currently records:
 - build ID and timestamps
-- the three route choices
-- exposure counts for all six possible forms
-- MERA messages and their exposure role
-- environmental events/consequences
-- final free-text guide
+- route choices
+- fixed and optional lexical exposure events
+- optional target exposure counts by form
+- chat openings, questions, resolved intents and deterministic responses
+- environmental consequences
+- final free-text route guide
+- browser voice identity used for the spoken MERA layer where available
+
+This is still local pilot logging. Persistent study storage / transmission is intentionally not implemented yet.
 
 ## Controls
 - WASD / arrows: move
 - Shift: run
 - Space: jump
 - Mouse drag: orbit camera
+- MERA icon: open text assistant
+- Escape: close text assistant
 
 ## Current limitations
-This remains a prototype. The third-person Soldier is still the proven E1 test character. The waterfall is unchanged. Assets are still network-loaded rather than bundled locally. The build has been syntax-checked, but final visual/physics acceptance should be done in the same GitHub Pages/browser environment used for the pilot.
+This remains a prototype. The E1 Soldier character is still used. The waterfall has not yet been refined. Runtime assets remain network-loaded. Browser TTS is suitable for piloting but is not acoustically standardized across participant devices.

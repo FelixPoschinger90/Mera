@@ -16,6 +16,14 @@ const navPanel = document.getElementById('nav-panel');
 const navCopy = document.getElementById('nav-copy');
 const navState = document.getElementById('nav-state');
 const windNote = document.getElementById('wind-note');
+const chatToggle = document.getElementById('chat-toggle');
+const chatPanel = document.getElementById('chat-panel');
+const chatClose = document.getElementById('chat-close');
+const chatContext = document.getElementById('chat-context');
+const chatLog = document.getElementById('chat-log');
+const chatSuggestions = document.getElementById('chat-suggestions');
+const chatForm = document.getElementById('chat-form');
+const chatInput = document.getElementById('chat-input');
 
 window.addEventListener('error', event => {
   if (!boot.classList.contains('hidden')) showBootError(event.error || event.message);
@@ -26,7 +34,7 @@ window.addEventListener('unhandledrejection', event => {
 
 function showBootError(err) {
   const message = err?.stack || err?.message || String(err);
-  bootStatus.textContent = 'E3.2 failed to initialize.';
+  bootStatus.textContent = 'E3.3 failed to initialize.';
   bootError.textContent = message;
   bootError.classList.remove('hidden');
   enterBtn.disabled = true;
@@ -57,7 +65,7 @@ const STUDY = {
 };
 
 const session = {
-  build: 'MERA_E3_2_CONSEQUENCE_EXPEDITION',
+  build: 'MERA_E3_3_ASSISTED_EXPEDITION',
   startedAt: null,
   finishedAt: null,
   routes: {river:null, woodland:null, ascent:null},
@@ -65,7 +73,13 @@ const session = {
   events: [],
   guide: '',
   mission: {relayRestored:false},
-  environmentalEvents: []
+  environmentalEvents: [],
+  chat: {
+    opened: 0,
+    questions: [],
+    optionalTargetExposures: {menic:0, blicket:0, boskot:0, fiffin:0, virdex:0, teebu:0}
+  },
+  voice: {enabled:true, engine:'browser_speechSynthesis'}
 };
 const fired = new Set();
 let navTimer = null;
@@ -73,6 +87,11 @@ let navBusy = false;
 const navQueue = [];
 let gameStarted = false;
 let audioCtx = null;
+let chatOpen = false;
+let lastPlayerPosition = {x:0,z:216};
+let lastChatStage = '';
+let meraVoice = null;
+let speechSerial = 0;
 const worldState = {
   introActive:false,
   cinematic:null,
@@ -88,7 +107,7 @@ function logEvent(type, data={}) {
   });
 }
 function inputActive(){
-  return boot.classList.contains('hidden') && gameStarted && !worldState.introActive && !worldState.cinematic && !session.finishedAt;
+  return boot.classList.contains('hidden') && gameStarted && !chatOpen && !worldState.introActive && !worldState.cinematic && !session.finishedAt;
 }
 function radioCrackle(duration=.22, volume=.075){
   try{
@@ -106,6 +125,43 @@ function radioCrackle(duration=.22, volume=.075){
     src.connect(bp);bp.connect(g);g.connect(audioCtx.destination);src.start();
   }catch(_){/* audio is optional */}
 }
+function sleep(ms){ return new Promise(resolve=>setTimeout(resolve,ms)); }
+function selectMeraVoice(){
+  try{
+    const voices=window.speechSynthesis?.getVoices?.()||[];
+    if(!voices.length)return null;
+    const english=voices.filter(v=>/^en[-_]/i.test(v.lang||''));
+    const preferred=['Microsoft Aria','Microsoft Zira','Samantha','Google UK English Female','Google US English','Daniel'];
+    meraVoice=preferred.map(name=>english.find(v=>(v.name||'').includes(name))).find(Boolean)||english[0]||voices[0]||null;
+    return meraVoice;
+  }catch(_){return null;}
+}
+if(window.speechSynthesis){
+  selectMeraVoice();
+  window.speechSynthesis.addEventListener?.('voiceschanged',selectMeraVoice);
+}
+function speakMera(text,{rate=.96,pitch=.88,volume=.92}={}){
+  const serial=++speechSerial;
+  return new Promise(resolve=>{
+    try{
+      if(!window.speechSynthesis||!window.SpeechSynthesisUtterance){setTimeout(resolve,Math.max(700,text.length*36));return;}
+      selectMeraVoice();
+      const utter=new SpeechSynthesisUtterance(text);
+      if(meraVoice)utter.voice=meraVoice;
+      utter.lang=meraVoice?.lang||'en-US'; utter.rate=rate; utter.pitch=pitch; utter.volume=volume;
+      let settled=false;
+      const done=()=>{if(settled)return;settled=true;resolve();};
+      utter.onend=done; utter.onerror=done;
+      window.speechSynthesis.speak(utter);
+      setTimeout(done,Math.max(3200,text.length*95));
+    }catch(_){resolve();}
+  });
+}
+function stopMeraVoice(){
+  speechSerial++;
+  try{window.speechSynthesis?.cancel?.();}catch(_){}
+}
+
 function setIntroLine(text, crackle=false){
   if(crackle) radioCrackle(.24,.085);
   introLine.classList.remove('show');
@@ -113,47 +169,59 @@ function setIntroLine(text, crackle=false){
   void introLine.offsetWidth;
   introLine.classList.add('show');
 }
-function beginIntro(){
+async function beginIntro(){
   worldState.introActive=true;
   intro.classList.remove('hidden');
   intro.classList.add('booting');
+  chatToggle.classList.add('hidden');
+  stopMeraVoice();
+  const started=performance.now();
   worldState.cinematic={
-    id:'intro', started:performance.now(), duration:12100,
+    id:'intro', started, duration:21000,
     from:[-7,11.5,221], to:[-2,8.8,202], lookAt:[10,8,-218], intro:true
   };
-  const beats=[
-    [150,'— crrk —',true],
-    [520,'MERA … — crrk — connection established.',true],
-    [1650,'Hurry.',false],
-    [2450,'Northern Outpost relay went dark at 03:17.',false],
-    [3700,'Last night’s storm devastated the lower reserve and cut off the teams beyond the ridge.',true],
-    [6050,'Another front is moving into the valley.',true],
-    [7400,'Reach the outpost. Restore the emergency uplink before it hits.',false],
-    [9200,'My route map is damaged. I still have terrain data.',true],
-    [10600,'I’ll guide you. You make the calls. Move.',false]
-  ];
-  beats.forEach(([delay,text,crackle])=>setTimeout(()=>{if(worldState.introActive)setIntroLine(text,crackle);},delay));
-  setTimeout(()=>{
+  const line=async(text,{crackle=false,pause=180,rate=.96}={})=>{
+    if(crackle){radioCrackle(.25,.085);await sleep(170);}
+    setIntroLine(text,false);
+    await speakMera(text.replace(/—.*?—/g,' '),{rate});
+    await sleep(pause);
+  };
+  try{
+    setIntroLine('— crrk —',true); await sleep(360);
+    await line('MERA.',{rate:.91,pause:80});
+    radioCrackle(.22,.085); await sleep(170);
+    await line('Connection established.',{rate:.91,pause:120});
+    await line('Hurry.',{rate:.98,pause:120});
+    await line('Northern Outpost relay went dark at 03:17.',{crackle:true,rate:.96,pause:140});
+    await line('Last night’s storm devastated the lower reserve and cut off the teams beyond the ridge.',{rate:.99,pause:140});
+    await line('Another front is moving into the valley.',{crackle:true,rate:.98,pause:140});
+    await line('Reach the outpost. Restore the emergency uplink before it hits.',{rate:.98,pause:140});
+    await line('My route map is damaged. I still have terrain data.',{crackle:true,rate:.99,pause:130});
+    await line('I’ll guide you. You make the calls. Move.',{rate:1.0,pause:100});
+  }finally{
     intro.classList.remove('booting');
     intro.classList.add('hidden');
     worldState.introActive=false;
     worldState.cinematic=null;
     gameStarted=true;
     session.startedAt=new Date().toISOString();
-    logEvent('game_start',{intro:'radio_sequence_complete'});
+    logEvent('game_start',{intro:'voiced_radio_sequence_complete',voice:meraVoice?.name||'browser_default'});
     hud.classList.remove('hidden'); help.classList.remove('hidden'); routeStatus.classList.remove('hidden');
-  },12100);
+    chatToggle.classList.remove('hidden');
+    refreshChatUI();
+  }
 }
 function pumpNavQueue() {
   if (navBusy || !navQueue.length || session.finishedAt || worldState.introActive || worldState.cinematic) return;
   const msg = navQueue.shift();
   navBusy = true;
   if (msg.target && session.exposures[msg.target] !== undefined) session.exposures[msg.target]++;
-  logEvent('nav_message', {id:msg.id, target:msg.target, exposure:msg.exposure, text:msg.text});
+  logEvent('nav_message', {id:msg.id, target:msg.target, exposure:msg.exposure, text:msg.text, voiced:!!msg.voice});
   navCopy.textContent = msg.text;
   navState.textContent = 'ONLINE';
   navPanel.classList.toggle('target-word',!!msg.target);
   navPanel.classList.remove('hidden');
+  if(msg.voice) speakMera(typeof msg.voice==='string'?msg.voice:msg.text,{rate:.99});
   clearTimeout(navTimer);
   navTimer = setTimeout(() => {
     navPanel.classList.add('hidden');
@@ -162,10 +230,10 @@ function pumpNavQueue() {
     setTimeout(pumpNavQueue, 350);
   }, msg.duration);
 }
-function showNav(id, text, {target=null, exposure=null, duration=7800}={}) {
+function showNav(id, text, {target=null, exposure=null, duration=7800, voice=false}={}) {
   if (fired.has(id)) return;
   fired.add(id);
-  navQueue.push({id,text,target,exposure,duration});
+  navQueue.push({id,text,target,exposure,duration,voice});
   pumpNavQueue();
 }
 function setRoute(kind, value) {
@@ -183,15 +251,18 @@ function startConsequence(kind){
   const route=session.routes[kind];
   const cfg={
     river: route==='bridge'
-      ? {caption:'THE FORD IS GONE',camera:[45,8.5,139],lookAt:[31,1.3,123]}
-      : {caption:'THE BRIDGE IS GONE',camera:[-46,8.5,139],lookAt:[-31,1.5,124]},
+      ? {caption:'THE FORD IS GONE',camera:[45,8.5,139],lookAt:[31,1.3,123],voice:'Water level rising. Rock crossing is gone. No return route.'}
+      : {caption:'THE BRIDGE IS GONE',camera:[-46,8.5,139],lookAt:[-31,1.5,124],voice:'Bridge failure detected. That crossing is no longer available.'},
     woodland: route==='pine'
-      ? {caption:'THE OPEN ROUTE CLOSES',camera:[44,10,-1],lookAt:[31,2,-13]}
-      : {caption:'THE PINE ROUTE CLOSES',camera:[-44,10,-1],lookAt:[-31,2,-13]},
+      ? {caption:'THE OPEN ROUTE CLOSES',camera:[44,10,-1],lookAt:[31,2,-13],voice:'Stormfall detected. The open route is blocked. Continue forward.'}
+      : {caption:'THE PINE ROUTE CLOSES',camera:[-44,10,-1],lookAt:[-31,2,-13],voice:'Treefall detected. The pine route is blocked. Continue forward.'},
     ascent: route==='ridge'
-      ? {caption:'THE SWITCHBACK GIVES WAY',camera:[-44,17,-139],lookAt:[-31,7,-143]}
-      : {caption:'ROCKFALL CLOSES THE RIDGE',camera:[44,17,-139],lookAt:[27,8,-145]}
+      ? {caption:'THE SWITCHBACK GIVES WAY',camera:[-44,17,-139],lookAt:[-31,7,-143],voice:'Slope failure. The switchback is no longer passable.'}
+      : {caption:'ROCKFALL CLOSES THE RIDGE',camera:[44,17,-139],lookAt:[27,8,-145],voice:'Rockfall detected. Direct ridge route is closed.'}
   }[kind];
+  closeChat();
+  chatToggle.classList.add('hidden');
+  stopMeraVoice();
   const effect={kind,route,started:performance.now()};
   worldState.effects[kind]=effect;
   logEvent('environmental_consequence',{kind,route,caption:cfg.caption});
@@ -201,15 +272,158 @@ function startConsequence(kind){
   worldState.cinematic={id:`${kind}_${route}`,started:performance.now(),duration:3300,from:cfg.camera,to:cfg.camera,lookAt:cfg.lookAt};
   cinematicCaption.textContent=cfg.caption;
   cinematicEl.classList.remove('hidden');
+  setTimeout(()=>speakMera(cfg.voice,{rate:.97}),180);
   setTimeout(()=>{
     if(worldState.cinematic?.id===`${kind}_${route}`){
       worldState.cinematic=null;
       cinematicEl.classList.add('hidden');
+      chatToggle.classList.remove('hidden');
+      refreshChatUI();
       setTimeout(pumpNavQueue,250);
-      showNav(`after_${kind}_${route}`,'That route is closed. Keep moving forward.',{duration:6500});
     }
   },3300);
 }
+function currentChatStage(){
+  const z=lastPlayerPosition.z;
+  if(z>78)return 'river';
+  if(z>-62)return 'woodland';
+  if(z>-190)return 'ascent';
+  return 'outpost';
+}
+function contextualSuggestions(stage=currentChatStage()){
+  if(stage==='river')return [
+    ['river_bridge','Is the bridge safe?'],
+    ['river_ford','What about the rocks?'],
+    ['faster','Which route is faster?'],
+    ['return','Can I change my mind?']
+  ];
+  if(stage==='woodland')return [
+    ['wood_pine','What about the pine route?'],
+    ['wood_open','How exposed is the open route?'],
+    ['faster','Which route is faster?'],
+    ['storm','How bad is the wind?']
+  ];
+  if(stage==='ascent')return [
+    ['ascent_ridge','How difficult is the ridge?'],
+    ['ascent_switchback','What about the switchback?'],
+    ['faster','Which way is faster?'],
+    ['return','Can I still turn back?']
+  ];
+  return [['mission','What happens at the outpost?'],['storm','How close is the storm?']];
+}
+function addChatMessage(role,text){
+  const row=document.createElement('div'); row.className=`chat-msg ${role}`;
+  const tag=document.createElement('span'); tag.textContent=role==='user'?'YOU':'MERA';
+  const body=document.createElement('div'); body.textContent=text;
+  row.append(tag,body); chatLog.appendChild(row); chatLog.scrollTop=chatLog.scrollHeight;
+}
+function optionalLexicalAnswer(form,withTarget,withoutTarget){
+  const used=session.chat.optionalTargetExposures[form]||0;
+  if(!used){
+    session.chat.optionalTargetExposures[form]=1;
+    session.exposures[form]=(session.exposures[form]||0)+1;
+    logEvent('optional_target_exposure',{source:'chat',target:form,exposure:'information_seeking'});
+    return {text:withTarget,target:form};
+  }
+  return {text:withoutTarget,target:null};
+}
+function answerIntent(intent){
+  switch(intent){
+    case 'river_bridge': return optionalLexicalAnswer('menic',
+      'It is menic — old and narrow — but not old enough that collapse should be expected. I cannot assess structural damage caused by last night’s storm.',
+      'The bridge is old and narrow. It appears passable, but structural storm damage cannot be ruled out.');
+    case 'river_ford': return optionalLexicalAnswer('blicket',
+      'The rock crossing is blicket — shallow and stone-set, with exposed footing. Water level is rising, so stability may change.',
+      'The rock crossing is shallow and stone-set. Water level is rising, so stability may change.');
+    case 'wood_pine': return optionalLexicalAnswer('boskot',
+      'The pine route is boskot — dense and sheltered from the strongest gusts. Stormfall may obstruct it.',
+      'The pine route is dense and sheltered from the strongest gusts. Stormfall may obstruct it.');
+    case 'wood_open': return optionalLexicalAnswer('fiffin',
+      'The open hollow is fiffin — exposed to the wind with little cover. It is more direct, but gusts are strengthening.',
+      'The open hollow has little cover and takes the full wind. It is more direct, but gusts are strengthening.');
+    case 'ascent_ridge': return optionalLexicalAnswer('virdex',
+      'The ridge is virdex — steep and direct over loose rock. It is the shorter ascent.',
+      'The ridge is steep and direct over loose rock. It is the shorter ascent.');
+    case 'ascent_switchback': return optionalLexicalAnswer('teebu',
+      'The switchback is teebu — long, winding, and gradual. It is longer, but easier underfoot.',
+      'The switchback is long, winding, and gradual. It is longer, but easier underfoot.');
+    case 'faster': {
+      const st=currentChatStage();
+      if(st==='river')return {text:'The bridge is faster. The rock crossing is slower but gives you more room.',target:null};
+      if(st==='woodland')return {text:'The open hollow is more direct. The pine route is slower but better sheltered.',target:null};
+      if(st==='ascent')return {text:'The ridge is shorter. The switchback is longer and less steep.',target:null};
+      return {text:'No reliable route comparison is available from this position.',target:null};
+    }
+    case 'return': return {text:'Once you commit to a branch, continue forward until the routes meet again. Conditions behind you may become impassable.',target:null};
+    case 'storm': return {text:'The next front is moving into the valley. I have no reliable arrival estimate. Conditions are deteriorating.',target:null};
+    case 'mission': return {text:'The Northern Outpost emergency relay is offline. Reach the station and restore the uplink before the next front arrives.',target:null};
+    default: return {text:'I cannot access that data. Limited uplink availability.',target:null};
+  }
+}
+function inferIntent(question){
+  const q=question.toLowerCase().replace(/[^a-z0-9\s]/g,' ');
+  const stage=currentChatStage();
+  if(/outpost|mission|relay|why|purpose/.test(q))return 'mission';
+  if(/storm|weather|wind|time|front/.test(q) && !/open|hollow/.test(q))return 'storm';
+  if(/back|return|change.*mind|turn around|go back/.test(q))return 'return';
+  if(/faster|quick|shorter|which way|which route/.test(q))return 'faster';
+  if(stage==='river'){
+    if(/bridge|timber|safe|old|narrow/.test(q))return 'river_bridge';
+    if(/rock|ford|stone|water|crossing/.test(q))return 'river_ford';
+  }
+  if(stage==='woodland'){
+    if(/pine|forest|tree|shelter|cover/.test(q))return 'wood_pine';
+    if(/open|hollow|meadow|exposed/.test(q))return 'wood_open';
+  }
+  if(stage==='ascent'){
+    if(/ridge|steep|direct|loose/.test(q))return 'ascent_ridge';
+    if(/switch|bend|winding|gradual/.test(q))return 'ascent_switchback';
+  }
+  return 'fallback';
+}
+function askMera(question,intent=null,source='typed'){
+  const clean=(question||'').trim(); if(!clean)return;
+  const resolved=intent||inferIntent(clean);
+  addChatMessage('user',clean);
+  const answer=answerIntent(resolved);
+  addChatMessage('mera',answer.text);
+  session.chat.questions.push({
+    t:session.startedAt?Math.round((Date.now()-new Date(session.startedAt).getTime())/10)/100:0,
+    stage:currentChatStage(),source,question:clean,intent:resolved,response:answer.text,target:answer.target
+  });
+  logEvent('chat_exchange',{stage:currentChatStage(),source,intent:resolved,target:answer.target,question:clean,response:answer.text});
+}
+function renderSuggestions(){
+  if(!chatSuggestions)return;
+  const stage=currentChatStage();
+  chatContext.textContent=`${stage.toUpperCase()} · limited uplink · route data only`;
+  chatSuggestions.innerHTML='';
+  contextualSuggestions(stage).forEach(([intent,label])=>{
+    const b=document.createElement('button'); b.type='button'; b.className='chat-suggestion'; b.textContent=label;
+    b.addEventListener('click',()=>askMera(label,intent,'suggestion'));
+    chatSuggestions.appendChild(b);
+  });
+}
+function refreshChatUI(){
+  const stage=currentChatStage();
+  if(stage!==lastChatStage){lastChatStage=stage;renderSuggestions();}
+}
+function openChat(){
+  if(!gameStarted||worldState.introActive||worldState.cinematic||session.finishedAt)return;
+  chatOpen=true; session.chat.opened++; logEvent('chat_open',{stage:currentChatStage()});
+  try{window.dispatchEvent(new Event('blur'));}catch(_){}
+  chatPanel.classList.remove('hidden'); chatToggle.classList.add('active'); renderSuggestions();
+  if(!chatLog.children.length)addChatMessage('mera','Text link active. Ask about the current route.');
+  setTimeout(()=>chatInput.focus(),40);
+}
+function closeChat(){
+  chatOpen=false; chatPanel.classList.add('hidden'); chatToggle.classList.remove('active'); chatInput?.blur();
+}
+chatToggle.addEventListener('click',()=>chatOpen?closeChat():openChat());
+chatClose.addEventListener('click',closeChat);
+chatForm.addEventListener('submit',e=>{e.preventDefault();const q=chatInput.value.trim();if(!q)return;chatInput.value='';askMera(q,null,'typed');});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&chatOpen){e.preventDefault();closeChat();}});
+
 function updateElapsed() {
   if (!session.startedAt) return;
   const ms = Date.now() - new Date(session.startedAt).getTime();
@@ -226,6 +440,7 @@ function finishStudy() {
   logEvent('outpost_reached', {routes:{...session.routes}});
   navState.textContent = 'OFFLINE';
   navPanel.classList.add('hidden');
+  closeChat(); chatToggle.classList.add('hidden'); stopMeraVoice();
   hud.classList.add('hidden');
   help.classList.add('hidden');
   routeStatus.classList.add('hidden');
@@ -235,7 +450,7 @@ function downloadSession() {
   const blob = new Blob([JSON.stringify(session, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `mera_e3_2_session_${Date.now()}.json`;
+  a.download = `mera_e3_3_session_${Date.now()}.json`;
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),900);
 }
@@ -814,7 +1029,7 @@ async function bootApp() {
     }
     function DirectKeyboardInput({controllerRef}){
       const pressed=useRef({forward:false,backward:false,leftward:false,rightward:false,run:false,jump:false});
-      useEffect(()=>{const map={KeyW:'forward',ArrowUp:'forward',KeyS:'backward',ArrowDown:'backward',KeyA:'leftward',ArrowLeft:'leftward',KeyD:'rightward',ArrowRight:'rightward',ShiftLeft:'run',ShiftRight:'run',Space:'jump'};const sync=()=>{const c=controllerRef.current,active=inputActive();if(c)c.setMovement(active?{...pressed.current}:{forward:false,backward:false,leftward:false,rightward:false,run:false,jump:false});const el=document.getElementById('input-state');if(el){const p=pressed.current,a=[];if(active){if(p.forward)a.push('W');if(p.backward)a.push('S');if(p.leftward)a.push('A');if(p.rightward)a.push('D');if(p.run)a.push('RUN');if(p.jump)a.push('JUMP');}el.textContent=a.length?a.join(' + '):'—';}};const down=e=>{const f=map[e.code];if(!f)return;e.preventDefault();pressed.current[f]=true;sync();};const up=e=>{const f=map[e.code];if(!f)return;e.preventDefault();pressed.current[f]=false;sync();};const clear=()=>{Object.keys(pressed.current).forEach(k=>pressed.current[k]=false);sync();};window.addEventListener('keydown',down,{passive:false});window.addEventListener('keyup',up,{passive:false});window.addEventListener('blur',clear);return()=>{window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);window.removeEventListener('blur',clear);};},[controllerRef]);
+      useEffect(()=>{const map={KeyW:'forward',ArrowUp:'forward',KeyS:'backward',ArrowDown:'backward',KeyA:'leftward',ArrowLeft:'leftward',KeyD:'rightward',ArrowRight:'rightward',ShiftLeft:'run',ShiftRight:'run',Space:'jump'};const sync=()=>{const c=controllerRef.current,active=inputActive();if(c)c.setMovement(active?{...pressed.current}:{forward:false,backward:false,leftward:false,rightward:false,run:false,jump:false});const el=document.getElementById('input-state');if(el){const p=pressed.current,a=[];if(active){if(p.forward)a.push('W');if(p.backward)a.push('S');if(p.leftward)a.push('A');if(p.rightward)a.push('D');if(p.run)a.push('RUN');if(p.jump)a.push('JUMP');}el.textContent=a.length?a.join(' + '):'—';}};const isTyping=e=>{const t=e.target,tag=t?.tagName;return tag==='INPUT'||tag==='TEXTAREA'||t?.isContentEditable;};const down=e=>{if(isTyping(e))return;const f=map[e.code];if(!f)return;e.preventDefault();pressed.current[f]=true;sync();};const up=e=>{if(isTyping(e))return;const f=map[e.code];if(!f)return;e.preventDefault();pressed.current[f]=false;sync();};const clear=()=>{Object.keys(pressed.current).forEach(k=>pressed.current[k]=false);sync();};window.addEventListener('keydown',down,{passive:false});window.addEventListener('keyup',up,{passive:false});window.addEventListener('blur',clear);return()=>{window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);window.removeEventListener('blur',clear);};},[controllerRef]);
       useFrame(()=>{const c=controllerRef.current;if(c)c.setMovement(inputActive()?{...pressed.current}:{forward:false,backward:false,leftward:false,rightward:false,run:false,jump:false});});return null;
     }
     function FollowCamera({controllerRef}){
@@ -842,6 +1057,8 @@ async function bootApp() {
     function updateStudyFromPosition(p){
       if(!gameStarted||session.finishedAt||worldState.cinematic)return;
       updateElapsed();
+      lastPlayerPosition={x:p.x,z:p.z};
+      refreshChatUI();
 
       const windy=session.routes.woodland==='birch' && inBirchWindZone(p);
       windNote?.classList.toggle('active',windy);
@@ -858,51 +1075,51 @@ async function bootApp() {
 
       // DECISION 1 — no nonce item before commitment. The player chooses from ordinary
       // route information, then encounters the form only on the route actually taken.
-      if(p.z<174)showNav('river_choice_prompt','River ahead. West: old narrow bridge, faster. East: shallow stepping-stone ford, slower. Choose one — the storm may close the other.',{duration:9800});
+      if(p.z<174)showNav('river_choice_prompt','River ahead. West: old narrow bridge, faster. East: shallow stepping-stone ford, slower. Choose one — the storm may close the other.',{duration:12000,voice:'Two crossings ahead. Bridge west: faster, old and narrow. Rocks east: slower, more room. Choose now.'});
       if(!session.routes.river && p.z<133){
         if(p.x<-14)setRoute('river','bridge'); else if(p.x>14)setRoute('river','ford');
       }
       if(session.routes.river==='bridge'){
-        showNav('menic_intro','Old timber, barely single-file. Menic crossing.',{target:'menic',exposure:'context',duration:7600});
-        if(p.z<124)showNav('menic_bare','Keep centred on the menic bridge.',{target:'menic',exposure:'bare',duration:6200});
+        showNav('menic_intro','Old timber, barely single-file. Menic crossing.',{target:'menic',exposure:'context',duration:10000});
+        if(p.z<124)showNav('menic_bare','Keep centred on the menic bridge.',{target:'menic',exposure:'bare',duration:8500});
         if(p.z<106)startConsequence('river');
       }
       if(session.routes.river==='ford'){
-        showNav('blicket_intro','Shallow, stone-set footing; exposed rocks. Blicket crossing.',{target:'blicket',exposure:'context',duration:7600});
-        if(p.z<122)showNav('blicket_bare','Stay on the blicket stones.',{target:'blicket',exposure:'bare',duration:6200});
+        showNav('blicket_intro','Shallow, stone-set footing; exposed rocks. Blicket crossing.',{target:'blicket',exposure:'context',duration:10000});
+        if(p.z<122)showNav('blicket_bare','Stay on the blicket stones.',{target:'blicket',exposure:'bare',duration:8500});
         if(p.z<106)startConsequence('river');
       }
 
       // DECISION 2 — shelter versus exposure. Branches are physically isolated until
       // the reconvergence in the upper basin.
-      if(p.z<69)showNav('wood_choice_prompt','Wind is rising. West: dense sheltered pines, slower around stormfall. East: open hollow, more direct but exposed.',{duration:9800});
+      if(p.z<69)showNav('wood_choice_prompt','Wind is rising. West: dense sheltered pines, slower around stormfall. East: open hollow, more direct but exposed.',{duration:12000,voice:'Wind is strengthening. Pines west: sheltered but slower. Open hollow east: direct but exposed. Choose now.'});
       if(!session.routes.woodland && p.z<27){
         if(p.x<-9)setRoute('woodland','pine'); else if(p.x>9)setRoute('woodland','birch');
       }
       if(session.routes.woodland==='pine'){
-        showNav('boskot_intro','Dense canopy; the gusts drop off here. Boskot stretch.',{target:'boskot',exposure:'context',duration:7600});
-        if(p.z<1)showNav('boskot_bare','Boskot cover holds. Keep moving.',{target:'boskot',exposure:'bare',duration:6200});
+        showNav('boskot_intro','Dense canopy; the gusts drop off here. Boskot stretch.',{target:'boskot',exposure:'context',duration:10000});
+        if(p.z<1)showNav('boskot_bare','Boskot cover holds. Keep moving.',{target:'boskot',exposure:'bare',duration:8500});
         if(p.z<-37)startConsequence('woodland');
       }
       if(session.routes.woodland==='birch'){
-        showNav('fiffin_intro','Open ground; full wind exposure. Fiffin stretch.',{target:'fiffin',exposure:'context',duration:7600});
-        if(p.z<3)showNav('fiffin_bare','Cross the fiffin hollow before the next gust.',{target:'fiffin',exposure:'bare',duration:6200});
+        showNav('fiffin_intro','Open ground; full wind exposure. Fiffin stretch.',{target:'fiffin',exposure:'context',duration:10000});
+        if(p.z<3)showNav('fiffin_bare','Cross the fiffin hollow before the next gust.',{target:'fiffin',exposure:'bare',duration:8500});
         if(p.z<-37)startConsequence('woodland');
       }
 
       // DECISION 3 — direct steep ridge versus longer gradual switchback.
-      if(p.z<-72)showNav('ascent_choice_prompt','Final climb. East: steep direct ridge over loose rock. West: longer winding switchback with an easier grade.',{duration:9800});
+      if(p.z<-72)showNav('ascent_choice_prompt','Final climb. East: steep direct ridge over loose rock. West: longer winding switchback with an easier grade.',{duration:12000,voice:'Final climb. Ridge east: steep and direct. Switchback west: longer and easier. Choose now.'});
       if(!session.routes.ascent && p.z<-107){
         if(p.x>8)setRoute('ascent','ridge'); else if(p.x<-8)setRoute('ascent','switchback');
       }
       if(session.routes.ascent==='ridge'){
-        showNav('virdex_intro','Steep, direct, loose rock. Virdex approach.',{target:'virdex',exposure:'context',duration:7600});
-        if(p.z<-137)showNav('virdex_bare','Virdex pitch ahead. Keep your line.',{target:'virdex',exposure:'bare',duration:6200});
+        showNav('virdex_intro','Steep, direct, loose rock. Virdex approach.',{target:'virdex',exposure:'context',duration:10000});
+        if(p.z<-137)showNav('virdex_bare','Virdex pitch ahead. Keep your line.',{target:'virdex',exposure:'bare',duration:8500});
         if(p.z<-173)startConsequence('ascent');
       }
       if(session.routes.ascent==='switchback'){
-        showNav('teebu_intro','Long, winding, gradual grade. Teebu approach.',{target:'teebu',exposure:'context',duration:7600});
-        if(p.z<-145)showNav('teebu_bare','Stay with the teebu bends.',{target:'teebu',exposure:'bare',duration:6200});
+        showNav('teebu_intro','Long, winding, gradual grade. Teebu approach.',{target:'teebu',exposure:'context',duration:10000});
+        if(p.z<-145)showNav('teebu_bare','Stay with the teebu bends.',{target:'teebu',exposure:'bare',duration:8500});
         if(p.z<-173)startConsequence('ascent');
       }
 
@@ -934,7 +1151,7 @@ async function bootApp() {
     }
     function App(){
       const [ready,setReady]=useState(false),once=useRef(false);
-      const onCharacterReady=React.useCallback(()=>{if(once.current)return;once.current=true;setReady(true);bootStatus.textContent='Ecctrl, Rapier and the consequence-driven study valley are ready.';loadfill.style.width='100%';enterBtn.disabled=false;},[]);
+      const onCharacterReady=React.useCallback(()=>{if(once.current)return;once.current=true;setReady(true);bootStatus.textContent='Ecctrl, Rapier, voiced MERA and the assisted study valley are ready.';loadfill.style.width='100%';enterBtn.disabled=false;},[]);
       useEffect(()=>{if(!ready)return;enterBtn.onclick=()=>{boot.classList.add('hidden');beginIntro();};},[ready]);
       return h(Canvas,{shadows:true,dpr:[1,1.18],camera:{position:[4.8,3.2,224],fov:54,near:.1,far:650},gl:{antialias:true,powerPreference:'high-performance'},onCreated:({gl})=>{gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=1.07;loadfill.style.width='78%';}},h(Suspense,{fallback:null},h(Scene,{onCharacterReady})));
     }
