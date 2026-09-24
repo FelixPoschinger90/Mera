@@ -66,7 +66,7 @@ const STUDY = {
 };
 
 const session = {
-  build: 'MERA_E3_4_STORM_VOICE',
+  build: 'MERA_E3_5_LOCAL_VOICE',
   startedAt: null,
   finishedAt: null,
   routes: {river:null, woodland:null, ascent:null},
@@ -80,7 +80,7 @@ const session = {
     questions: [],
     optionalTargetExposures: {menic:0, blicket:0, boskot:0, fiffin:0, virdex:0, teebu:0}
   },
-  voice: {enabled:true, engine:'browser_speech_synthesis', requestedProfile:'natural_female_english', selectedVoice:null}
+  voice: {enabled:true, engine:'bundled_cmu_flite_slt', profile:'female_english', fixedStimulus:true}
 };
 const fired = new Set();
 let navTimer = null;
@@ -126,88 +126,58 @@ function radioCrackle(duration=.22, volume=.075){
 }
 function sleep(ms){ return new Promise(resolve=>setTimeout(resolve,ms)); }
 
-// E3.4 voice layer. We deliberately use the participant browser's highest-ranked
-// English female/natural system voice rather than the previous clipped eSpeak files.
-// The first utterance is started synchronously from the BEGIN FIELD RUN click.
-let selectedMeraVoice = null;
-let activeUtterance = null;
-let voiceGeneration = 0;
-
-const FEMALE_VOICE_HINTS = [
-  'aria','jenny','sonia','samantha','zira','hazel','serena','moira','victoria',
-  'ava','emma','michelle','susan','karen','tessa','female','google uk english female'
-];
-const MALE_VOICE_HINTS = ['david','mark','guy','daniel','alex','fred','thomas','male'];
-
-function scoreVoice(v){
-  const lang=(v.lang||'').toLowerCase(), name=(v.name||'').toLowerCase();
-  if(!lang.startsWith('en')) return -1000;
-  let score=20;
-  if(/natural|neural|online/.test(name)) score+=18;
-  if(FEMALE_VOICE_HINTS.some(x=>name.includes(x))) score+=30;
-  if(MALE_VOICE_HINTS.some(x=>name.includes(x))) score-=35;
-  if(name.includes('google uk english female')) score+=24;
-  if(name.includes('microsoft aria')) score+=28;
-  if(name.includes('microsoft jenny')) score+=27;
-  if(name.includes('microsoft sonia')) score+=25;
-  if(lang.startsWith('en-gb')) score+=4;
-  if(v.localService) score+=2;
-  return score;
-}
-function chooseMeraVoice(){
-  if(!('speechSynthesis' in window)) return null;
-  const voices=window.speechSynthesis.getVoices?.()||[];
-  const ranked=voices.map(v=>[scoreVoice(v),v]).filter(x=>x[0]>-500).sort((a,b)=>b[0]-a[0]);
-  selectedMeraVoice=ranked[0]?.[1]||null;
-  session.voice.selectedVoice=selectedMeraVoice?{name:selectedMeraVoice.name,lang:selectedMeraVoice.lang,localService:selectedMeraVoice.localService}:null;
-  return selectedMeraVoice;
-}
-if('speechSynthesis' in window){
-  chooseMeraVoice();
-  window.speechSynthesis.addEventListener?.('voiceschanged', chooseMeraVoice);
-  window.speechSynthesis.onvoiceschanged=chooseMeraVoice;
+// E3.5 voice layer: fixed, locally bundled audio. No browser speech synthesis,
+// no network call, and no participant-machine voice variation.
+let activeMeraAudio = null;
+const VOICE_CLIPS = {
+  intro:'audio/intro.mp3',
+  river_choice_prompt:'audio/decision_river.mp3',
+  menic_intro:'audio/menic_intro.mp3', menic_bare:'audio/menic_bare.mp3',
+  blicket_intro:'audio/blicket_intro.mp3', blicket_bare:'audio/blicket_bare.mp3',
+  wood_choice_prompt:'audio/decision_wood.mp3',
+  boskot_intro:'audio/boskot_intro.mp3', boskot_bare:'audio/boskot_bare.mp3',
+  fiffin_intro:'audio/fiffin_intro.mp3', fiffin_bare:'audio/fiffin_bare.mp3',
+  ascent_choice_prompt:'audio/decision_ascent.mp3',
+  virdex_intro:'audio/virdex_intro.mp3', virdex_bare:'audio/virdex_bare.mp3',
+  teebu_intro:'audio/teebu_intro.mp3', teebu_bare:'audio/teebu_bare.mp3',
+  consequence_river_bridge:'audio/consequence_river_bridge.mp3',
+  consequence_river_ford:'audio/consequence_river_ford.mp3',
+  consequence_woodland_pine:'audio/consequence_wood_pine.mp3',
+  consequence_woodland_birch:'audio/consequence_wood_birch.mp3',
+  consequence_ascent_ridge:'audio/consequence_ascent_ridge.mp3',
+  consequence_ascent_switchback:'audio/consequence_ascent_switchback.mp3'
+};
+const preloadedVoice = new Map();
+for(const [id,src] of Object.entries(VOICE_CLIPS)){
+  const a=new Audio(src); a.preload='auto'; preloadedVoice.set(id,a);
 }
 function stopMeraVoice(){
-  voiceGeneration++;
-  activeUtterance=null;
-  try{window.speechSynthesis?.cancel();}catch(_){ }
+  if(activeMeraAudio){
+    try{activeMeraAudio.pause();activeMeraAudio.currentTime=0;}catch(_){ }
+    activeMeraAudio=null;
+  }
 }
-function speakMera(text,{rate=.98,pitch=1.04,volume=1}={}){
+function playMeraClip(id){
   return new Promise(resolve=>{
-    if(!('speechSynthesis' in window)){
-      logEvent('voice_unavailable',{text});
-      setTimeout(resolve,Math.max(900,Math.min(8000,text.length*45)));
-      return;
-    }
-    const generation=++voiceGeneration;
-    try{window.speechSynthesis.cancel();}catch(_){ }
-    chooseMeraVoice();
-    const u=new SpeechSynthesisUtterance(text);
-    if(selectedMeraVoice)u.voice=selectedMeraVoice;
-    u.lang=selectedMeraVoice?.lang||'en-GB';
-    u.rate=rate;u.pitch=pitch;u.volume=volume;
-    activeUtterance=u;
+    const src=VOICE_CLIPS[id];
+    if(!src){logEvent('voice_missing',{id});resolve();return;}
+    stopMeraVoice();
+    const a=preloadedVoice.get(id)||new Audio(src);
+    activeMeraAudio=a;
+    try{a.currentTime=0;}catch(_){ }
     let settled=false;
-    const done=(status)=>{
+    const done=status=>{
       if(settled)return;settled=true;
-      if(activeUtterance===u)activeUtterance=null;
-      logEvent('voice_line',{status,text,voice:selectedMeraVoice?.name||'default',rate,pitch});
+      if(activeMeraAudio===a)activeMeraAudio=null;
+      a.onended=null;a.onerror=null;
+      logEvent('voice_line',{id,status,engine:'bundled_cmu_flite_slt'});
       resolve();
     };
-    u.onend=()=>done('ended');
-    u.onerror=e=>done(`error:${e.error||'unknown'}`);
-    // Chromium occasionally pauses very long utterances. A light resume pulse avoids
-    // the classic mid-sentence cut-off without creating additional speech events.
-    const resumePulse=setInterval(()=>{
-      if(settled||generation!==voiceGeneration){clearInterval(resumePulse);return;}
-      try{if(window.speechSynthesis.paused)window.speechSynthesis.resume();}catch(_){ }
-    },1500);
-    const oldDone=done;
-    const finish=status=>{clearInterval(resumePulse);oldDone(status);};
-    u.onend=()=>finish('ended');u.onerror=e=>finish(`error:${e.error||'unknown'}`);
-    window.speechSynthesis.speak(u);
-    const max=Math.max(9000,Math.min(45000,text.split(/\s+/).length*520));
-    setTimeout(()=>{if(!settled)finish('timeout');},max);
+    a.onended=()=>done('ended');
+    a.onerror=()=>done('error');
+    const promise=a.play();
+    if(promise?.catch)promise.catch(()=>done('play_rejected'));
+    setTimeout(()=>done('timeout'),45000);
   });
 }
 function thunderRumble(intensity=.12){
@@ -263,14 +233,14 @@ async function beginIntro(){
   for(const [at,text,status] of INTRO_SUBTITLES){timers.push(setTimeout(()=>setIntroLine(text,{status}),at));}
   // Crucial: speak() is reached synchronously from the BEGIN FIELD RUN click,
   // avoiding the autoplay/gesture failure that affected the first speech prototype.
-  const voicePromise=speakMera(INTRO_SCRIPT,{rate:1.02,pitch:1.04,volume:1});
+  const voicePromise=playMeraClip('intro');
   const minVisual=sleep(32000);
   await Promise.allSettled([voicePromise,minVisual]);
   timers.forEach(clearTimeout);
   intro.classList.remove('booting','flash');intro.classList.add('hidden');
   worldState.introActive=false;worldState.cinematic=null;gameStarted=true;
   session.startedAt=new Date().toISOString();
-  logEvent('game_start',{intro:'storm_emergency_transmission',voice:'browser_speech_synthesis',selectedVoice:session.voice.selectedVoice});
+  logEvent('game_start',{intro:'storm_emergency_transmission',voice:'bundled_cmu_flite_slt'});
   hud.classList.remove('hidden');help.classList.remove('hidden');routeStatus.classList.remove('hidden');
   chatToggle.classList.remove('hidden');refreshChatUI();
 }
@@ -291,7 +261,7 @@ function pumpNavQueue() {
     navBusy=false;setTimeout(pumpNavQueue,350);
   };
   if(msg.voice){
-    speakMera(typeof msg.voice==='string'?msg.voice:msg.text,{rate:msg.voiceRate||.98,pitch:1.04})
+    playMeraClip(msg.id)
       .finally(()=>{navTimer=setTimeout(closeMessage,1500);});
   }else{
     navTimer=setTimeout(closeMessage,msg.duration);
@@ -340,7 +310,7 @@ function startConsequence(kind){
   cinematicCaption.textContent=cfg.caption;
   cinematicLine.textContent=cfg.voice;
   cinematicEl.classList.remove('hidden');
-  setTimeout(()=>speakMera(cfg.voice,{rate:.97,pitch:1.04}),140);
+  setTimeout(()=>playMeraClip(`consequence_${kind}_${route}`),140);
   setTimeout(()=>{
     if(worldState.cinematic?.id===`${kind}_${route}`){
       worldState.cinematic=null;
@@ -518,7 +488,7 @@ function downloadSession() {
   const blob = new Blob([JSON.stringify(session, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `mera_e3_4_session_${Date.now()}.json`;
+  a.download = `mera_e3_5_session_${Date.now()}.json`;
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),900);
 }
@@ -1219,7 +1189,7 @@ async function bootApp() {
     }
     function App(){
       const [ready,setReady]=useState(false),once=useRef(false);
-      const onCharacterReady=React.useCallback(()=>{if(once.current)return;once.current=true;setReady(true);bootStatus.textContent='Ecctrl, Rapier, MERA voice and the assisted study valley are ready.';loadfill.style.width='100%';enterBtn.disabled=false;},[]);
+      const onCharacterReady=React.useCallback(()=>{if(once.current)return;once.current=true;setReady(true);bootStatus.textContent='Ecctrl, Rapier, bundled MERA voice and the assisted study valley are ready.';loadfill.style.width='100%';enterBtn.disabled=false;},[]);
       useEffect(()=>{if(!ready)return;enterBtn.onclick=()=>{boot.classList.add('hidden');beginIntro();};},[ready]);
       return h(Canvas,{shadows:true,dpr:[1,1.18],camera:{position:[4.8,3.2,224],fov:54,near:.1,far:650},gl:{antialias:true,powerPreference:'high-performance'},onCreated:({gl})=>{gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=1.07;loadfill.style.width='78%';}},h(Suspense,{fallback:null},h(Scene,{onCharacterReady})));
     }

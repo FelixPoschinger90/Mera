@@ -1,6 +1,6 @@
 # Third-party notices
 
-MERA E3.4 loads third-party open-source software and public assets at runtime.
+MERA E3.5 loads third-party open-source software and public assets at runtime.
 
 - Ecctrl — MIT License
 - React / React DOM — MIT License
@@ -10,6 +10,6 @@ MERA E3.4 loads third-party open-source software and public assets at runtime.
 - Three.js `Soldier.glb` example model — temporary test character
 - Poly Haven textures — CC0
 
-MERA speech in this pilot uses the Web Speech API exposed by the participant's browser/operating system. No bundled TTS recordings are used in E3.4. The game ranks available English voices to prefer natural/female voice profiles when present.
+The bundled MERA speech files were rendered offline with the CMU Flite `slt` English female synthetic voice. Flite is used only as the offline synthesis tool; the game does not ship or execute a TTS engine at runtime.
 
 The radio crackle, storm overlay, procedural terrain, route events, study logic, deterministic text assistant and UI in this build are implemented within the MERA prototype.

@@ -1,32 +1,35 @@
-# MERA E3.4 — Storm Link
+# MERA E3.5 — Local Voice
 
 Pilot browser build of the MERA lexical-propagation game.
 
-## What changed from E3.3.1
+## Voice architecture
 
-- Replaced the clipped bundled eSpeak clips with browser speech synthesis and explicit preference for a natural English female voice (e.g. Microsoft Aria/Jenny/Sonia, Google UK English Female, Samantha/Zira where available).
-- The opening is one continuous spoken emergency transmission rather than many chopped clips.
-- Added animated rain and timed lightning/thunder cues during the opening cinematic.
-- Opening establishes stakes: prior storm damage, two injured, two missing, player is the only mobile field worker, Northern Outpost relay failure, incoming second front, MERA emergency power and damaged terrain data.
-- Spoken + subtitled: opening, route-choice prompts, two controlled lexical exposures on the chosen route, and environmental consequence lines.
-- Text only: optional MERA ASSIST chat. Chat never calls the voice system.
-- Voiced navigation subtitles remain visible through the utterance and for ~1.5 seconds afterwards.
-- Route commitment/consequence logic from E3.2/E3.3 remains intact.
+E3.5 no longer uses the Web Speech API. Every spoken MERA stimulus is a fixed MP3 bundled in `audio/`, rendered offline with the local CMU Flite `slt` female English voice. There is no TTS service, API key, account, or runtime network dependency for speech.
 
-## Important voice note
+Spoken + subtitled:
+- the continuous emergency opening transmission;
+- each of the three route-choice prompts;
+- both controlled lexical exposures for the route actually chosen;
+- each route-consequence line.
 
-This pilot selects the best matching English female/natural voice exposed by the participant's browser/operating system. This is much smoother than the previous offline eSpeak assets but is not yet stimulus-identical across machines. For the final study, once the script and voice are approved, replace these calls with fixed neural-voice audio files generated from one selected provider/voice.
+Text only:
+- optional MERA ASSIST chatbot interaction.
+
+Canonical target spellings shown in subtitles/data are `menic`, `blicket`, `boskot`, `fiffin`, `virdex`, and `teebu`. The fixed recordings use stable pronunciations for those nonce forms.
+
+## Opening
+
+The storm cinematic establishes: severe damage during the previous storm; two injured and two missing team members; the player is the only mobile field worker; the Northern Outpost relay is down; rescue cannot be contacted until its uplink is restored; a second front is approaching; MERA is on emergency power; and its terrain data is damaged.
 
 ## Deploy
 
-Upload these five files to the repository root:
+Upload these five root files plus the complete `audio/` folder:
 
 - index.html
 - main.js
 - styles.css
 - README.md
 - THIRD_PARTY_NOTICES.md
+- audio/
 
-The old `audio/` directory from E3.3.1 is not used by this build and can be deleted.
-
-The build still loads the Ecctrl/R3F/Rapier stack, Soldier test character and Poly Haven textures from public hosts at runtime.
+Do not omit the `audio/` directory. The game still loads the Ecctrl/R3F/Rapier stack, Soldier test character and Poly Haven textures from public hosts at runtime.
