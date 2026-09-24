@@ -1,6 +1,6 @@
 # Third-party notices
 
-MERA E3.3 loads third-party open-source software and public assets at runtime.
+MERA E3.3.1 loads third-party open-source software and public assets at runtime.
 
 - Ecctrl — MIT License
 - React / React DOM — MIT License
@@ -10,6 +10,6 @@ MERA E3.3 loads third-party open-source software and public assets at runtime.
 - Three.js `Soldier.glb` example model — temporary test character
 - Poly Haven textures — CC0
 
-Browser speech output uses the Web Speech `speechSynthesis` API and the voice installed/available in the participant's browser or operating system. No external text-to-speech service is called by this pilot.
+The MERA spoken lines bundled in `audio/` were generated specifically for this prototype using a local synthetic text-to-speech engine, then lightly filtered for a field-radio effect. No external text-to-speech service is called at runtime.
 
-The generated radio crackle, procedural terrain, route events, study logic, deterministic text assistant and UI in this build are implemented within the MERA prototype.
+The radio crackle, procedural terrain, route events, study logic, deterministic text assistant and UI in this build are implemented within the MERA prototype.

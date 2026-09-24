@@ -34,7 +34,7 @@ window.addEventListener('unhandledrejection', event => {
 
 function showBootError(err) {
   const message = err?.stack || err?.message || String(err);
-  bootStatus.textContent = 'E3.3 failed to initialize.';
+  bootStatus.textContent = 'E3.3.1 failed to initialize.';
   bootError.textContent = message;
   bootError.classList.remove('hidden');
   enterBtn.disabled = true;
@@ -65,7 +65,7 @@ const STUDY = {
 };
 
 const session = {
-  build: 'MERA_E3_3_ASSISTED_EXPEDITION',
+  build: 'MERA_E3_3_1_FIXED_VOICE',
   startedAt: null,
   finishedAt: null,
   routes: {river:null, woodland:null, ascent:null},
@@ -79,7 +79,7 @@ const session = {
     questions: [],
     optionalTargetExposures: {menic:0, blicket:0, boskot:0, fiffin:0, virdex:0, teebu:0}
   },
-  voice: {enabled:true, engine:'browser_speechSynthesis'}
+  voice: {enabled:true, engine:'bundled_fixed_synthetic_audio', variant:'eSpeak_en-us_radio'}
 };
 const fired = new Set();
 let navTimer = null;
@@ -90,8 +90,6 @@ let audioCtx = null;
 let chatOpen = false;
 let lastPlayerPosition = {x:0,z:216};
 let lastChatStage = '';
-let meraVoice = null;
-let speechSerial = 0;
 const worldState = {
   introActive:false,
   cinematic:null,
@@ -126,40 +124,108 @@ function radioCrackle(duration=.22, volume=.075){
   }catch(_){/* audio is optional */}
 }
 function sleep(ms){ return new Promise(resolve=>setTimeout(resolve,ms)); }
-function selectMeraVoice(){
+
+// Fixed synthetic MERA voice. These audio files are bundled with the study so
+// every participant hears the same pronunciation, timing and prosody.
+const MERA_AUDIO_BY_TEXT = new Map([
+  ['MERA.','intro_mera'],
+  ['Connection established.','intro_connection'],
+  ['Hurry.','intro_hurry'],
+  ['Northern Outpost relay went dark at 03:17.','intro_relay'],
+  ['Last night’s storm devastated the lower reserve and cut off the teams beyond the ridge.','intro_storm'],
+  ['Another front is moving into the valley.','intro_front'],
+  ['Reach the outpost. Restore the emergency uplink before it hits.','intro_mission'],
+  ['My route map is damaged. I still have terrain data.','intro_map'],
+  ['I’ll guide you. You make the calls. Move.','intro_move'],
+  ['Two crossings ahead. Bridge west: faster, old and narrow. Rocks east: slower, more room. Choose now.','choice_river'],
+  ['Wind is strengthening. Pines west: sheltered but slower. Open hollow east: direct but exposed. Choose now.','choice_woodland'],
+  ['Final climb. Ridge east: steep and direct. Switchback west: longer and easier. Choose now.','choice_ascent'],
+  ['Water level rising. Rock crossing is gone. No return route.','conseq_river_bridge'],
+  ['Bridge failure detected. That crossing is no longer available.','conseq_river_ford'],
+  ['Stormfall detected. The open route is blocked. Continue forward.','conseq_wood_pine'],
+  ['Treefall detected. The pine route is blocked. Continue forward.','conseq_wood_open'],
+  ['Slope failure. The switchback is no longer passable.','conseq_ascent_ridge'],
+  ['Rockfall detected. Direct ridge route is closed.','conseq_ascent_switch']
+]);
+const meraAudioCache = new Map();
+let activeMeraAudio = null;
+let fixedAudioUnlocked = false;
+function meraAudioFor(key){
+  if(!key)return null;
+  if(!meraAudioCache.has(key)){
+    const a=new Audio(`./audio/${key}.mp3`);
+    a.preload='auto';
+    a.playsInline=true;
+    meraAudioCache.set(key,a);
+  }
+  return meraAudioCache.get(key);
+}
+function preloadMeraAudio(){
+  for(const key of new Set(MERA_AUDIO_BY_TEXT.values())) meraAudioFor(key)?.load?.();
+}
+preloadMeraAudio();
+async function unlockMeraAudio(){
+  // Called directly from the participant's ENTER click. This avoids browser
+  // autoplay blocking when the first spoken line occurs after the radio delay.
+  const a=meraAudioFor('intro_mera');
+  if(!a)return false;
   try{
-    const voices=window.speechSynthesis?.getVoices?.()||[];
-    if(!voices.length)return null;
-    const english=voices.filter(v=>/^en[-_]/i.test(v.lang||''));
-    const preferred=['Microsoft Aria','Microsoft Zira','Samantha','Google UK English Female','Google US English','Daniel'];
-    meraVoice=preferred.map(name=>english.find(v=>(v.name||'').includes(name))).find(Boolean)||english[0]||voices[0]||null;
-    return meraVoice;
-  }catch(_){return null;}
+    const previousVolume=a.volume;
+    a.volume=0;
+    a.currentTime=0;
+    const promise=a.play();
+    if(promise?.then) await promise;
+    a.pause(); a.currentTime=0; a.volume=previousVolume;
+    fixedAudioUnlocked=true;
+    return true;
+  }catch(err){
+    try{a.pause();a.currentTime=0;a.volume=1;}catch(_){ }
+    fixedAudioUnlocked=false;
+    logEvent('voice_unlock_failed',{message:String(err?.message||err)});
+    return false;
+  }
 }
-if(window.speechSynthesis){
-  selectMeraVoice();
-  window.speechSynthesis.addEventListener?.('voiceschanged',selectMeraVoice);
-}
-function speakMera(text,{rate=.96,pitch=.88,volume=.92}={}){
-  const serial=++speechSerial;
+function speakMera(text){
+  const key=MERA_AUDIO_BY_TEXT.get(text);
   return new Promise(resolve=>{
+    if(!key){
+      logEvent('voice_asset_missing',{text});
+      setTimeout(resolve,Math.max(650,Math.min(2600,text.length*35)));
+      return;
+    }
+    const a=meraAudioFor(key);
+    if(!a){resolve();return;}
     try{
-      if(!window.speechSynthesis||!window.SpeechSynthesisUtterance){setTimeout(resolve,Math.max(700,text.length*36));return;}
-      selectMeraVoice();
-      const utter=new SpeechSynthesisUtterance(text);
-      if(meraVoice)utter.voice=meraVoice;
-      utter.lang=meraVoice?.lang||'en-US'; utter.rate=rate; utter.pitch=pitch; utter.volume=volume;
+      if(activeMeraAudio && activeMeraAudio!==a){activeMeraAudio.pause();activeMeraAudio.currentTime=0;}
+      activeMeraAudio=a;
+      a.currentTime=0; a.volume=.94;
       let settled=false;
-      const done=()=>{if(settled)return;settled=true;resolve();};
-      utter.onend=done; utter.onerror=done;
-      window.speechSynthesis.speak(utter);
-      setTimeout(done,Math.max(3200,text.length*95));
-    }catch(_){resolve();}
+      const done=(status)=>{
+        if(settled)return; settled=true;
+        a.onended=null; a.onerror=null;
+        if(activeMeraAudio===a)activeMeraAudio=null;
+        logEvent('voice_line',{key,status});
+        resolve();
+      };
+      a.onended=()=>done('ended');
+      a.onerror=()=>done('error');
+      const promise=a.play();
+      if(promise?.catch)promise.catch(err=>{
+        logEvent('voice_play_failed',{key,message:String(err?.message||err),unlocked:fixedAudioUnlocked});
+        done('blocked');
+      });
+      setTimeout(()=>done('timeout'),12000);
+    }catch(err){
+      logEvent('voice_play_failed',{key,message:String(err?.message||err),unlocked:fixedAudioUnlocked});
+      resolve();
+    }
   });
 }
 function stopMeraVoice(){
-  speechSerial++;
-  try{window.speechSynthesis?.cancel?.();}catch(_){}
+  if(activeMeraAudio){
+    try{activeMeraAudio.pause();activeMeraAudio.currentTime=0;}catch(_){ }
+    activeMeraAudio=null;
+  }
 }
 
 function setIntroLine(text, crackle=false){
@@ -183,7 +249,7 @@ async function beginIntro(){
   const line=async(text,{crackle=false,pause=180,rate=.96}={})=>{
     if(crackle){radioCrackle(.25,.085);await sleep(170);}
     setIntroLine(text,false);
-    await speakMera(text.replace(/—.*?—/g,' '),{rate});
+    await speakMera(text.replace(/—.*?—/g,' '));
     await sleep(pause);
   };
   try{
@@ -205,7 +271,7 @@ async function beginIntro(){
     worldState.cinematic=null;
     gameStarted=true;
     session.startedAt=new Date().toISOString();
-    logEvent('game_start',{intro:'voiced_radio_sequence_complete',voice:meraVoice?.name||'browser_default'});
+    logEvent('game_start',{intro:'voiced_radio_sequence_complete',voice:'bundled_fixed_synthetic_audio',audioUnlocked:fixedAudioUnlocked});
     hud.classList.remove('hidden'); help.classList.remove('hidden'); routeStatus.classList.remove('hidden');
     chatToggle.classList.remove('hidden');
     refreshChatUI();
@@ -221,7 +287,7 @@ function pumpNavQueue() {
   navState.textContent = 'ONLINE';
   navPanel.classList.toggle('target-word',!!msg.target);
   navPanel.classList.remove('hidden');
-  if(msg.voice) speakMera(typeof msg.voice==='string'?msg.voice:msg.text,{rate:.99});
+  if(msg.voice) speakMera(typeof msg.voice==='string'?msg.voice:msg.text);
   clearTimeout(navTimer);
   navTimer = setTimeout(() => {
     navPanel.classList.add('hidden');
@@ -272,7 +338,7 @@ function startConsequence(kind){
   worldState.cinematic={id:`${kind}_${route}`,started:performance.now(),duration:3300,from:cfg.camera,to:cfg.camera,lookAt:cfg.lookAt};
   cinematicCaption.textContent=cfg.caption;
   cinematicEl.classList.remove('hidden');
-  setTimeout(()=>speakMera(cfg.voice,{rate:.97}),180);
+  setTimeout(()=>speakMera(cfg.voice),180);
   setTimeout(()=>{
     if(worldState.cinematic?.id===`${kind}_${route}`){
       worldState.cinematic=null;
@@ -1151,8 +1217,8 @@ async function bootApp() {
     }
     function App(){
       const [ready,setReady]=useState(false),once=useRef(false);
-      const onCharacterReady=React.useCallback(()=>{if(once.current)return;once.current=true;setReady(true);bootStatus.textContent='Ecctrl, Rapier, voiced MERA and the assisted study valley are ready.';loadfill.style.width='100%';enterBtn.disabled=false;},[]);
-      useEffect(()=>{if(!ready)return;enterBtn.onclick=()=>{boot.classList.add('hidden');beginIntro();};},[ready]);
+      const onCharacterReady=React.useCallback(()=>{if(once.current)return;once.current=true;setReady(true);bootStatus.textContent='Ecctrl, Rapier, fixed MERA audio and the assisted study valley are ready.';loadfill.style.width='100%';enterBtn.disabled=false;},[]);
+      useEffect(()=>{if(!ready)return;enterBtn.onclick=async()=>{boot.classList.add('hidden');await unlockMeraAudio();beginIntro();};},[ready]);
       return h(Canvas,{shadows:true,dpr:[1,1.18],camera:{position:[4.8,3.2,224],fov:54,near:.1,far:650},gl:{antialias:true,powerPreference:'high-performance'},onCreated:({gl})=>{gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=1.07;loadfill.style.width='78%';}},h(Suspense,{fallback:null},h(Scene,{onCharacterReady})));
     }
 

@@ -1,47 +1,37 @@
-# MERA E3.3 — Assisted Navigation
+# MERA E3.3.1 — Assisted Navigation / Fixed Voice
 
 Browser-playable pilot build for the MERA lexical-transfer study.
 
 ## Deploy
-Upload these five files to the root of the GitHub Pages site:
+Upload the following to the root of the GitHub Pages site:
 - `index.html`
 - `main.js`
 - `styles.css`
 - `README.md`
 - `THIRD_PARTY_NOTICES.md`
+- the complete `audio/` folder
 
-There is no local assets folder in this build. The controller/framework, Soldier test character, and Poly Haven textures are loaded from public CDNs/hosts. For the final study deployment these resources should be localized for reliability.
+The controller/framework, Soldier test character, and Poly Haven textures are still loaded from public CDNs/hosts. The MERA speech files are now local and bundled with the game.
 
-## E3.3 interaction architecture
-E3.3 keeps the E3.2 landscape, irreversible route commitments and environmental consequence cinematics, and adds two deliberately separate MERA channels.
+## Why E3.3.1 exists
+E3.3 used browser `speechSynthesis`. On some Chrome configurations the generated radio crackle played but speech did not: the crackle was unlocked directly by the participant's ENTER click, while the first speech call occurred after asynchronous delays and could be blocked by browser media/user-gesture rules.
 
-### 1. Spoken MERA
-Voice is reserved for consequential moments only:
+E3.3.1 removes browser TTS from the experimental voice path. All spoken MERA lines are fixed pre-generated synthetic audio files. The ENTER click explicitly unlocks media playback before the opening sequence begins.
+
+## Spoken MERA
+Voice remains limited to consequential moments:
 - opening radio transmission / mission framing
-- the three choice-architecture prompts
+- the three route-choice prompts
 - the three post-choice environmental consequences
 
-Routine lexical messages and chatbot responses are not voiced.
+Routine lexical messages and all MERA ASSIST chatbot responses remain silent.
 
-The pilot uses the browser `speechSynthesis` API plus locally generated radio crackle. The exact installed voice can differ across computers; fixed pre-generated audio is preferable for a final controlled study.
+The bundled voice is intentionally synthetic and lightly radio-filtered. Every participant receives the same audio files, pronunciation, rate and prosody.
 
-### 2. MERA ASSIST — text only
-A circular MERA icon opens a silent contextual assistant. The player can:
-- choose one of the context-sensitive suggested questions, or
-- type a short free-text question.
+## MERA ASSIST — text only
+A circular MERA icon opens a silent contextual assistant. The player can select suggested questions or type a short free-text question. The assistant is deterministic: questions are mapped to a bounded set of route intents; no generative model or external AI service is called.
 
-The assistant is deterministic. Questions are matched to a small set of route intents; no generative model or external AI service is called. Unsupported or overly broad questions receive a bounded fallback such as: `I cannot access that data. Limited uplink availability.`
-
-Suggested prompts change by stage. Examples include:
-- Is the bridge safe?
-- What about the rocks?
-- Which route is faster?
-- What about the pine route?
-- How exposed is the open route?
-- How difficult is the ridge?
-- Can I change my mind?
-
-Opening the text assistant pauses player movement until the panel is closed.
+Unsupported or overly broad questions receive a limited-access fallback such as: `I cannot access that data. Limited uplink availability.`
 
 ## Controlled optional lexical exposure
 The six retained nonce forms are:
@@ -52,34 +42,20 @@ The six retained nonce forms are:
 - ridge/steep: `virdex`
 - switchback/winding: `teebu`
 
-Fixed route messages still provide two short exposures only after a route has been committed to.
-
-A small number of specific information-seeking intents may contain the relevant target form. Example: asking `Is the bridge safe?` can return a response beginning `It is menic — old and narrow ...`.
-
-Each target-bearing chatbot response is capped at **one optional exposure per nonce form per session**. Repeated questions about the same feature switch to ordinary vocabulary. This prevents repeated chatbot use from mechanically producing repeated target-word exposure.
-
-Because a participant can ask about an unchosen route, optional chat exposure is logged separately from route exposure and should be treated as self-selected information seeking rather than a randomized manipulation.
+Fixed route messages provide two short exposures only after route commitment. A few specific information-seeking chat intents may contain the relevant target form. Each target-bearing chatbot response is capped at one optional exposure per nonce form per session; repeat questions switch to ordinary vocabulary.
 
 ## Irreversible route consequences
-The three route decisions remain commitments. After completion of each chosen branch, a short camera event makes the rejected alternative unavailable:
+The three decisions remain commitments:
 1. River: rising water removes the ford, or the bridge collapses.
 2. Woodland: stormfall blocks the unchosen path.
 3. Final ascent: rockfall/slope failure closes the unchosen ascent.
 
-The branches remain physically separated until their authored reconvergence point.
+Routes remain physically separated until the authored reconvergence point.
 
 ## Pilot logging
-The downloadable JSON currently records:
-- build ID and timestamps
-- route choices
-- fixed and optional lexical exposure events
-- optional target exposure counts by form
-- chat openings, questions, resolved intents and deterministic responses
-- environmental consequences
-- final free-text route guide
-- browser voice identity used for the spoken MERA layer where available
+The downloadable JSON records route choices, fixed/optional lexical exposures, chat interaction and resolved intents, environmental consequences, final guide text, timestamps, and whether bundled audio was successfully unlocked.
 
-This is still local pilot logging. Persistent study storage / transmission is intentionally not implemented yet.
+Persistent study storage/transmission is intentionally not implemented yet.
 
 ## Controls
 - WASD / arrows: move
@@ -90,4 +66,4 @@ This is still local pilot logging. Persistent study storage / transmission is in
 - Escape: close text assistant
 
 ## Current limitations
-This remains a prototype. The E1 Soldier character is still used. The waterfall has not yet been refined. Runtime assets remain network-loaded. Browser TTS is suitable for piloting but is not acoustically standardized across participant devices.
+The E1 Soldier character remains temporary. The waterfall is not refined. Several visual/runtime dependencies still load from the network and should eventually be localized for the final experiment.
