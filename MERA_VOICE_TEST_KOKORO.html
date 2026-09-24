@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MERA Voice Test — Kokoro</title>
+<style>
+:root{font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;color:#eef5ef;background:#101613}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 50% 15%,#223129 0,#101613 55%)}
+.card{width:min(760px,calc(100vw - 32px));background:#172019;border:1px solid #34463b;border-radius:18px;padding:24px;box-shadow:0 20px 60px #0008}
+h1{margin:.15rem 0 .5rem;font-size:1.8rem}.muted{color:#a9b9ad;line-height:1.5}.status{padding:12px 14px;background:#0e1411;border-radius:10px;margin:16px 0;min-height:22px}
+button{appearance:none;border:0;border-radius:10px;padding:12px 16px;margin:5px 6px 5px 0;font-weight:700;cursor:pointer;background:#d7e7da;color:#122016}button:disabled{opacity:.4;cursor:not-allowed}.secondary{background:#2a3a30;color:#e9f2eb;border:1px solid #415548}
+textarea{box-sizing:border-box;width:100%;min-height:120px;border-radius:12px;border:1px solid #3a4c40;background:#0d1310;color:#eef5ef;padding:12px;line-height:1.45;resize:vertical}.row{display:flex;flex-wrap:wrap;gap:4px}.small{font-size:.88rem;color:#90a094}audio{width:100%;margin-top:14px}.good{color:#bcefc8}.bad{color:#ffb5b5}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="small">MERA · ZERO-COST VOICE SCREENING</div>
+  <h1>Kokoro neural voice test</h1>
+  <p class="muted">This is deliberately separate from the game. It tests three fixed female voices before we rebuild MERA again. On first load, the browser downloads an open-source Kokoro speech model (roughly 86–100 MB in the quantized version) and caches it locally.</p>
+  <textarea id="text">MERA here. Can you hear me? Last night's storm caused severe damage across the reserve. You need to reach the Northern Outpost before the next front arrives. The bridge is menic — old, narrow, barely single-file. It should hold.</textarea>
+  <div id="status" class="status">Press “Load voice engine” first.</div>
+  <div class="row">
+    <button id="load">LOAD VOICE ENGINE</button>
+    <button class="voice secondary" data-voice="af_heart" disabled>HEART · warm US female</button>
+    <button class="voice secondary" data-voice="af_bella" disabled>BELLA · bright US female</button>
+    <button class="voice secondary" data-voice="bf_emma" disabled>EMMA · British female</button>
+  </div>
+  <audio id="player" controls></audio>
+  <p class="small">No account, API key, subscription, or paid service is used. Speech is generated in your browser after the model files load.</p>
+</div>
+<script type="module">
+const status=document.querySelector('#status');
+const loadBtn=document.querySelector('#load');
+const buttons=[...document.querySelectorAll('.voice')];
+const player=document.querySelector('#player');
+const text=document.querySelector('#text');
+let tts=null;
+let lastURL=null;
+function setStatus(s,cls=''){status.textContent=s;status.className='status '+cls;}
+loadBtn.addEventListener('click', async()=>{
+  loadBtn.disabled=true;
+  try{
+    setStatus('Loading Kokoro.js…');
+    const { KokoroTTS } = await import('https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm');
+    setStatus('Downloading/loading the Kokoro q4 model. First load can take a while…');
+    tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
+      dtype:'q4',
+      device:'wasm',
+      progress_callback:(p)=>{
+        if(p?.status==='progress' && Number.isFinite(p.progress)) setStatus(`Loading voice engine… ${Math.round(p.progress)}%`);
+        else if(p?.file) setStatus(`Loading ${p.file}…`);
+      }
+    });
+    buttons.forEach(b=>b.disabled=false);
+    setStatus('Ready. Try the three voices.', 'good');
+  }catch(err){
+    console.error(err);
+    setStatus('Voice engine failed to load: '+(err?.message||err), 'bad');
+    loadBtn.disabled=false;
+  }
+});
+buttons.forEach(btn=>btn.addEventListener('click',async()=>{
+  if(!tts)return;
+  buttons.forEach(b=>b.disabled=true);
+  try{
+    const voice=btn.dataset.voice;
+    setStatus(`Generating ${voice}…`);
+    const start=performance.now();
+    const audio=await tts.generate(text.value,{voice,speed:.96});
+    const blob=audio.toBlob();
+    if(lastURL)URL.revokeObjectURL(lastURL);
+    lastURL=URL.createObjectURL(blob);
+    player.src=lastURL;
+    await player.play();
+    setStatus(`${voice} generated in ${((performance.now()-start)/1000).toFixed(1)} s.`, 'good');
+  }catch(err){
+    console.error(err);setStatus('Generation failed: '+(err?.message||err),'bad');
+  }finally{buttons.forEach(b=>b.disabled=false);}
+}));
+</script>
+</body>
+</html>
