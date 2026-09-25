@@ -1,15 +1,19 @@
-# Third-party notices
+# Third-party notices — MERA E3.6
 
-MERA E3.5 loads third-party open-source software and public assets at runtime.
+This prototype uses open-source libraries and freely licensed assets as described in the project source.
 
-- Ecctrl — MIT License
-- React / React DOM — MIT License
-- Three.js — MIT License
-- React Three Fiber / Drei — MIT License
-- Rapier / @react-three/rapier — open-source licenses as distributed by their respective projects
-- Three.js `Soldier.glb` example model — temporary test character
-- Poly Haven textures — CC0
+## Kokoro TTS / Heart voice
 
-The bundled MERA speech files were rendered offline with the CMU Flite `slt` English female synthetic voice. Flite is used only as the offline synthesis tool; the game does not ship or execute a TTS engine at runtime.
+The fixed MERA voice stimuli are intended to be generated during development with `Kokoro-82M-v1.0-ONNX` using the `af_heart` voice and Kokoro.js. The Kokoro ONNX model repository is licensed under Apache-2.0. The model itself is not required or distributed by the participant runtime; only the generated WAV stimuli are served with the game.
 
-The radio crackle, storm overlay, procedural terrain, route events, study logic, deterministic text assistant and UI in this build are implemented within the MERA prototype.
+## Poly Haven
+
+Ground, path, rock and wood texture resources are loaded from Poly Haven. Poly Haven assets are released under CC0.
+
+## Three.js example Soldier model
+
+The temporary player character is loaded from the Three.js examples host. It remains a development placeholder.
+
+## Ecctrl / React Three Fiber / Rapier / Three.js / React
+
+The game uses these open-source libraries through browser ESM imports. See the respective upstream projects for their licenses and notices.

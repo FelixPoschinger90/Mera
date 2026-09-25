@@ -34,7 +34,7 @@ window.addEventListener('unhandledrejection', event => {
 
 function showBootError(err) {
   const message = err?.stack || err?.message || String(err);
-  bootStatus.textContent = 'E3.4 failed to initialize.';
+  bootStatus.textContent = 'E3.6 failed to initialize.';
   bootError.textContent = message;
   bootError.classList.remove('hidden');
   enterBtn.disabled = true;
@@ -66,7 +66,7 @@ const STUDY = {
 };
 
 const session = {
-  build: 'MERA_E3_5_LOCAL_VOICE',
+  build: 'MERA_E3_6_HEART_LOCKED',
   startedAt: null,
   finishedAt: null,
   routes: {river:null, woodland:null, ascent:null},
@@ -80,7 +80,7 @@ const session = {
     questions: [],
     optionalTargetExposures: {menic:0, blicket:0, boskot:0, fiffin:0, virdex:0, teebu:0}
   },
-  voice: {enabled:true, engine:'bundled_cmu_flite_slt', profile:'female_english', fixedStimulus:true}
+  voice: {enabled:true, engine:'kokoro_heart_prerendered', profile:'af_heart', fixedStimulus:true}
 };
 const fired = new Set();
 let navTimer = null;
@@ -126,26 +126,27 @@ function radioCrackle(duration=.22, volume=.075){
 }
 function sleep(ms){ return new Promise(resolve=>setTimeout(resolve,ms)); }
 
-// E3.5 voice layer: fixed, locally bundled audio. No browser speech synthesis,
-// no network call, and no participant-machine voice variation.
+// E3.6 voice layer: fixed Heart audio generated once during development.
+// Participants only download/play the resulting WAV files; Kokoro is not loaded in-game.
 let activeMeraAudio = null;
 const VOICE_CLIPS = {
-  intro:'audio/intro.mp3',
-  river_choice_prompt:'audio/decision_river.mp3',
-  menic_intro:'audio/menic_intro.mp3', menic_bare:'audio/menic_bare.mp3',
-  blicket_intro:'audio/blicket_intro.mp3', blicket_bare:'audio/blicket_bare.mp3',
-  wood_choice_prompt:'audio/decision_wood.mp3',
-  boskot_intro:'audio/boskot_intro.mp3', boskot_bare:'audio/boskot_bare.mp3',
-  fiffin_intro:'audio/fiffin_intro.mp3', fiffin_bare:'audio/fiffin_bare.mp3',
-  ascent_choice_prompt:'audio/decision_ascent.mp3',
-  virdex_intro:'audio/virdex_intro.mp3', virdex_bare:'audio/virdex_bare.mp3',
-  teebu_intro:'audio/teebu_intro.mp3', teebu_bare:'audio/teebu_bare.mp3',
-  consequence_river_bridge:'audio/consequence_river_bridge.mp3',
-  consequence_river_ford:'audio/consequence_river_ford.mp3',
-  consequence_woodland_pine:'audio/consequence_wood_pine.mp3',
-  consequence_woodland_birch:'audio/consequence_wood_birch.mp3',
-  consequence_ascent_ridge:'audio/consequence_ascent_ridge.mp3',
-  consequence_ascent_switchback:'audio/consequence_ascent_switchback.mp3'
+  intro:'audio/intro.wav',
+  river_choice_prompt:'audio/decision_river.wav',
+  menic_intro:'audio/menic_intro.wav', menic_bare:'audio/menic_bare.wav',
+  blicket_intro:'audio/blicket_intro.wav', blicket_bare:'audio/blicket_bare.wav',
+  wood_choice_prompt:'audio/decision_wood.wav',
+  boskot_intro:'audio/boskot_intro.wav', boskot_bare:'audio/boskot_bare.wav',
+  fiffin_intro:'audio/fiffin_intro.wav', fiffin_bare:'audio/fiffin_bare.wav',
+  ascent_choice_prompt:'audio/decision_ascent.wav',
+  virdex_intro:'audio/virdex_intro.wav', virdex_bare:'audio/virdex_bare.wav',
+  teebu_intro:'audio/teebu_intro.wav', teebu_bare:'audio/teebu_bare.wav',
+  consequence_river_bridge:'audio/consequence_river_bridge.wav',
+  consequence_river_ford:'audio/consequence_river_ford.wav',
+  consequence_woodland_pine:'audio/consequence_wood_pine.wav',
+  consequence_woodland_birch:'audio/consequence_wood_birch.wav',
+  consequence_ascent_ridge:'audio/consequence_ascent_ridge.wav',
+  consequence_ascent_switchback:'audio/consequence_ascent_switchback.wav',
+  outro:'audio/outro.wav'
 };
 const preloadedVoice = new Map();
 for(const [id,src] of Object.entries(VOICE_CLIPS)){
@@ -160,7 +161,7 @@ function stopMeraVoice(){
 function playMeraClip(id){
   return new Promise(resolve=>{
     const src=VOICE_CLIPS[id];
-    if(!src){logEvent('voice_missing',{id});resolve();return;}
+    if(!src){logEvent('voice_missing',{id});resolve({status:'missing',duration:0});return;}
     stopMeraVoice();
     const a=preloadedVoice.get(id)||new Audio(src);
     activeMeraAudio=a;
@@ -170,15 +171,30 @@ function playMeraClip(id){
       if(settled)return;settled=true;
       if(activeMeraAudio===a)activeMeraAudio=null;
       a.onended=null;a.onerror=null;
-      logEvent('voice_line',{id,status,engine:'bundled_cmu_flite_slt'});
-      resolve();
+      logEvent('voice_line',{id,status,engine:'kokoro_heart_prerendered',voice:'af_heart'});
+      resolve({status,duration:Number.isFinite(a.duration)?a.duration:0});
     };
     a.onended=()=>done('ended');
     a.onerror=()=>done('error');
     const promise=a.play();
     if(promise?.catch)promise.catch(()=>done('play_rejected'));
-    setTimeout(()=>done('timeout'),45000);
+    setTimeout(()=>done('timeout'),90000);
   });
+}
+function getVoiceDurationMs(id,fallback=5000){const a=preloadedVoice.get(id);return Number.isFinite(a?.duration)&&a.duration>0?a.duration*1000:fallback;}
+async function verifyHeartVoicePack(){
+  const required=Object.values(VOICE_CLIPS);
+  const failures=[];
+  await Promise.all(required.map(src=>new Promise(resolve=>{
+    const a=new Audio();
+    let done=false;
+    const finish=ok=>{if(done)return;done=true;if(!ok)failures.push(src);a.oncanplaythrough=null;a.onerror=null;resolve();};
+    a.preload='metadata';a.onloadedmetadata=()=>finish(true);a.onerror=()=>finish(false);a.src=src;
+    setTimeout(()=>finish(false),7000);
+  })));
+  if(failures.length){
+    throw new Error(`Heart voice pack is missing or unreadable (${failures.length} file${failures.length===1?'':'s'}). Generate HEART_AUDIO_GENERATOR.html and upload the resulting audio/ folder. First missing: ${failures[0]}`);
+  }
 }
 function thunderRumble(intensity=.12){
   try{
@@ -208,39 +224,39 @@ function setIntroLine(text,{crackle=false,status=false}={}){
   void introLine.offsetWidth;
   introLine.classList.add('show');
 }
-const INTRO_SCRIPT = `MERA here. Can you hear me? Last night's storm caused severe damage across the reserve. Status report: two injured, two missing. You are the only field worker still able to move. I would have called for emergency help, but the Northern Outpost relay is damaged. If you cannot reach it and restore the uplink, I cannot contact rescue. Another front is entering the valley. My field unit is on emergency power. Hurry. I will guide you, but my terrain data is damaged. Some decisions will be yours.`;
+const INTRO_SCRIPT = `MERA here. Can you hear me? The storm last night caused severe damage across the reserve. Status report: two members of your team are injured. Two are still missing. You are the only one still able to reach the Northern Outpost. I would have contacted emergency services already, but the outpost relay is damaged. Without that uplink, I cannot reach them. Another storm front is moving into the valley. My field unit is running on emergency power. You need to reach the outpost and restore the uplink before the storm arrives. I will guide you as far as I can. My terrain data is incomplete, so some decisions will be yours. Move.`;
 const INTRO_SUBTITLES = [
-  [0,'MERA here… can you hear me?',false],
-  [2500,"Last night's storm caused severe damage across the reserve.",false],
-  [6100,'STATUS REPORT · 2 INJURED · 2 MISSING',true],
-  [9000,'You are the only field worker still able to move.',false],
-  [12100,'I would have called for emergency help, but the Northern Outpost relay is damaged.',false],
-  [16900,'If you cannot reach it and restore the uplink, I cannot contact rescue.',false],
-  [21300,'Another front is entering the valley. My field unit is on emergency power.',false],
-  [25600,'Hurry.',true],
-  [27300,'I will guide you, but my terrain data is damaged. Some decisions will be yours.',false]
+  [0.00,'MERA here. Can you hear me?',false],
+  [0.055,'The storm last night caused severe damage across the reserve.',false],
+  [0.145,'STATUS REPORT · 2 INJURED · 2 MISSING',true],
+  [0.285,'You are the only one still able to reach the Northern Outpost.',false],
+  [0.395,'I would have contacted emergency services already, but the outpost relay is damaged.',false],
+  [0.525,'Without that uplink, I cannot reach them.',false],
+  [0.590,'Another storm front is moving into the valley. My field unit is running on emergency power.',false],
+  [0.725,'You need to reach the outpost and restore the uplink before the storm arrives.',false],
+  [0.855,'I will guide you as far as I can. My terrain data is incomplete, so some decisions will be yours.',false],
+  [0.975,'Move.',true]
 ];
 async function beginIntro(){
   worldState.introActive=true;
   intro.classList.remove('hidden');intro.classList.add('booting');
   chatToggle.classList.add('hidden');
   stopMeraVoice();
+  const durationMs=getVoiceDurationMs('intro',50000);
   const started=performance.now();
-  worldState.cinematic={id:'intro',started,duration:33500,from:[-10,16.5,231],to:[-2,9.0,202],lookAt:[7,8,-218],intro:true};
+  worldState.cinematic={id:'intro',started,duration:durationMs+900,from:[-10,16.5,231],to:[-2,9.0,202],lookAt:[7,8,-218],intro:true};
   setIntroLine('— crrk —',{crackle:true});
-  lightningFlash(900);lightningFlash(7200);lightningFlash(18400);lightningFlash(27600);
+  lightningFlash(Math.min(1100,durationMs*.025));
+  lightningFlash(durationMs*.18);lightningFlash(durationMs*.49);lightningFlash(durationMs*.78);
   const timers=[];
-  for(const [at,text,status] of INTRO_SUBTITLES){timers.push(setTimeout(()=>setIntroLine(text,{status}),at));}
-  // Crucial: speak() is reached synchronously from the BEGIN FIELD RUN click,
-  // avoiding the autoplay/gesture failure that affected the first speech prototype.
-  const voicePromise=playMeraClip('intro');
-  const minVisual=sleep(32000);
-  await Promise.allSettled([voicePromise,minVisual]);
+  for(const [fraction,text,status] of INTRO_SUBTITLES){timers.push(setTimeout(()=>setIntroLine(text,{status}),Math.max(0,durationMs*fraction)));}
+  await playMeraClip('intro');
+  await sleep(850);
   timers.forEach(clearTimeout);
   intro.classList.remove('booting','flash');intro.classList.add('hidden');
   worldState.introActive=false;worldState.cinematic=null;gameStarted=true;
   session.startedAt=new Date().toISOString();
-  logEvent('game_start',{intro:'storm_emergency_transmission',voice:'bundled_cmu_flite_slt'});
+  logEvent('game_start',{intro:'storm_emergency_transmission',voice:'kokoro_heart_prerendered'});
   hud.classList.remove('hidden');help.classList.remove('hidden');routeStatus.classList.remove('hidden');
   chatToggle.classList.remove('hidden');refreshChatUI();
 }
@@ -291,11 +307,11 @@ function startConsequence(kind){
       ? {caption:'THE FORD IS GONE',camera:[45,8.5,139],lookAt:[31,1.3,123],voice:'Water level rising. Rock crossing is gone. No return route.'}
       : {caption:'THE BRIDGE IS GONE',camera:[-46,8.5,139],lookAt:[-31,1.5,124],voice:'Bridge failure detected. That crossing is no longer available.'},
     woodland: route==='pine'
-      ? {caption:'THE OPEN ROUTE CLOSES',camera:[44,10,-1],lookAt:[31,2,-13],voice:'Stormfall detected. The open route is blocked. Continue forward.'}
-      : {caption:'THE PINE ROUTE CLOSES',camera:[-44,10,-1],lookAt:[-31,2,-13],voice:'Treefall detected. The pine route is blocked. Continue forward.'},
+      ? {caption:'THE OPEN ROUTE CLOSES',camera:[44,10,-1],lookAt:[31,2,-13],voice:'Treefall behind us. The open route is blocked.'}
+      : {caption:'THE PINE ROUTE CLOSES',camera:[-44,10,-1],lookAt:[-31,2,-13],voice:'Treefall behind us. The forest route is blocked.'},
     ascent: route==='ridge'
-      ? {caption:'THE SWITCHBACK GIVES WAY',camera:[-44,17,-139],lookAt:[-31,7,-143],voice:'Slope failure. The switchback is no longer passable.'}
-      : {caption:'ROCKFALL CLOSES THE RIDGE',camera:[44,17,-139],lookAt:[27,8,-145],voice:'Rockfall detected. Direct ridge route is closed.'}
+      ? {caption:'THE SWITCHBACK GIVES WAY',camera:[-44,17,-139],lookAt:[-31,7,-143],voice:'Rockfall below us. The switchback is closed.'}
+      : {caption:'ROCKFALL CLOSES THE RIDGE',camera:[44,17,-139],lookAt:[27,8,-145],voice:'Rockfall on the ridge. The direct route is closed.'}
   }[kind];
   closeChat();
   chatToggle.classList.add('hidden');
@@ -383,7 +399,7 @@ function answerIntent(intent){
       'The ridge is virdex — steep and direct over loose rock. It is the shorter ascent.',
       'The ridge is steep and direct over loose rock. It is the shorter ascent.');
     case 'ascent_switchback': return optionalLexicalAnswer('teebu',
-      'The switchback is teebu — long, winding, and gradual. It is longer, but easier underfoot.',
+      'The teebu path climbs gradually through long turns. It is slower, but easier. It is longer, but easier underfoot.',
       'The switchback is long, winding, and gradual. It is longer, but easier underfoot.');
     case 'faster': {
       const st=currentChatStage();
@@ -470,25 +486,43 @@ function updateElapsed() {
   const s = String(sec%60).padStart(2,'0');
   document.getElementById('elapsed').textContent = `${m}:${s}`;
 }
-function finishStudy() {
-  if (session.finishedAt) return;
+async function finishStudy() {
+  if (session.finishedAt || worldState.cinematic?.id==='outro') return;
   session.finishedAt = new Date().toISOString();
   session.mission.relayRestored = true;
   logEvent('relay_restored', {status:'emergency_uplink_online'});
   logEvent('outpost_reached', {routes:{...session.routes}});
-  navState.textContent = 'OFFLINE';
-  navPanel.classList.add('hidden');
   closeChat(); chatToggle.classList.add('hidden'); stopMeraVoice();
-  hud.classList.add('hidden');
-  help.classList.add('hidden');
-  routeStatus.classList.add('hidden');
+  hud.classList.add('hidden'); help.classList.add('hidden'); routeStatus.classList.add('hidden');
+  navPanel.classList.add('hidden'); navBusy=false;
+  const durationMs=getVoiceDurationMs('outro',30000);
+  worldState.cinematic={id:'outro',started:performance.now(),duration:durationMs+900,from:[15,12,-204],to:[11,10,-211],lookAt:[OUTPOST.x,terrainHeight(OUTPOST.x,OUTPOST.z)+6,OUTPOST.z]};
+  cinematicCaption.textContent='NORTHERN OUTPOST · RELAY RESTART';
+  cinematicEl.classList.remove('hidden');
+  const segments=[
+    [0.00,'Northern Outpost reached.'],
+    [0.075,'Stand by. Attempting relay restart.'],
+    [0.175,'Uplink restored. Emergency channel is responding.'],
+    [0.300,'Help can be contacted.'],
+    [0.360,'There is a problem.'],
+    [0.425,'My local navigation cache was damaged during the uplink transfer.'],
+    [0.610,'Another responder is approaching from the southern trailhead. They will not have access to my route guidance.'],
+    [0.825,'Leave them clear directions to the outpost. Describe the route you took and anything they need to know.']
+  ];
+  const timers=segments.map(([fraction,text])=>setTimeout(()=>{cinematicLine.textContent=text;},durationMs*fraction));
+  cinematicLine.textContent=segments[0][1];
+  await playMeraClip('outro');
+  await sleep(850);
+  timers.forEach(clearTimeout);
+  worldState.cinematic=null;cinematicEl.classList.add('hidden');
+  navState.textContent = 'OFFLINE';
   finish.classList.remove('hidden');
 }
 function downloadSession() {
   const blob = new Blob([JSON.stringify(session, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `mera_e3_5_session_${Date.now()}.json`;
+  a.download = `mera_e3_6_session_${Date.now()}.json`;
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),900);
 }
@@ -995,6 +1029,20 @@ async function bootApp() {
       return h(RigidBody,{type:'fixed',colliders:false},...locks);
     }
 
+    function DynamicLexicalSigns({mats}){
+      const [routes,setRoutes]=useState({river:null,woodland:null,ascent:null});
+      useEffect(()=>{const fn=e=>setRoutes(r=>({...r,[e.detail.kind]:e.detail.value}));window.addEventListener('mera-route',fn);return()=>window.removeEventListener('mera-route',fn);},[]);
+      const signs=[];
+      // These appear only after commitment, so the unchosen lexical item is never exposed.
+      if(routes.river==='bridge')signs.push(h(Signpost,{key:'lex-men',position:[-20,0,136],rotation:.12,lines:['MENIC','BRIDGE'],mats}));
+      if(routes.river==='ford')signs.push(h(Signpost,{key:'lex-bli',position:[20,0,136],rotation:-.12,lines:['BLICKET','CROSSING'],mats}));
+      if(routes.woodland==='pine')signs.push(h(Signpost,{key:'lex-bos',position:[-18,0,31],rotation:.10,lines:['BOSKOT','TRAIL'],mats}));
+      if(routes.woodland==='birch')signs.push(h(Signpost,{key:'lex-fif',position:[18,0,31],rotation:-.10,lines:['FIFFIN','TRAIL'],mats}));
+      if(routes.ascent==='ridge')signs.push(h(Signpost,{key:'lex-vir',position:[18,0,-101],rotation:-.08,lines:['VIRDEX','RIDGE'],mats}));
+      if(routes.ascent==='switchback')signs.push(h(Signpost,{key:'lex-tee',position:[-18,0,-101],rotation:.08,lines:['TEEBU','PATH'],mats}));
+      return h(React.Fragment,null,...signs);
+    }
+
     function RiverConsequenceFx(){
       const flood=useRef(),[effect,setEffect]=useState(null);
       useEffect(()=>{const fn=e=>{if(e.detail?.kind==='river')setEffect({...e.detail});};window.addEventListener('mera-consequence',fn);return()=>window.removeEventListener('mera-consequence',fn);},[]);
@@ -1052,7 +1100,7 @@ async function bootApp() {
         h(Signpost,{position:[0,0,151],rotation:0,lines:['BRIDGE  ←','FORD  →'],mats:materials}),
         h(Signpost,{position:[0,0,48],rotation:0,lines:['PINE TRAIL  ←','BIRCH HOLLOW  →'],mats:materials}),
         h(Signpost,{position:[0,0,-84],rotation:0,lines:['SWITCHBACK  ←','RIDGE  →'],mats:materials}),
-        h(DecisionLandforms,{mats:materials}),h(DynamicRouteLocks,{mats:materials}),h(RiverConsequenceFx,null),h(WoodlandConsequenceFx,{mats:materials}),h(AscentConsequenceFx,{mats:materials}),
+        h(DecisionLandforms,{mats:materials}),h(DynamicRouteLocks,{mats:materials}),h(DynamicLexicalSigns,{mats:materials}),h(RiverConsequenceFx,null),h(WoodlandConsequenceFx,{mats:materials}),h(AscentConsequenceFx,{mats:materials}),
         h(Outpost,{mats:materials}),h(OutpostBeacon,null),h(Waterfall,{mats:materials}),h(Mountains,null)
       );
     }
@@ -1113,51 +1161,51 @@ async function bootApp() {
 
       // DECISION 1 — no nonce item before commitment. The player chooses from ordinary
       // route information, then encounters the form only on the route actually taken.
-      if(p.z<174)showNav('river_choice_prompt','River ahead. West: old narrow bridge, faster. East: shallow stepping-stone ford, slower. Choose one — the storm may close the other.',{duration:12000,voice:'Two crossings ahead. The bridge to the west is faster, but old and narrow. The rocks to the east are slower, with more room. Choose your route.'});
+      if(p.z<174)showNav('river_choice_prompt','Two crossings ahead. The bridge is faster, but narrow. The rocks are slower, but give you more room. Water levels are rising. Choose.',{duration:12000,voice:'Two crossings ahead. The bridge is faster, but narrow. The rocks are slower, but give you more room. Water levels are rising. Choose.'});
       if(!session.routes.river && p.z<133){
         if(p.x<-14)setRoute('river','bridge'); else if(p.x>14)setRoute('river','ford');
       }
       if(session.routes.river==='bridge'){
-        showNav('menic_intro','The bridge is menic — old, narrow, barely single-file. It should hold.',{target:'menic',exposure:'context',duration:10000,voice:'The bridge is menic — old, narrow, barely single-file. It should hold.',voiceRate:.94});
+        showNav('menic_intro','The menic bridge is old and narrow, barely single-file. It should still hold.',{target:'menic',exposure:'context',duration:10000,voice:'The menic bridge is old and narrow, barely single-file. It should still hold.',voiceRate:.94});
         if(p.z<124)showNav('menic_bare','Stay centred on the menic bridge.',{target:'menic',exposure:'bare',duration:8500,voice:'Stay centred on the menic bridge.',voiceRate:.94});
         if(p.z<106)startConsequence('river');
       }
       if(session.routes.river==='ford'){
-        showNav('blicket_intro','The ford is blicket — shallow, stone-set, broken by exposed rocks.',{target:'blicket',exposure:'context',duration:10000,voice:'The ford is blicket — shallow, stone-set, broken by exposed rocks.',voiceRate:.94});
-        if(p.z<122)showNav('blicket_bare','Keep to the blicket stones.',{target:'blicket',exposure:'bare',duration:8500,voice:'Keep to the blicket stones.',voiceRate:.94});
+        showNav('blicket_intro','The blicket crossing is shallow, broken by exposed rocks. Watch your footing.',{target:'blicket',exposure:'context',duration:10000,voice:'The blicket crossing is shallow, broken by exposed rocks. Watch your footing.',voiceRate:.94});
+        if(p.z<122)showNav('blicket_bare','Keep to the blicket crossing until you reach the far bank.',{target:'blicket',exposure:'bare',duration:8500,voice:'Keep to the blicket crossing until you reach the far bank.',voiceRate:.94});
         if(p.z<106)startConsequence('river');
       }
 
       // DECISION 2 — shelter versus exposure. Branches are physically isolated until
       // the reconvergence in the upper basin.
-      if(p.z<69)showNav('wood_choice_prompt','Wind is rising. West: dense sheltered pines, slower around stormfall. East: open hollow, more direct but exposed.',{duration:12000,voice:'The wind is strengthening. The pines to the west are sheltered, but slower. The open hollow to the east is direct, but exposed. Choose your route.'});
+      if(p.z<69)showNav('wood_choice_prompt','The trail divides again. The forest route is sheltered, but storm debris may slow you down. The open route is faster, but exposed to the wind. The front is getting closer. Choose.',{duration:12000,voice:'The trail divides again. The forest route is sheltered, but storm debris may slow you down. The open route is faster, but exposed to the wind. The front is getting closer. Choose.'});
       if(!session.routes.woodland && p.z<27){
         if(p.x<-9)setRoute('woodland','pine'); else if(p.x>9)setRoute('woodland','birch');
       }
       if(session.routes.woodland==='pine'){
-        showNav('boskot_intro','The pine route is boskot — enclosed and sheltered from the wind.',{target:'boskot',exposure:'context',duration:10000,voice:'The pine route is boskot — enclosed and sheltered from the wind.',voiceRate:.94});
-        if(p.z<1)showNav('boskot_bare','Stay under the boskot cover.',{target:'boskot',exposure:'bare',duration:8500,voice:'Stay under the boskot cover.',voiceRate:.94});
+        showNav('boskot_intro','This is the boskot trail — sheltered beneath dense tree cover. Wind exposure should be lower here.',{target:'boskot',exposure:'context',duration:10000,voice:'This is the boskot trail — sheltered beneath dense tree cover. Wind exposure should be lower here.',voiceRate:.94});
+        if(p.z<1)showNav('boskot_bare','Stay on the boskot trail until the trees begin to thin.',{target:'boskot',exposure:'bare',duration:8500,voice:'Stay on the boskot trail until the trees begin to thin.',voiceRate:.94});
         if(p.z<-37)startConsequence('woodland');
       }
       if(session.routes.woodland==='birch'){
-        showNav('fiffin_intro','The eastern hollow is fiffin — open, exposed, taking the full wind.',{target:'fiffin',exposure:'context',duration:10000,voice:'The eastern hollow is fiffin — open, exposed, taking the full wind.',voiceRate:.94});
-        if(p.z<3)showNav('fiffin_bare','Cross the fiffin hollow before the next gust.',{target:'fiffin',exposure:'bare',duration:8500,voice:'Cross the fiffin hollow before the next gust.',voiceRate:.94});
+        showNav('fiffin_intro','This is the fiffin trail — open and exposed to the wind. Keep moving.',{target:'fiffin',exposure:'context',duration:10000,voice:'This is the fiffin trail — open and exposed to the wind. Keep moving.',voiceRate:.94});
+        if(p.z<3)showNav('fiffin_bare','Stay on the fiffin trail until you reach cover.',{target:'fiffin',exposure:'bare',duration:8500,voice:'Stay on the fiffin trail until you reach cover.',voiceRate:.94});
         if(p.z<-37)startConsequence('woodland');
       }
 
       // DECISION 3 — direct steep ridge versus longer gradual switchback.
-      if(p.z<-72)showNav('ascent_choice_prompt','Final climb. East: steep direct ridge over loose rock. West: longer winding switchback with an easier grade.',{duration:12000,voice:'Final climb. The ridge to the east is steep and direct. The switchback to the west is longer, but easier. Choose your route.'});
+      if(p.z<-72)showNav('ascent_choice_prompt','The outpost is directly above us. The ridge is shorter, but steep. The switchback is longer and easier to climb. We are running out of time. Choose.',{duration:12000,voice:'The outpost is directly above us. The ridge is shorter, but steep. The switchback is longer and easier to climb. We are running out of time. Choose.'});
       if(!session.routes.ascent && p.z<-107){
         if(p.x>8)setRoute('ascent','ridge'); else if(p.x<-8)setRoute('ascent','switchback');
       }
       if(session.routes.ascent==='ridge'){
-        showNav('virdex_intro','The ridge is virdex — steep, direct, and loose underfoot.',{target:'virdex',exposure:'context',duration:10000,voice:'The ridge is virdex — steep, direct, and loose underfoot.',voiceRate:.94});
-        if(p.z<-137)showNav('virdex_bare','The virdex pitch starts here. Keep your line.',{target:'virdex',exposure:'bare',duration:8500,voice:'The virdex pitch starts here. Keep your line.',voiceRate:.94});
+        showNav('virdex_intro','The virdex ridge is steep and direct. Expect a hard climb.',{target:'virdex',exposure:'context',duration:10000,voice:'The virdex ridge is steep and direct. Expect a hard climb.',voiceRate:.94});
+        if(p.z<-137)showNav('virdex_bare','Keep climbing the virdex ridge. The outpost is close.',{target:'virdex',exposure:'bare',duration:8500,voice:'Keep climbing the virdex ridge. The outpost is close.',voiceRate:.94});
         if(p.z<-173)startConsequence('ascent');
       }
       if(session.routes.ascent==='switchback'){
-        showNav('teebu_intro','The switchback is teebu — long, winding, and gradual.',{target:'teebu',exposure:'context',duration:10000,voice:'The switchback is teebu — long, winding, and gradual.',voiceRate:.94});
-        if(p.z<-145)showNav('teebu_bare','Stay with the teebu bends.',{target:'teebu',exposure:'bare',duration:8500,voice:'Stay with the teebu bends.',voiceRate:.94});
+        showNav('teebu_intro','The teebu path climbs gradually through long turns. It is slower, but easier.',{target:'teebu',exposure:'context',duration:10000,voice:'The teebu path climbs gradually through long turns. It is slower, but easier.',voiceRate:.94});
+        if(p.z<-145)showNav('teebu_bare','Stay on the teebu path. Do not cut across the slope.',{target:'teebu',exposure:'bare',duration:8500,voice:'Stay on the teebu path. Do not cut across the slope.',voiceRate:.94});
         if(p.z<-173)startConsequence('ascent');
       }
 
@@ -1189,7 +1237,7 @@ async function bootApp() {
     }
     function App(){
       const [ready,setReady]=useState(false),once=useRef(false);
-      const onCharacterReady=React.useCallback(()=>{if(once.current)return;once.current=true;setReady(true);bootStatus.textContent='Ecctrl, Rapier, bundled MERA voice and the assisted study valley are ready.';loadfill.style.width='100%';enterBtn.disabled=false;},[]);
+      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking the fixed Heart voice pack…';loadfill.style.width='90%';try{await verifyHeartVoicePack();setReady(true);bootStatus.textContent='Ecctrl, Rapier, fixed Heart voice pack and the assisted study valley are ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
       useEffect(()=>{if(!ready)return;enterBtn.onclick=()=>{boot.classList.add('hidden');beginIntro();};},[ready]);
       return h(Canvas,{shadows:true,dpr:[1,1.18],camera:{position:[4.8,3.2,224],fov:54,near:.1,far:650},gl:{antialias:true,powerPreference:'high-performance'},onCreated:({gl})=>{gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=1.07;loadfill.style.width='78%';}},h(Suspense,{fallback:null},h(Scene,{onCharacterReady})));
     }
