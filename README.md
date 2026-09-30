@@ -1,89 +1,36 @@
-# MERA E3.6 — Heart Locked
+# MERA E3.6.1 — Signs & Outpost correction
 
-This build locks the approved spoken script, the Heart voice, and branch-specific lexical signage into the E3 consequence architecture.
+This is a **targeted patch** to the verified E3.6 game. The controller, existing terrain, six lexical forms, fixed Heart WAV names, decision/consequence logic, and text-only chat remain unchanged.
 
-## What changed
+## Upload / existing audio
 
-- The participant runtime no longer loads a TTS model or uses browser speech synthesis.
-- MERA voice is expected as fixed local WAV files generated once with Kokoro `af_heart`, speed `0.96`.
-- The opening transmission now contains the complete approved emergency narrative, including the final mission instruction and “Move.”
-- All three choice prompts are voiced and subtitled.
-- Each chosen lexical item receives exactly two controlled voiced + subtitled exposures.
-- After commitment, the chosen route gains a persistent in-world lexical sign:
-  - MENIC BRIDGE
-  - BLICKET CROSSING
-  - BOSKOT TRAIL
-  - FIFFIN TRAIL
-  - VIRDEX RIDGE
-  - TEEBU PATH
-- Unchosen lexical signs never appear.
-- The six environmental consequence reactions are voiced.
-- Reaching the outpost now triggers a voiced relay-restoration / route-handover sequence before the free-text guide task.
-- Optional MERA ASSIST remains text-only.
+**Your populated `audio/` directory must stay exactly where it is in the GitHub repository. Do not delete it or regenerate the Heart recordings.** This ZIP contains only the five replacement root files:
 
-## IMPORTANT: generate the Heart audio once
+- `index.html`
+- `main.js`
+- `styles.css`
+- `README.md`
+- `THIRD_PARTY_NOTICES.md`
 
-The game package deliberately does **not** contain low-quality fallback speech. Before deploying the build to participants, generate the fixed Heart audio pack:
+Use **Add file → Upload files** in GitHub to replace the files with the same names. Upload to the repository root. The game continues to read the existing `audio/*.wav` files, including `outro.wav`. The Heart generator is no longer needed to apply this patch.
 
-1. Upload `HEART_AUDIO_GENERATOR.html` to the root of your GitHub Pages repository.
-2. Open `.../HEART_AUDIO_GENERATOR.html` in Chrome.
-3. Click **LOAD HEART**.
-4. When ready, click **GENERATE & DOWNLOAD AUDIO ZIP**.
-5. Extract `MERA_HEART_AUDIO_PACK.zip`.
-6. Upload the resulting `audio/` folder beside `index.html`.
-7. You may then delete `HEART_AUDIO_GENERATOR.html` from the public repository if desired.
+## Correction 1: permanent branch-specific signs
 
-The generator loads Kokoro only during this one development step. Study participants receive only the fixed WAV files and therefore do not wait for the model to load.
+All six physical markers now exist in the landscape from the initial render, *further ahead* on the paths rather than behind the route-commitment triggers. From a distance their boards are visible but their labels are not legible. Lettering is shown only if (a) the player commits to that branch and (b) gets within 17 world units of the marker. The unchosen form is never disclosed by the sign. Proximity is logged as `lexical_sign_in_range`, and is **not** treated as proof that the participant actually looked at the sign.
 
-## Required deployed structure
+## Correction 2: outpost completion
 
-```text
-index.html
-main.js
-styles.css
-README.md
-THIRD_PARTY_NOTICES.md
-audio/
-  intro.wav
-  decision_river.wav
-  menic_intro.wav
-  menic_bare.wav
-  blicket_intro.wav
-  blicket_bare.wav
-  consequence_river_bridge.wav
-  consequence_river_ford.wav
-  decision_wood.wav
-  boskot_intro.wav
-  boskot_bare.wav
-  fiffin_intro.wav
-  fiffin_bare.wav
-  consequence_wood_pine.wav
-  consequence_wood_birch.wav
-  decision_ascent.wav
-  virdex_intro.wav
-  virdex_bare.wav
-  teebu_intro.wav
-  teebu_bare.wav
-  consequence_ascent_ridge.wav
-  consequence_ascent_switchback.wav
-  outro.wav
-  VOICE_MANIFEST.json
-```
+E3.6 froze because `finishStudy()` referenced `OUTPOST` and `terrainHeight`, which were scoped inside the 3D scene setup. E3.6.1 explicitly passes the outpost coordinates and terrain height to the completion function.
 
-The boot screen checks the complete fixed voice pack and will stop with a clear error if a required clip is missing.
+The relay cinematic now also includes a **CONTINUE TO ROUTE GUIDE** control, which becomes available after 1.8 seconds. Normally the writing task opens after Heart finishes the outro recording. If the recording fails, is blocked, or never signals completion, an independent watchdog opens the writing task rather than leaving the participant trapped. The transition reason is logged as `guide_task_displayed`.
 
-## Runtime dependencies
+The final free-text guide is still stored in the current session until the pilot JSON is downloaded; there is **no server-side collection** in this build.
 
-The existing game code still loads its Three.js / React / Ecctrl dependencies, Soldier model, and Poly Haven materials from their existing public hosts. This E3.6 change only localizes the MERA speech stimuli.
+## Check on GitHub Pages
 
-## Controls
+1. Hard refresh the game (Ctrl+Shift+R).
+2. Approach each branch: the marker should already be visible ahead; after choosing it, the relevant label becomes readable nearby.
+3. Reach the outpost: the full Heart outro should play, then the writing interface should open. The continue control can also open it early.
+4. Enter a guide and save/download the pilot JSON.
 
-- WASD / arrows — move
-- Shift — run
-- Space — jump
-- Mouse drag — camera
-- MERA icon — optional text-only route assistant
-
-## Research note
-
-The six lexical forms remain `menic`, `blicket`, `boskot`, `fiffin`, `virdex`, and `teebu`. A participant encounters only the three attached to the routes they actually commit to. The fixed exposures are logged separately from optional text-chat exposures.
+The runtime continues to fetch React/Three/Ecctrl, Soldier and landscape textures from the same external hosts as E3.6; only the existing fixed Heart WAV pack is local.

@@ -1,4 +1,4 @@
-# Third-party notices — MERA E3.6
+# Third-party notices — MERA E3.6.1
 
 This prototype uses open-source libraries and freely licensed assets as described in the project source.
 

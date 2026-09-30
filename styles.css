@@ -32,3 +32,7 @@
 .cinematic-caption{bottom:11vh}
 .nav-panel.speaking{border-color:rgba(218,224,179,.38);box-shadow:0 16px 48px rgba(0,0,0,.31),0 0 0 1px rgba(218,224,179,.07) inset}
 @media(max-width:700px){.intro-line{bottom:14vh;font-size:18px}.cinematic-line{bottom:16vh;font-size:16px}}
+
+/* E3.6.1: safe, manually accessible transition from relay cinematic to DV task */
+.outpost-continue{position:fixed;left:50%;bottom:3.5vh;transform:translateX(-50%);z-index:28;white-space:nowrap;background:#eee4c5;color:#183020;box-shadow:0 4px 28px rgba(0,0,0,.65);pointer-events:auto}
+.outpost-continue:focus-visible{outline:3px solid #fff;outline-offset:4px}

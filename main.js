@@ -34,7 +34,7 @@ window.addEventListener('unhandledrejection', event => {
 
 function showBootError(err) {
   const message = err?.stack || err?.message || String(err);
-  bootStatus.textContent = 'E3.6 failed to initialize.';
+  bootStatus.textContent = 'E3.6.1 failed to initialize.';
   bootError.textContent = message;
   bootError.classList.remove('hidden');
   enterBtn.disabled = true;
@@ -45,6 +45,7 @@ const introLine = document.getElementById('intro-line');
 const cinematicEl = document.getElementById('cinematic');
 const cinematicCaption = document.getElementById('cinematic-caption');
 const cinematicLine = document.getElementById('cinematic-line');
+const outpostContinue = document.getElementById('outpost-continue');
 
 const STUDY = {
   // Six deliberately distinctive nonce forms. A player encounters only the
@@ -66,7 +67,7 @@ const STUDY = {
 };
 
 const session = {
-  build: 'MERA_E3_6_HEART_LOCKED',
+  build: 'MERA_E3_6_1_SIGNS_OUTPOST',
   startedAt: null,
   finishedAt: null,
   routes: {river:null, woodland:null, ascent:null},
@@ -91,6 +92,9 @@ let audioCtx = null;
 let chatOpen = false;
 let lastPlayerPosition = {x:0,z:216};
 let lastChatStage = '';
+let outpostFinalized = false;
+let outpostWatchdog = null;
+let outpostSubtitleTimers = [];
 const worldState = {
   introActive:false,
   cinematic:null,
@@ -126,7 +130,7 @@ function radioCrackle(duration=.22, volume=.075){
 }
 function sleep(ms){ return new Promise(resolve=>setTimeout(resolve,ms)); }
 
-// E3.6 voice layer: fixed Heart audio generated once during development.
+// E3.6.1 voice layer: existing fixed Heart audio generated once during development.
 // Participants only download/play the resulting WAV files; Kokoro is not loaded in-game.
 let activeMeraAudio = null;
 const VOICE_CLIPS = {
@@ -486,19 +490,47 @@ function updateElapsed() {
   const s = String(sec%60).padStart(2,'0');
   document.getElementById('elapsed').textContent = `${m}:${s}`;
 }
-async function finishStudy() {
-  if (session.finishedAt || worldState.cinematic?.id==='outro') return;
+// A blocked/missing audio event must never prevent collection of the free-text DV.
+function revealGuideTask(reason='audio_completed') {
+  if (outpostFinalized) return;
+  outpostFinalized = true;
+  if (outpostWatchdog !== null) clearTimeout(outpostWatchdog);
+  outpostWatchdog = null;
+  outpostSubtitleTimers.forEach(clearTimeout);
+  outpostSubtitleTimers = [];
+  stopMeraVoice();
+  worldState.cinematic = null;
+  cinematicEl.classList.add('hidden');
+  outpostContinue.classList.add('hidden');
+  navState.textContent = 'OFFLINE';
+  logEvent('guide_task_displayed', {reason});
+  finish.classList.remove('hidden');
+  setTimeout(() => guideText.focus(), 60);
+}
+outpostContinue.addEventListener('click', () => revealGuideTask('participant_continued'));
+
+async function finishStudy(outpostPoint) {
+  if (session.finishedAt || worldState.cinematic?.id === 'outro') return;
   session.finishedAt = new Date().toISOString();
   session.mission.relayRestored = true;
   logEvent('relay_restored', {status:'emergency_uplink_online'});
   logEvent('outpost_reached', {routes:{...session.routes}});
   closeChat(); chatToggle.classList.add('hidden'); stopMeraVoice();
   hud.classList.add('hidden'); help.classList.add('hidden'); routeStatus.classList.add('hidden');
-  navPanel.classList.add('hidden'); navBusy=false;
+  navPanel.classList.add('hidden'); navBusy=false;navQueue.length=0;
+  // The arrival coordinates/height are passed from the 3D scene. In E3.6,
+  // OUTPOST and terrainHeight were local to bootApp and threw ReferenceError here.
   const durationMs=getVoiceDurationMs('outro',30000);
-  worldState.cinematic={id:'outro',started:performance.now(),duration:durationMs+900,from:[15,12,-204],to:[11,10,-211],lookAt:[OUTPOST.x,terrainHeight(OUTPOST.x,OUTPOST.z)+6,OUTPOST.z]};
+  const location=outpostPoint || {x:10,y:6,z:-218};
+  worldState.cinematic={id:'outro',started:performance.now(),duration:durationMs+900,
+    from:[location.x+5,location.y+12,location.z+14],
+    to:[location.x+1,location.y+10,location.z+7],
+    lookAt:[location.x,location.y+6,location.z]};
   cinematicCaption.textContent='NORTHERN OUTPOST · RELAY RESTART';
   cinematicEl.classList.remove('hidden');
+  cinematicLine.textContent='Northern Outpost reached.';
+  outpostContinue.classList.add('hidden');
+  setTimeout(() => {if(!outpostFinalized)outpostContinue.classList.remove('hidden');},1800);
   const segments=[
     [0.00,'Northern Outpost reached.'],
     [0.075,'Stand by. Attempting relay restart.'],
@@ -509,20 +541,28 @@ async function finishStudy() {
     [0.610,'Another responder is approaching from the southern trailhead. They will not have access to my route guidance.'],
     [0.825,'Leave them clear directions to the outpost. Describe the route you took and anything they need to know.']
   ];
-  const timers=segments.map(([fraction,text])=>setTimeout(()=>{cinematicLine.textContent=text;},durationMs*fraction));
-  cinematicLine.textContent=segments[0][1];
-  await playMeraClip('outro');
-  await sleep(850);
-  timers.forEach(clearTimeout);
-  worldState.cinematic=null;cinematicEl.classList.add('hidden');
-  navState.textContent = 'OFFLINE';
-  finish.classList.remove('hidden');
+  outpostSubtitleTimers=segments.slice(1).map(([fraction,text])=>setTimeout(()=>{
+    if(!outpostFinalized)cinematicLine.textContent=text;
+  },durationMs*fraction));
+  // Independent of audio promises, a bounded watchdog guarantees the writing
+  // task appears even if an onended event never fires.
+  outpostWatchdog=setTimeout(()=>revealGuideTask('audio_watchdog'),Math.min(90000,Math.max(65000,durationMs+8000)));
+  try {
+    const result=await playMeraClip('outro');
+    if(!outpostFinalized) {
+      await sleep(result.status==='ended'?850:2000);
+      revealGuideTask(result.status==='ended'?'audio_completed':`audio_${result.status}`);
+    }
+  } catch(error) {
+    logEvent('outpost_voice_error',{message:String(error?.message||error)});
+    if(!outpostFinalized)revealGuideTask('audio_error');
+  }
 }
 function downloadSession() {
   const blob = new Blob([JSON.stringify(session, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `mera_e3_6_session_${Date.now()}.json`;
+  a.download = `mera_e3_6_1_session_${Date.now()}.json`;
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),900);
 }
@@ -1029,18 +1069,51 @@ async function bootApp() {
       return h(RigidBody,{type:'fixed',colliders:false},...locks);
     }
 
+    function LexicalSignpost({position,rotation=0,kind,route,lines,mats}){
+      // The entire wooden marker is in the world from the initial render. Its
+      // lettering is disclosed only after commitment AND within readable range.
+      // This prevents exposure to a label on the unchosen route.
+      const blank=useMemo(()=>makeTextTexture([]),[]);
+      const labelled=useMemo(()=>makeTextTexture(lines),[lines[0],lines[1]]);
+      const mat=useMemo(()=>new THREE.MeshStandardMaterial({map:blank,roughness:1}),[blank]);
+      const readable=useRef(false);
+      useFrame(()=>{
+        const distance=Math.hypot(lastPlayerPosition.x-position[0],lastPlayerPosition.z-position[2]);
+        const shouldRead=readable.current || (session.routes[kind]===route && distance<=17);
+        if(shouldRead!==readable.current){
+          readable.current=shouldRead;
+          mat.map=shouldRead?labelled:blank;
+          mat.needsUpdate=true;
+          if(shouldRead)logEvent('lexical_sign_in_range',{
+            kind,route,item:lines[0].toLowerCase(),distance:Math.round(distance*10)/10,
+            note:'proximity, not verified visual attention'
+          });
+        }
+      });
+      useEffect(()=>()=>{mat.dispose();blank.dispose();labelled.dispose();},[mat,blank,labelled]);
+      return h('group',{
+        position:[position[0],terrainHeight(position[0],position[2]),position[2]],
+        rotation:[0,rotation,0]
+      },
+        h('mesh',{position:[0,1.6,0],castShadow:true},
+          h('cylinderGeometry',{args:[.10,.14,3.2,7]}),
+          h('primitive',{object:mats.bark,attach:'material'})),
+        h('mesh',{position:[0,2.45,.02],castShadow:true},
+          h('boxGeometry',{args:[3.5,1.28,.16]}),
+          h('primitive',{object:mat,attach:'material'}))
+      );
+    }
     function DynamicLexicalSigns({mats}){
-      const [routes,setRoutes]=useState({river:null,woodland:null,ascent:null});
-      useEffect(()=>{const fn=e=>setRoutes(r=>({...r,[e.detail.kind]:e.detail.value}));window.addEventListener('mera-route',fn);return()=>window.removeEventListener('mera-route',fn);},[]);
-      const signs=[];
-      // These appear only after commitment, so the unchosen lexical item is never exposed.
-      if(routes.river==='bridge')signs.push(h(Signpost,{key:'lex-men',position:[-20,0,136],rotation:.12,lines:['MENIC','BRIDGE'],mats}));
-      if(routes.river==='ford')signs.push(h(Signpost,{key:'lex-bli',position:[20,0,136],rotation:-.12,lines:['BLICKET','CROSSING'],mats}));
-      if(routes.woodland==='pine')signs.push(h(Signpost,{key:'lex-bos',position:[-18,0,31],rotation:.10,lines:['BOSKOT','TRAIL'],mats}));
-      if(routes.woodland==='birch')signs.push(h(Signpost,{key:'lex-fif',position:[18,0,31],rotation:-.10,lines:['FIFFIN','TRAIL'],mats}));
-      if(routes.ascent==='ridge')signs.push(h(Signpost,{key:'lex-vir',position:[18,0,-101],rotation:-.08,lines:['VIRDEX','RIDGE'],mats}));
-      if(routes.ascent==='switchback')signs.push(h(Signpost,{key:'lex-tee',position:[-18,0,-101],rotation:.08,lines:['TEEBU','PATH'],mats}));
-      return h(React.Fragment,null,...signs);
+      // These six markers are mounted immediately, *ahead* of the commitment
+      // triggers and on the outer edge of the actual, divergent paths.
+      return h(React.Fragment,null,
+        h(LexicalSignpost,{key:'lex-men',position:[-34,0,127],rotation:.12,kind:'river',route:'bridge',lines:['MENIC','BRIDGE'],mats}),
+        h(LexicalSignpost,{key:'lex-bli',position:[34,0,127],rotation:-.12,kind:'river',route:'ford',lines:['BLICKET','CROSSING'],mats}),
+        h(LexicalSignpost,{key:'lex-bos',position:[-37,0,13],rotation:.10,kind:'woodland',route:'pine',lines:['BOSKOT','TRAIL'],mats}),
+        h(LexicalSignpost,{key:'lex-fif',position:[37,0,13],rotation:-.10,kind:'woodland',route:'birch',lines:['FIFFIN','TRAIL'],mats}),
+        h(LexicalSignpost,{key:'lex-vir',position:[36,0,-120],rotation:-.08,kind:'ascent',route:'ridge',lines:['VIRDEX','RIDGE'],mats}),
+        h(LexicalSignpost,{key:'lex-tee',position:[-39,0,-120],rotation:.08,kind:'ascent',route:'switchback',lines:['TEEBU','PATH'],mats})
+      );
     }
 
     function RiverConsequenceFx(){
@@ -1210,7 +1283,7 @@ async function bootApp() {
       }
 
       if(p.z<-198)showNav('final_neutral','Outpost in range. Emergency relay handshake starting.',{duration:7000});
-      if(Math.hypot(p.x-OUTPOST.x,p.z-OUTPOST.z)<6.5) finishStudy();
+      if(Math.hypot(p.x-OUTPOST.x,p.z-OUTPOST.z)<6.5) finishStudy({x:OUTPOST.x,y:terrainHeight(OUTPOST.x,OUTPOST.z),z:OUTPOST.z});
     }
 
     function Diagnostics({controllerRef}){
