@@ -21,13 +21,13 @@ try{
 
  function Character({onReady}){
    const root=useRef();
-   const visual=useRef();
    const model=useGLTF(MODEL_URL);
    const animLib=useGLTF(ANIM_URL);
    const {actions}=useAnimations(animLib.animations,root);
    const animState=useEcctrlAnimationStore(s=>s.animationState);
    const [norm,setNorm]=useState({scale:1,offset:0});
    const current=useRef(null);
+   const dressed=useRef(false);
 
    useLayoutEffect(()=>{
      const obj=model.scene;
@@ -39,13 +39,78 @@ try{
      obj.updateMatrixWorld(true);
      const b2=new THREE.Box3().setFromObject(obj);
      setNorm({scale,offset:-b2.min.y});
-     obj.traverse(o=>{if(o.isMesh||o.isSkinnedMesh){o.frustumCulled=false;if(o.material){for(const m of (Array.isArray(o.material)?o.material:[o.material])){if('roughness' in m)m.roughness=Math.max(.58,m.roughness??.7);}}}});
+     obj.traverse(o=>{
+       if(o.isMesh||o.isSkinnedMesh){
+         o.frustumCulled=false;
+         if(o.material){
+           for(const m of (Array.isArray(o.material)?o.material:[o.material])){
+             if('roughness' in m)m.roughness=Math.max(.62,m.roughness??.75);
+           }
+         }
+       }
+     });
+
+     // Dress the existing Quaternius skeleton rather than replacing the rig.
+     // These meshes are render-only children of the animated bones: no physics,
+     // controller or animation data is changed.
+     if(!dressed.current){
+       dressed.current=true;
+       const jacket=new THREE.MeshStandardMaterial({color:'#677052',roughness:.96,metalness:0});
+       const jacketDark=new THREE.MeshStandardMaterial({color:'#4f5740',roughness:.98,metalness:0});
+       const trousers=new THREE.MeshStandardMaterial({color:'#303330',roughness:.98,metalness:0});
+       const boots=new THREE.MeshStandardMaterial({color:'#49392c',roughness:1,metalness:0});
+       const strap=new THREE.MeshStandardMaterial({color:'#786047',roughness:1,metalness:0});
+
+       const bone=(...names)=>names.map(n=>obj.getObjectByName(n)).find(Boolean);
+       const add=(parent,geo,mat,pos=[0,0,0],rot=[0,0,0],sc=[1,1,1])=>{
+         if(!parent)return null;
+         const m=new THREE.Mesh(geo,mat);
+         m.position.set(...pos);m.rotation.set(...rot);m.scale.set(...sc);
+         m.castShadow=false;m.receiveShadow=false;
+         parent.add(m);return m;
+       };
+       const seg=(aName,bName,r,mat,thickness=1)=>{
+         const a=bone(aName),b=bone(bName); if(!a||!b)return;
+         const v=b.position.clone(); const len=v.length(); if(len<.025)return;
+         const rr=Math.min(r,len*.30);
+         const g=new THREE.CapsuleGeometry(rr,Math.max(.012,len-2*rr),5,9);
+         const m=new THREE.Mesh(g,mat);
+         m.position.copy(v).multiplyScalar(.5);
+         m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v.clone().normalize());
+         m.scale.x=thickness;m.scale.z=thickness;
+         m.castShadow=false;m.receiveShadow=false;a.add(m);
+       };
+
+       const pelvis=bone('pelvis'), s1=bone('spine_01'), s2=bone('spine_02'), s3=bone('spine_03');
+       // Jacket body: deliberately slightly loose to sit outside the base mesh.
+       add(s2||s1,new THREE.CapsuleGeometry(.235,.30,6,12),jacket,[0,.06,0],[0,0,0],[1.20,1.02,.80]);
+       add(s3||s2,new THREE.CylinderGeometry(.255,.235,.20,12),jacketDark,[0,.025,0],[0,0,0],[1.10,1,.82]);
+       add(pelvis,new THREE.CylinderGeometry(.245,.225,.20,12),trousers,[0,.00,0],[0,0,0],[1.08,1,.82]);
+
+       // Sleeves and full-length trousers follow the actual animated limb bones.
+       seg('upperarm_l','lowerarm_l',.105,jacket,1.04);
+       seg('lowerarm_l','hand_l',.090,jacketDark,1.02);
+       seg('upperarm_r','lowerarm_r',.105,jacket,1.04);
+       seg('lowerarm_r','hand_r',.090,jacketDark,1.02);
+       seg('thigh_l','calf_l',.135,trousers,1.05);
+       seg('calf_l','foot_l',.112,trousers,1.02);
+       seg('thigh_r','calf_r',.135,trousers,1.05);
+       seg('calf_r','foot_r',.112,trousers,1.02);
+
+       // Simple hiking boots, attached to the feet.
+       add(bone('foot_l'),new THREE.BoxGeometry(.19,.17,.37),boots,[0,.035,.10],[0,0,0],[1,1,1]);
+       add(bone('foot_r'),new THREE.BoxGeometry(.19,.17,.37),boots,[0,.035,.10],[0,0,0],[1,1,1]);
+
+       // Small chest/shoulder webbing makes the torso read as clothing rather than recoloured skin.
+       add(s3||s2,new THREE.BoxGeometry(.035,.44,.025),strap,[-.15,.01,-.205],[0,0,.10]);
+       add(s3||s2,new THREE.BoxGeometry(.035,.44,.025),strap,[ .15,.01,-.205],[0,0,-.10]);
+     }
    },[model.scene]);
 
    useEffect(()=>{
      const names=animLib.animations.map(a=>a.name);
      document.getElementById('clip-list').textContent='Clips: '+names.filter(n=>/idle|walk|jog|sprint|jump/i.test(n)).join(' · ');
-     document.getElementById('model-state').textContent='READY';
+     document.getElementById('model-state').textContent='READY · FIELD OUTFIT';
      onReady?.();
    },[animLib.animations,onReady]);
 
@@ -64,8 +129,11 @@ try{
      document.getElementById('anim-state').textContent=name;
    },[actions,animState]);
 
-   return h('group',{ref:root,position:[0,-.88,0],rotation:[0,Math.PI,0]},
-     h('group',{ref:visual,position:[0,norm.offset,0]},h('primitive',{object:model.scene}))
+   // The previous proof applied PI yaw and the model presented its back while
+   // moving forward under Ecctrl.  Leave the imported +Z-facing visual unflipped
+   // in this proof; Ecctrl supplies the gameplay-facing transform.
+   return h('group',{ref:root,position:[0,-.88,0],rotation:[0,0,0]},
+     h('group',{position:[0,norm.offset,0]},h('primitive',{object:model.scene}))
    );
  }
 
