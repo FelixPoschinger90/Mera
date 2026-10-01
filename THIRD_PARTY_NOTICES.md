@@ -1,4 +1,4 @@
-# Third-party notices — MERA E3.9
+# Third-party notices — MERA E3.9.1
 
 ## Poly Haven — CC0
 MERA uses Poly Haven assets under the CC0 license. E3.9 adds static render/impostor images from:
@@ -20,3 +20,6 @@ The temporary animated Soldier is loaded from the publicly hosted Three.js examp
 
 ## Open-source libraries
 The application uses React, React Three Fiber, Drei, Three.js, Rapier, Zustand and Ecctrl through browser ESM/CDN imports. Refer to their upstream projects for exact license texts.
+
+
+`assets/trail_dirt.png` is a locally generated texture created for MERA E3.9.1 and has no third-party licensing requirement.

@@ -40,7 +40,7 @@
 
 
 
-/* E3.9 persistent storm layer — intentionally obvious in gameplay. */
+/* E3.9.1 persistent storm layer — intentionally obvious in gameplay. */
 .field-weather{position:fixed;inset:0;z-index:4;pointer-events:none;overflow:hidden;mix-blend-mode:normal}
 .field-rain{position:absolute;inset:-35% -25%;transform:skewX(-12deg);background-image:repeating-linear-gradient(107deg,transparent 0 13px,rgba(220,236,242,.34) 14px 15px,transparent 16px 31px);background-size:150px 150px;animation:fieldRain .42s linear infinite;opacity:.62;filter:blur(.15px)}
 .field-rain-b{background-size:215px 215px;animation-duration:.61s;opacity:.34;transform:skewX(-16deg) translateX(36px)}
