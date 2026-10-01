@@ -36,7 +36,7 @@ window.addEventListener('unhandledrejection', event => {
 
 function showBootError(err) {
   const message = err?.stack || err?.message || String(err);
-  bootStatus.textContent = 'E3.8 failed to initialize.';
+  bootStatus.textContent = 'E3.9 failed to initialize.';
   bootError.textContent = message;
   bootError.classList.remove('hidden');
   enterBtn.disabled = true;
@@ -69,7 +69,7 @@ const STUDY = {
 };
 
 const session = {
-  build: 'MERA_E3_8_STORM_ASCENT',
+  build: 'MERA_E3_9_REALISTIC_STORM',
   startedAt: null,
   finishedAt: null,
   routes: {river:null, woodland:null, ascent:null},
@@ -139,6 +139,8 @@ function pulseFieldLightning(){
   fieldLightning.classList.remove('flash');
   void fieldLightning.offsetWidth;
   fieldLightning.classList.add('flash');
+  window.dispatchEvent(new CustomEvent('mera-lightning'));
+  thunderRumble(.085);
   setTimeout(()=>fieldLightning?.classList.remove('flash'),620);
 }
 function scheduleFieldLightning(){
@@ -152,7 +154,7 @@ function startFieldWeather(){
   scheduleFieldLightning();
 }
 
-// E3.8 retains the verified E3.6.1 fixed Heart audio layer unchanged.
+// E3.9 retains the verified E3.6.1 fixed Heart audio layer unchanged.
 // Participants only download/play the resulting WAV files; Kokoro is not loaded in-game.
 let activeMeraAudio = null;
 const VOICE_CLIPS = {
@@ -639,7 +641,11 @@ async function bootApp() {
       rockDiff:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/mossy_rock/mossy_rock_diff_1k.jpg',
       rockNorm:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/mossy_rock/mossy_rock_nor_gl_1k.jpg',
       woodDiff:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/weathered_planks/weathered_planks_diff_1k.jpg',
-      woodNorm:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/weathered_planks/weathered_planks_nor_gl_1k.jpg'
+      woodNorm:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/weathered_planks/weathered_planks_nor_gl_1k.jpg',
+      realPine:'https://cdn.polyhaven.com/asset_img/thumbs/pine_tree_01.png?format=png&v=5a9763f6',
+      realFir:'https://cdn.polyhaven.com/asset_img/thumbs/fir_tree_01.png?format=png&v=55f25e61',
+      realBroad:'https://cdn.polyhaven.com/asset_img/thumbs/tree_small_02.png?format=png&v=3743831d',
+      realRock:'https://cdn.polyhaven.com/asset_img/thumbs/rock_moss_set_01.png?format=png&v=e99703c4'
     };
 
     // Three physically different decisions. Paths are visual guidance, not movement rails.
@@ -651,13 +657,16 @@ async function bootApp() {
       pine:[[0,40],[-14,34],[-27,23],[-34,8],[-32,-10],[-24,-26],[-12,-41],[0,-52]],
       birch:[[0,40],[15,34],[29,23],[36,7],[33,-10],[25,-27],[12,-42],[0,-52]],
       upper:[[0,-52],[4,-66],[-2,-80],[0,-91]],
-      // E3.8: the direct ridge now climbs almost straight to the high outpost.
+      // E3.9: the direct ridge now climbs almost straight to the high outpost.
       ridge:[[0,-91],[10,-101],[16,-113],[19,-126],[18,-140],[16,-154],[14,-169],[12,-184],[11,-199],[10,-214]],
       // The alternative gains the same elevation through a much longer traverse.
       switchback:[[0,-91],[-18,-97],[-39,-105],[-52,-116],[-47,-128],[-27,-138],[-48,-149],[-54,-161],[-35,-172],[-50,-184],[-44,-196],[-23,-205],[1,-212],[10,-214]],
       final:[[10,-214],[10,-218]]
     };
     const OUTPOST = {x:10,z:-218};
+    // Storm wind blows down-valley toward the south-east. Progress toward the outpost
+    // is therefore a real headwind; turning back produces a tailwind boost.
+    const WIND_DIR = new THREE.Vector2(.20,.98).normalize();
 
     function rand(seed=1234567){
       let s=seed>>>0;
@@ -674,7 +683,7 @@ async function bootApp() {
       y += .7*Math.exp(-((x+28)*(x+28))/700-((z-6)*(z-6))/900);
       y += .65*Math.exp(-((x-30)*(x-30))/750-((z-5)*(z-5))/900);
 
-      // E3.8 final mountain: remove the flat gap before the outpost. From the third
+      // E3.9 final mountain: remove the flat gap before the outpost. From the third
       // decision onward the ground rises continuously to a clearly elevated station.
       const mountainProgress=clamp((-z-88)/132,0,1);
       y += 24.5*Math.pow(mountainProgress,1.32);
@@ -738,7 +747,7 @@ async function bootApp() {
       return tex;
     }
 
-    // E3.8: genuine alpha-cutout branch and ground-cover artwork, generated and
+    // E3.9: genuine alpha-cutout branch and ground-cover artwork, generated and
     // bundled under assets/. Existing CC0 PBR terrain/rock textures remain intact.
     function useLandscapeMaterials(){
       const textures=useTexture([
@@ -746,18 +755,20 @@ async function bootApp() {
         ASSET.rockDiff,ASSET.rockNorm,ASSET.woodDiff,ASSET.woodNorm,
         'assets/pine_branch.png','assets/broad_leaves.png','assets/birch_leaves.png',
         'assets/grass_tuft.png','assets/reed_tuft.png','assets/fern.png',
-        'assets/meadow_flower.png','assets/bark.png','assets/birch_bark.png'
+        'assets/meadow_flower.png','assets/bark.png','assets/birch_bark.png',
+        ASSET.realPine,ASSET.realFir,ASSET.realBroad,ASSET.realRock
       ]);
       useMemo(()=>{
         configureTexture(textures[0],18,true); configureTexture(textures[1],18,false);
         configureTexture(textures[2],3.1,true); configureTexture(textures[3],3.1,false);
         configureTexture(textures[4],2.0,true); configureTexture(textures[5],2.0,false);
         configureTexture(textures[6],1.4,true); configureTexture(textures[7],1.4,false);
-        for(let i=8;i<17;i++){
+        for(let i=8;i<21;i++){
           textures[i].colorSpace=THREE.SRGBColorSpace;
           textures[i].anisotropy=4;
-          textures[i].wrapS=textures[i].wrapT=i>=15?THREE.RepeatWrapping:THREE.ClampToEdgeWrapping;
-          if(i>=15)textures[i].repeat.set(2,1);
+          const barkTex=(i===15||i===16);
+          textures[i].wrapS=textures[i].wrapT=barkTex?THREE.RepeatWrapping:THREE.ClampToEdgeWrapping;
+          if(barkTex)textures[i].repeat.set(2,1);
         }
       },[textures]);
       const foliage=(index,color=0xffffff,cutoff=.33)=>new THREE.MeshStandardMaterial({
@@ -766,8 +777,9 @@ async function bootApp() {
       });
       return useMemo(()=>({
         forest:new THREE.MeshStandardMaterial({map:textures[0],normalMap:textures[1],roughness:.99,color:0xc8d0bb,vertexColors:true}),
-        path:new THREE.MeshStandardMaterial({map:textures[2],normalMap:textures[3],roughness:.98,color:0xe2d2b9}),
-        verge:new THREE.MeshStandardMaterial({map:textures[0],normalMap:textures[1],roughness:1,color:0xa4a48c}),
+        path:new THREE.MeshStandardMaterial({map:textures[2],normalMap:textures[3],roughness:.98,color:0xbca982}),
+        pathCore:new THREE.MeshStandardMaterial({map:textures[2],normalMap:textures[3],roughness:1,color:0x947b58}),
+        verge:new THREE.MeshStandardMaterial({map:textures[0],normalMap:textures[1],roughness:1,color:0x7f826d}),
         rock:new THREE.MeshStandardMaterial({map:textures[4],normalMap:textures[5],roughness:.98,color:0xc2c2ae}),
         wood:new THREE.MeshStandardMaterial({map:textures[6],normalMap:textures[7],roughness:.95,color:0xb1a08b}),
         bark:new THREE.MeshStandardMaterial({map:textures[15],roughness:1,color:0xb7a48a}),
@@ -779,7 +791,11 @@ async function bootApp() {
         reed:foliage(12,0xc8d5b2,.34),
         fern:foliage(13,0xb2c99b,.37),
         flower:foliage(14,0xe6e4c7,.30),
-        stone:new THREE.MeshStandardMaterial({map:textures[4],normalMap:textures[5],roughness:1,color:0xbab9aa})
+        stone:new THREE.MeshStandardMaterial({map:textures[4],normalMap:textures[5],roughness:1,color:0xbab9aa}),
+        realPine:new THREE.MeshBasicMaterial({map:textures[17],transparent:true,alphaTest:.08,side:THREE.DoubleSide,depthWrite:true,color:0xd0d5c9,fog:true}),
+        realFir:new THREE.MeshBasicMaterial({map:textures[18],transparent:true,alphaTest:.08,side:THREE.DoubleSide,depthWrite:true,color:0xc5ccbf,fog:true}),
+        realBroad:new THREE.MeshBasicMaterial({map:textures[19],transparent:true,alphaTest:.08,side:THREE.DoubleSide,depthWrite:true,color:0xcbd2bf,fog:true}),
+        realRock:new THREE.MeshBasicMaterial({map:textures[20],transparent:true,alphaTest:.06,side:THREE.DoubleSide,depthWrite:true,color:0xb8b8ad,fog:true})
       }),[textures]);
     }
 
@@ -883,6 +899,17 @@ async function bootApp() {
       const a=new THREE.PlaneGeometry(w,h);a.translate(0,h*.5,0);const b=a.clone();b.rotateY(Math.PI/2);const c=a.clone();c.rotateY(Math.PI/4);return mergeGeometries([a,b,c],false);
     }
 
+    function makeBillboardCrossGeometry(width=5.4,height=7.6){
+      const a=new THREE.PlaneGeometry(width,height);a.translate(0,height*.5,0);
+      const b=a.clone();b.rotateY(Math.PI/2);
+      return mergeGeometries([a,b],false);
+    }
+    function makeRockCardGeometry(width=4.8,height=2.05){
+      const a=new THREE.PlaneGeometry(width,height);a.translate(0,height*.47,0);
+      const b=a.clone();b.rotateY(Math.PI/2);
+      return mergeGeometries([a,b],false);
+    }
+
     function generateLandscapeLayout(){
       const trees=[],grass=[],rocks=[],reeds=[],ferns=[],flowers=[],pebbles=[];
       // General interior trees; maintain open central sightline to the outpost.
@@ -898,12 +925,12 @@ async function bootApp() {
       }
       // Pine branch is intentionally crowded: a narrow sheltered corridor with trunks
       // close to the route, while the exposed eastern alternative stays visually open.
-      for(let i=0;i<52;i++){const x=-44+rng()*27,z=-38+rng()*80;if(!nearTrail(x,z,2.55))trees.push({x,z,s:.9+rng()*.82,type:'pine',rot:rng()*6.28,collision:true});}
-      for(let i=0;i<112;i++){
+      for(let i=0;i<78;i++){const x=-47+rng()*31,z=-42+rng()*86;if(!nearTrail(x,z,2.15))trees.push({x,z,s:.9+rng()*.88,type:'pine',rot:rng()*6.28,collision:true});}
+      for(let i=0;i<154;i++){
         const p=PATHS.pine,k=Math.floor(rng()*(p.length-1)),t=rng();
         const x0=p[k][0]+(p[k+1][0]-p[k][0])*t,z0=p[k][1]+(p[k+1][1]-p[k][1])*t;
         const vx=p[k+1][0]-p[k][0],vz=p[k+1][1]-p[k][1],ll=Math.max(.001,Math.hypot(vx,vz));
-        const side=(rng()<.5?-1:1)*(2.65+rng()*4.4);
+        const side=(rng()<.5?-1:1)*(2.15+rng()*3.7);
         const x=x0-vz/ll*side,z=z0+vx/ll*side;
         if(Math.abs(x)>60||Math.abs(z-riverCenterZ(x))<7)continue;
         trees.push({x,z,s:.82+rng()*.92,type:'pine',rot:rng()*6.28,collision:(i%3===0)});
@@ -959,11 +986,18 @@ async function bootApp() {
 
     function Terrain({mat}){
       const geometry=useMemo(makeTerrainGeometry,[]);
-      return h(RigidBody,{type:'fixed',colliders:'trimesh',friction:1,restitution:0},h('mesh',{geometry,material:mat,receiveShadow:true}));
+      return h(RigidBody,{type:'fixed',colliders:'trimesh',friction:1,restitution:0},h('mesh',{geometry,material:mat,receiveShadow:false}));
     }
-    function Paths({mat}){
-      const geos=useMemo(()=>Object.entries(PATHS).map(([k,p])=>makeStripGeometry(p,k==='pine'?2.35:k==='birch'?3.25:(k==='south'||k==='central'||k==='upper'||k==='final'?3.25:2.8))),[]);
-      return h(React.Fragment,null,...geos.map((geometry,i)=>h('mesh',{key:i,geometry,material:mat,receiveShadow:true})));
+    function Paths({mat,coreMat,vergeMat}){
+      const specs=useMemo(()=>Object.entries(PATHS).map(([k,p])=>{
+        const outer=k==='pine'?2.45:k==='birch'?3.15:k==='switchback'?2.85:k==='ridge'?2.15:(k==='south'||k==='central'||k==='upper'||k==='final'?3.15:2.75);
+        const inner=k==='pine'?1.38:k==='birch'?1.95:k==='switchback'?1.70:k==='ridge'?1.30:1.75;
+        return {k,outer:makeStripGeometry(p,outer,.045),inner:makeStripGeometry(p,inner,.088)};
+      }),[]);
+      return h(React.Fragment,null,
+        ...specs.map((s,i)=>h('mesh',{key:'v'+i,geometry:s.outer,material:vergeMat||mat,receiveShadow:false})),
+        ...specs.map((s,i)=>h('mesh',{key:'c'+i,geometry:s.inner,material:coreMat||mat,receiveShadow:false}))
+      );
     }
     function River(){
       const geometry=useMemo(makeRiverGeometry,[]);
@@ -984,7 +1018,7 @@ async function bootApp() {
             gl_FragColor=vec4(c,.87-.06*edge);}`
       }),[]);
       useFrame((_,dt)=>mat.uniforms.time.value+=dt);
-      return h('mesh',{geometry,material:mat,receiveShadow:true,renderOrder:1});
+      return h('mesh',{geometry,material:mat,receiveShadow:false,renderOrder:1});
     }
 
         function RiverBarriers(){
@@ -1010,6 +1044,7 @@ async function bootApp() {
           if(kind==='tree')dummy.scale.setScalar(it.s);
           else if(kind==='reed')dummy.scale.set(.85*it.s,it.s,.85*it.s);
           else if(kind==='rock')dummy.scale.set(it.s,it.s*it.sy,it.s*(.9+.08*(i%3)));
+          else if(kind==='rockcard'){dummy.scale.set(.72*it.s,.72*it.s,.72*it.s);dummy.position.y=terrainHeight(it.x,it.z)-.06;}
           else dummy.scale.set(it.s,it.s,it.s);
           dummy.updateMatrix();ref.current.setMatrixAt(i,dummy.matrix);
           if(leafTint){
@@ -1025,17 +1060,15 @@ async function bootApp() {
       return h('instancedMesh',{ref,args:[geometry,material,items.length],castShadow,receiveShadow:kind==='rock'});
     }
     function Forest({mats}){
-      const pine=useMemo(makePineGeometries,[]),broad=useMemo(makeBroadGeometries,[]),birch=useMemo(makeBirchGeometries,[]);
+      const treeGeo=useMemo(()=>makeBillboardCrossGeometry(5.2,7.5),[]);
       const p=layout.trees.filter(t=>t.type==='pine'),b=layout.trees.filter(t=>t.type==='broad'),bi=layout.trees.filter(t=>t.type==='birch');
-      const colliderTrees=layout.trees.filter(t=>t.collision).sort((a,b)=>{const pa=(a.x<2&&a.z<43&&a.z>-46)?1:0,pb=(b.x<2&&b.z<43&&b.z>-46)?1:0;return pb-pa;}).slice(0,135);
+      const fir=p.filter((_,i)=>i%3!==0),pine=p.filter((_,i)=>i%3===0);
+      const colliderTrees=layout.trees.filter(t=>t.collision).sort((a,b)=>{const pa=(a.x<2&&a.z<43&&a.z>-46)?1:0,pb=(b.x<2&&b.z<43&&b.z>-46)?1:0;return pb-pa;}).slice(0,190);
       return h(React.Fragment,null,
-        h(InstancedBatch,{geometry:pine.trunk,material:mats.bark,items:p,kind:'tree'}),
-        h(InstancedBatch,{geometry:pine.foliage,material:mats.pine,items:p,kind:'tree',leafTint:'pine'}),
-        h(InstancedBatch,{geometry:broad.trunk,material:mats.bark,items:b,kind:'tree'}),
-        h(InstancedBatch,{geometry:broad.foliage,material:mats.broad,items:b,kind:'tree',leafTint:'broad'}),
-        h(InstancedBatch,{geometry:birch.trunk,material:mats.birchBark,items:bi,kind:'tree'}),
-        h(InstancedBatch,{geometry:birch.foliage,material:mats.birchLeaf,items:bi,kind:'tree',leafTint:'birch'}),
-        h(RigidBody,{type:'fixed',colliders:false},...colliderTrees.map((t,i)=>h(CuboidCollider,{key:i,args:[.28*t.s,1.9*t.s,.28*t.s],position:[t.x,terrainHeight(t.x,t.z)+1.9*t.s,t.z]})))
+        h(InstancedBatch,{geometry:treeGeo,material:mats.realFir,items:fir,kind:'tree'}),
+        h(InstancedBatch,{geometry:treeGeo,material:mats.realPine,items:pine,kind:'tree'}),
+        h(InstancedBatch,{geometry:treeGeo,material:mats.realBroad,items:[...b,...bi],kind:'tree'}),
+        h(RigidBody,{type:'fixed',colliders:false},...colliderTrees.map((t,i)=>h(CuboidCollider,{key:i,args:[.30*t.s,2.25*t.s,.30*t.s],position:[t.x,terrainHeight(t.x,t.z)+2.25*t.s,t.z]})))
       );
     }
     function GroundCover({mats}){
@@ -1049,36 +1082,41 @@ async function bootApp() {
     }
     function RockField({mats}){
       const variants=useMemo(()=>[1,2,3,4,5].map(makeRockGeometry),[]);
-      const batches=[0,1,2,3,4].map(v=>layout.rocks.filter(r=>r.variant===v));
-      const colliders=layout.rocks.filter(r=>r.collision).slice(0,80);
+      const rockCard=useMemo(()=>makeRockCardGeometry(4.7,2.05),[]);
+      const major=layout.rocks.filter((_,i)=>i%3!==0);
+      const close=layout.rocks.filter((_,i)=>i%3===0);
+      const colliders=layout.rocks.filter(r=>r.collision).slice(0,95);
       return h(React.Fragment,null,
-        ...batches.map((items,v)=>h(InstancedBatch,{key:v,geometry:variants[v],material:mats.rock,items,kind:'rock'})),
+        h(InstancedBatch,{geometry:rockCard,material:mats.realRock,items:major,kind:'rockcard'}),
+        ...[0,1,2,3,4].map(v=>h(InstancedBatch,{key:v,geometry:variants[v],material:mats.rock,items:close.filter(r=>r.variant===v),kind:'rock'})),
         h(InstancedBatch,{geometry:variants[2],material:mats.stone,items:layout.pebbles,kind:'rock'}),
-        h(RigidBody,{type:'fixed',colliders:false},...colliders.map((r,i)=>h(BallCollider,{key:i,args:[r.s*.58],position:[r.x,terrainHeight(r.x,r.z)+r.s*.28,r.z]}))));
+        h(RigidBody,{type:'fixed',colliders:false},...colliders.map((r,i)=>h(BallCollider,{key:i,args:[r.s*.60],position:[r.x,terrainHeight(r.x,r.z)+r.s*.30,r.z]})))
+      );
     }
+
 
         function Bridge({mats}){
       const x=-31,z=riverCenterZ(x),deckY=waterSurfaceAt(x)+1.0,length=10.0,width=1.58,pieces=[];
       const visual=useRef(),body=useRef(),collapseAt=useRef(0),[collapse,setCollapse]=useState(false);
       useEffect(()=>{const fn=e=>{if(e.detail?.kind==='river'&&e.detail?.route==='ford'){collapseAt.current=performance.now();setCollapse(true);}};window.addEventListener('mera-consequence',fn);return()=>window.removeEventListener('mera-consequence',fn);},[]);
       useFrame(()=>{if(!collapse||!visual.current)return;const t=Math.min(1,(performance.now()-collapseAt.current)/2450),e=t*t*(3-2*t);visual.current.position.y=-2.25*e;visual.current.rotation.z=-.34*e;visual.current.rotation.x=.12*e;if(t>.52)body.current?.setEnabled?.(false);});
-      for(let i=0;i<25;i++)pieces.push(h('mesh',{key:'p'+i,position:[0,.04,-length/2+.2+i*.4],castShadow:true,receiveShadow:true},h('boxGeometry',{args:[width,.14,.37]}),h('primitive',{object:mats.wood,attach:'material'})));
+      for(let i=0;i<25;i++)pieces.push(h('mesh',{key:'p'+i,position:[0,.04,-length/2+.2+i*.4],castShadow:false,receiveShadow:false},h('boxGeometry',{args:[width,.14,.37]}),h('primitive',{object:mats.wood,attach:'material'})));
       for(const sx of [-1,1]){
-        pieces.push(h('mesh',{key:'rail'+sx,position:[sx*.69,.86,0],rotation:[Math.PI/2,0,0],castShadow:true},h('cylinderGeometry',{args:[.07,.08,length,7]}),h('meshStandardMaterial',{color:'#6d5138',roughness:1})));
-        for(let i=0;i<6;i++)pieces.push(h('mesh',{key:`post${sx}${i}`,position:[sx*.69,.54,-length/2+.25+i*(length-.5)/5],castShadow:true},h('cylinderGeometry',{args:[.09,.11,1.12,7]}),h('meshStandardMaterial',{color:'#6b4f35',roughness:1})));
+        pieces.push(h('mesh',{key:'rail'+sx,position:[sx*.69,.86,0],rotation:[Math.PI/2,0,0],castShadow:false},h('cylinderGeometry',{args:[.07,.08,length,7]}),h('meshStandardMaterial',{color:'#6d5138',roughness:1})));
+        for(let i=0;i<6;i++)pieces.push(h('mesh',{key:`post${sx}${i}`,position:[sx*.69,.54,-length/2+.25+i*(length-.5)/5],castShadow:false},h('cylinderGeometry',{args:[.09,.11,1.12,7]}),h('meshStandardMaterial',{color:'#6b4f35',roughness:1})));
       }
       return h(RigidBody,{ref:body,type:'fixed',colliders:false,position:[x,deckY,z],friction:1},
         h(CuboidCollider,{args:[width/2,.15,length/2]}),
         h(CuboidCollider,{args:[.07,.48,length/2],position:[-.69,.55,0]}),h(CuboidCollider,{args:[.07,.48,length/2],position:[.69,.55,0]}),
         h(CuboidCollider,{args:[width/2,.10,1.3],position:[0,-.18,length/2+1],rotation:[-.11,0,0]}),h(CuboidCollider,{args:[width/2,.10,1.3],position:[0,-.18,-length/2-1],rotation:[.11,0,0]}),
         h('group',{ref:visual},...pieces,
-          h('mesh',{position:[0,-.18,length/2+1],rotation:[-.11,0,0],receiveShadow:true},h('boxGeometry',{args:[width,.16,2.6]}),h('primitive',{object:mats.wood,attach:'material'})),
-          h('mesh',{position:[0,-.18,-length/2-1],rotation:[.11,0,0],receiveShadow:true},h('boxGeometry',{args:[width,.16,2.6]}),h('primitive',{object:mats.wood,attach:'material'}))
+          h('mesh',{position:[0,-.18,length/2+1],rotation:[-.11,0,0],receiveShadow:false},h('boxGeometry',{args:[width,.16,2.6]}),h('primitive',{object:mats.wood,attach:'material'})),
+          h('mesh',{position:[0,-.18,-length/2-1],rotation:[.11,0,0],receiveShadow:false},h('boxGeometry',{args:[width,.16,2.6]}),h('primitive',{object:mats.wood,attach:'material'}))
         )
       );
     }
     function Ford({mats}){
-      const stones=[];for(let i=0;i<13;i++){const z=130-i*1.15,x=31+Math.sin(i*.84)*.45,y=waterSurfaceAt(x)+.08;stones.push(h('mesh',{key:i,position:[x,y,z],rotation:[0,i*.39,0],scale:[.72,.25,.95],receiveShadow:true},h('primitive',{object:makeRockGeometry((i%5)+1)}),h('primitive',{object:mats.rock,attach:'material'})));}
+      const stones=[];for(let i=0;i<13;i++){const z=130-i*1.15,x=31+Math.sin(i*.84)*.45,y=waterSurfaceAt(x)+.08;stones.push(h('mesh',{key:i,position:[x,y,z],rotation:[0,i*.39,0],scale:[.72,.25,.95],receiveShadow:false},h('primitive',{object:makeRockGeometry((i%5)+1)}),h('primitive',{object:mats.rock,attach:'material'})));}
       return h('group',null,...stones);
     }
 
@@ -1098,14 +1136,14 @@ async function bootApp() {
       ];
       gate.forEach((r,i)=>{
         const y=terrainHeight(r.x,r.z);
-        parts.push(h('mesh',{key:'gate-m'+i,geometry:i?rockB:rockA,material:mats.rock,position:[r.x,y+1.05,r.z],rotation:[0,r.rot,0],scale:[r.sx,r.sy,r.sz],castShadow:true,receiveShadow:true}));
+        parts.push(h('mesh',{key:'gate-m'+i,geometry:i?rockB:rockA,material:mats.rock,position:[r.x,y+1.05,r.z],rotation:[0,r.rot,0],scale:[r.sx,r.sy,r.sz],castShadow:false,receiveShadow:false}));
         parts.push(h(BallCollider,{key:'gate-c'+i,args:[1.65],position:[r.x,y+1.0,r.z]}));
       });
 
       // SILAR contrast: west is enclosed under pines; east is exposed before a short
       // sheltered rock-and-birch pocket. The fallen trunk gives the pine choice a cost.
       const logX=-31.5,logZ=-1.5,logY=terrainHeight(logX,logZ)+.46;
-      parts.push(h('mesh',{key:'fallen-log',position:[logX,logY,logZ],rotation:[0,0,Math.PI/2],castShadow:true,receiveShadow:true},h('cylinderGeometry',{args:[.28,.36,5.6,9]}),h('primitive',{object:mats.bark,attach:'material'})));
+      parts.push(h('mesh',{key:'fallen-log',position:[logX,logY,logZ],rotation:[0,0,Math.PI/2],castShadow:false,receiveShadow:false},h('cylinderGeometry',{args:[.28,.36,5.6,9]}),h('primitive',{object:mats.bark,attach:'material'})));
       parts.push(h(CuboidCollider,{key:'fallen-log-collider',args:[2.8,.32,.34],position:[logX,logY,logZ]}));
 
       const shelter=[
@@ -1115,40 +1153,44 @@ async function bootApp() {
       ];
       shelter.forEach((r,i)=>{
         const y=terrainHeight(r.x,r.z);
-        parts.push(h('mesh',{key:'shelter-m'+i,geometry:i%2?rockB:rockA,material:mats.rock,position:[r.x,y+r.s*.44,r.z],rotation:[0,r.rot,0],scale:[r.s,r.s*.72,r.s*1.05],castShadow:i<2,receiveShadow:true}));
+        parts.push(h('mesh',{key:'shelter-m'+i,geometry:i%2?rockB:rockA,material:mats.rock,position:[r.x,y+r.s*.44,r.z],rotation:[0,r.rot,0],scale:[r.s,r.s*.72,r.s*1.05],castShadow:i<2,receiveShadow:false}));
         if(i<2)parts.push(h(BallCollider,{key:'shelter-c'+i,args:[r.s*.62],position:[r.x,y+r.s*.45,r.z]}));
       });
 
       // VALEN: rock teeth make the short ridge visibly harsher without forcing a rail.
       for(let i=0;i<8;i++){
         const z=-108-i*8.2,x=25.5+Math.sin(i*.9)*3.1,s=.85+(i%3)*.22,y=terrainHeight(x,z);
-        parts.push(h('mesh',{key:'ridge-rock'+i,geometry:i%2?rockA:rockB,material:mats.rock,position:[x,y+s*.3,z],rotation:[0,i*.57,0],scale:[s,s*.52,s*.88],receiveShadow:true}));
+        parts.push(h('mesh',{key:'ridge-rock'+i,geometry:i%2?rockA:rockB,material:mats.rock,position:[x,y+s*.3,z],rotation:[0,i*.57,0],scale:[s,s*.52,s*.88],receiveShadow:false}));
       }
       return h(RigidBody,{type:'fixed',colliders:false},...parts);
     }
 
     function WindField(){
       const ref=useRef();
-      const data=useMemo(()=>{
-        const n=260,pos=new Float32Array(n*3),speed=new Float32Array(n);
-        for(let i=0;i<n;i++){
-          const x=9+rng()*45,z=-34+rng()*76;
-          pos[i*3]=x;pos[i*3+1]=terrainHeight(x,z)+.55+rng()*4.1;pos[i*3+2]=z;speed[i]=9+rng()*9;
-        }
-        const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
-        return {g,speed,n};
-      },[]);
-      useFrame((_,dt)=>{
-        const attr=data.g.attributes.position;
-        for(let i=0;i<data.n;i++){
-          let x=attr.getX(i)+data.speed[i]*dt,z=attr.getZ(i)-data.speed[i]*.16*dt;
-          if(x>56){x=9;z=-34+rng()*76;}
-          attr.setX(i,x);attr.setZ(i,z);attr.setY(i,terrainHeight(x,z)+.8+(i%7)*.42);
-        }
-        attr.needsUpdate=true;
-      });
-      const mat=useMemo(()=>new THREE.PointsMaterial({color:0xe5eee3,size:.13,transparent:true,opacity:.68,depthWrite:false}),[]);
-      return h('points',{ref,geometry:data.g,material:mat});
+      const count=260;
+      const data=useMemo(()=>{const pos=new Float32Array(count*6),speed=new Float32Array(count);for(let i=0;i<count;i++){
+        const x=10+rng()*49,z=-39+rng()*83,y=terrainHeight(x,z)+.7+rng()*5.8;
+        const j=i*6;pos[j]=x;pos[j+1]=y;pos[j+2]=z;pos[j+3]=x+WIND_DIR.x*1.65;pos[j+4]=y+.03;pos[j+5]=z+WIND_DIR.y*1.65;speed[i]=5+rng()*8;
+      }return{pos,speed};},[]);
+      const geo=useMemo(()=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(data.pos,3));return g;},[data]);
+      const mat=useMemo(()=>new THREE.LineBasicMaterial({color:0xdde9eb,transparent:true,opacity:.34,depthWrite:false}),[]);
+      useFrame((_,dt)=>{if(!ref.current)return;const a=geo.attributes.position;for(let i=0;i<count;i++){const j=i*2;let x=a.getX(j)+WIND_DIR.x*data.speed[i]*dt,z=a.getZ(j)+WIND_DIR.y*data.speed[i]*dt,y=a.getY(j);if(x>58||z>44||z<-43){x=11+(i*19%44);z=-40+(i*31%80);y=terrainHeight(x,z)+.9+(i%9)*.56;}a.setXYZ(j,x,y,z);a.setXYZ(j+1,x+WIND_DIR.x*1.65,y+.03,z+WIND_DIR.y*1.65);}a.needsUpdate=true;});
+      return h('lineSegments',{ref,geometry:geo,material:mat,frustumCulled:false});
+    }
+
+    function StormRain3D(){
+      const ref=useRef(),count=950;
+      const data=useMemo(()=>{const pos=new Float32Array(count*6),spd=new Float32Array(count);for(let i=0;i<count;i++){const x=-76+rng()*152,z=-232+rng()*470,y=terrainHeight(x,z)+4+rng()*24,j=i*6;pos[j]=x;pos[j+1]=y;pos[j+2]=z;pos[j+3]=x-.12;pos[j+4]=y-.85;pos[j+5]=z+.20;spd[i]=12+rng()*11;}return{pos,spd};},[]);
+      const geo=useMemo(()=>{const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(data.pos,3));return g;},[data]);
+      const mat=useMemo(()=>new THREE.LineBasicMaterial({color:0xcfe0e5,transparent:true,opacity:.38,depthWrite:false}),[]);
+      useFrame((_,dt)=>{const a=geo.attributes.position;for(let i=0;i<count;i++){const j=i*2;let x=a.getX(j)+WIND_DIR.x*2.4*dt,z=a.getZ(j)+WIND_DIR.y*2.4*dt,y=a.getY(j)-data.spd[i]*dt;const floor=terrainHeight(x,z)+.25;if(y<floor){x=-75+(i*37%150);z=-230+(i*53%460);y=terrainHeight(x,z)+12+(i%13)*1.1;}a.setXYZ(j,x,y,z);a.setXYZ(j+1,x-.12,y-.85,z+.20);}a.needsUpdate=true;});
+      return h('lineSegments',{ref,geometry:geo,material:mat,frustumCulled:false});
+    }
+    function LightningSceneLight(){
+      const ref=useRef(),flash=useRef(0);
+      useEffect(()=>{const fn=()=>{flash.current=performance.now();};window.addEventListener('mera-lightning',fn);return()=>window.removeEventListener('mera-lightning',fn);},[]);
+      useFrame(()=>{if(!ref.current)return;const t=(performance.now()-flash.current)/1000;ref.current.intensity=t<.10?7.2:t<.18?.8:t<.30?4.1:0;});
+      return h('directionalLight',{ref,position:[-18,70,28],color:'#eaf7ff',intensity:0});
     }
 
     function OutpostBeacon(){
@@ -1168,27 +1210,27 @@ async function bootApp() {
     }
     function Signpost({position,rotation=0,lines,mats}){
       const tex=useMemo(()=>makeTextTexture(lines),[]);const mat=useMemo(()=>new THREE.MeshStandardMaterial({map:tex,roughness:1}),[tex]);
-      return h('group',{position:[position[0],terrainHeight(position[0],position[2]),position[2]],rotation:[0,rotation,0]},h('mesh',{position:[0,1.6,0],castShadow:true},h('cylinderGeometry',{args:[.10,.14,3.2,7]}),h('primitive',{object:mats.bark,attach:'material'})),h('mesh',{position:[0,2.45,.02],castShadow:true},h('boxGeometry',{args:[3.5,1.28,.16]}),h('primitive',{object:mat,attach:'material'})));
+      return h('group',{position:[position[0],terrainHeight(position[0],position[2]),position[2]],rotation:[0,rotation,0]},h('mesh',{position:[0,1.6,0],castShadow:false},h('cylinderGeometry',{args:[.10,.14,3.2,7]}),h('primitive',{object:mats.bark,attach:'material'})),h('mesh',{position:[0,2.45,.02],castShadow:false},h('boxGeometry',{args:[3.5,1.28,.16]}),h('primitive',{object:mat,attach:'material'})));
     }
 
     function DecisionLandforms({mats}){
       const geo=useMemo(()=>makeRockGeometry(31),[]);
-      const crags=useMemo(()=>{
-        const a=[];
-        // Central woodland crag: creates a genuine west/east choice without fencing the player onto a path.
-        for(let i=0;i<14;i++)a.push({x:-1.2+Math.sin(i*1.4)*2.1,z:34-i*6.2,s:2.25+(i%3)*.34,sy:.82+(i%2)*.18,rot:i*.52});
-        // Upper crag / broken ridge: divides the final switchback and ridge approaches.
-        for(let i=0;i<13;i++)a.push({x:1.0+Math.sin(i*1.15)*2.5,z:-101-i*6.0,s:2.4+(i%4)*.28,sy:.86+(i%3)*.12,rot:i*.43});
-        return a;
-      },[]);
-      return h(RigidBody,{type:'fixed',colliders:false},...crags.flatMap((r,i)=>{
+      const spine=[];
+      // River divider: after commitment, branches cannot be crossed before they reunite near z=90.
+      for(let z=129;z>=101;z-=5.6)spine.push({x:Math.sin(z*.31)*1.0,z,s:1.55,sy:1.12,rot:z*.08,zone:'river'});
+      // Woodland divider: an actual rocky/wooded spine from the fork to the reconvergence.
+      for(let z=20;z>=-40;z-=5.0)spine.push({x:Math.sin(z*.27)*1.15,z,s:1.75+(Math.abs(z)%3)*.10,sy:1.20,rot:z*.12,zone:'wood'});
+      // Final ascent divider: continuous rock rib keeps ridge and switchback separate until the summit approach.
+      for(let z=-116;z>=-201;z-=5.3)spine.push({x:2.3+Math.sin(z*.18)*1.1,z,s:1.95,sy:1.32,rot:z*.10,zone:'ascent'});
+      return h(RigidBody,{type:'fixed',colliders:false},...spine.flatMap((r,i)=>{
         const y=terrainHeight(r.x,r.z);
         return [
-          h('mesh',{key:'m'+i,geometry:geo,material:mats.rock,position:[r.x,y+r.s*.42,r.z],rotation:[0,r.rot,0],scale:[r.s,r.s*r.sy,r.s*.95],castShadow:i<8,receiveShadow:true}),
-          h(BallCollider,{key:'c'+i,args:[r.s*.72],position:[r.x,y+r.s*.48,r.z]})
+          h('mesh',{key:'m'+i,geometry:geo,material:mats.rock,position:[r.x,y+r.s*.46,r.z],rotation:[0,r.rot,0],scale:[r.s,r.s*r.sy,r.s*1.08],castShadow:false,receiveShadow:false}),
+          h(BallCollider,{key:'c'+i,args:[r.s*.78],position:[r.x,y+r.s*.62,r.z]})
         ];
       }));
     }
+
 
 
     function DynamicRouteLocks({mats}){
@@ -1197,14 +1239,14 @@ async function bootApp() {
       const locks=[];
       const addLog=(key,x,z,rot)=>{
         const y=terrainHeight(x,z)+.42;
-        locks.push(h('mesh',{key:key+'m',position:[x,y,z],rotation:[0,rot,Math.PI/2],castShadow:true,receiveShadow:true},h('cylinderGeometry',{args:[.28,.38,7.0,9]}),h('primitive',{object:mats.bark,attach:'material'})));
-        locks.push(h(CuboidCollider,{key:key+'c',args:[3.45,.38,.48],position:[x,y,z],rotation:[0,rot,0]}));
+        locks.push(h('mesh',{key:key+'m',position:[x,y,z],rotation:[0,rot,Math.PI/2],castShadow:false,receiveShadow:false},h('cylinderGeometry',{args:[.28,.38,7.0,9]}),h('primitive',{object:mats.bark,attach:'material'})));
+        locks.push(h(CuboidCollider,{key:key+'c',args:[4.2,1.15,.70],position:[x,y+1.0,z],rotation:[0,rot,0]}));
       };
       const addRocks=(key,x,z,rot)=>{
         for(let i=0;i<4;i++){
           const ox=(i-1.5)*1.15*Math.cos(rot),oz=(i-1.5)*1.15*Math.sin(rot),xx=x+ox,zz=z+oz,y=terrainHeight(xx,zz),g=makeRockGeometry(70+i);
-          locks.push(h('mesh',{key:key+'m'+i,geometry:g,material:mats.rock,position:[xx,y+.55,zz],rotation:[0,i*.8,0],scale:[1.1,.75,1.05],castShadow:true,receiveShadow:true}));
-          locks.push(h(BallCollider,{key:key+'c'+i,args:[.78],position:[xx,y+.62,zz]}));
+          locks.push(h('mesh',{key:key+'m'+i,geometry:g,material:mats.rock,position:[xx,y+.55,zz],rotation:[0,i*.8,0],scale:[1.1,.75,1.05],castShadow:false,receiveShadow:false}));
+          locks.push(h(BallCollider,{key:key+'c'+i,args:[1.05],position:[xx,y+1.05,zz]}));
         }
       };
       if(routes.river==='bridge')addLog('rb',-16.8,138.8,-1.06);
@@ -1242,10 +1284,10 @@ async function bootApp() {
         position:[position[0],terrainHeight(position[0],position[2]),position[2]],
         rotation:[0,rotation,0]
       },
-        h('mesh',{position:[0,1.6,0],castShadow:true},
+        h('mesh',{position:[0,1.6,0],castShadow:false},
           h('cylinderGeometry',{args:[.10,.14,3.2,7]}),
           h('primitive',{object:mats.bark,attach:'material'})),
-        h('mesh',{position:[0,2.45,.02],castShadow:true},
+        h('mesh',{position:[0,2.45,.02],castShadow:false},
           h('boxGeometry',{args:[3.5,1.28,.16]}),
           h('primitive',{object:mat,attach:'material'}))
       );
@@ -1282,8 +1324,8 @@ async function bootApp() {
       const makeTree=(ref,x,z)=>{
         const y=terrainHeight(x,z);
         return h('group',{ref,position:[x,y,z],scale:[1.22,1.22,1.22]},
-          h('mesh',{geometry:pineGeo.trunk,material:mats.bark,castShadow:true}),
-          h('mesh',{geometry:pineGeo.foliage,material:mats.pine,castShadow:true})
+          h('mesh',{geometry:pineGeo.trunk,material:mats.bark,castShadow:false}),
+          h('mesh',{geometry:pineGeo.foliage,material:mats.pine,castShadow:false})
         );
       };
       const blockedX=effect?(effect.route==='pine'?31:-31):0, blockedY=effect?terrainHeight(blockedX,-13)+.48:0;
@@ -1296,7 +1338,7 @@ async function bootApp() {
       useEffect(()=>{const fn=e=>{if(e.detail?.kind==='ascent'){refs.current=[];setEffect({...e.detail});}};window.addEventListener('mera-consequence',fn);return()=>window.removeEventListener('mera-consequence',fn);},[]);
       useFrame(()=>{if(!effect)return;const baseX=effect.route==='ridge'?-47:13,baseZ=-184;refs.current.forEach((m,i)=>{if(!m)return;const t=Math.min(1,Math.max(0,(performance.now()-effect.started-i*70)/1900)),e=1-Math.pow(1-t,3),tx=baseX+(i%4-1.5)*1.3,tz=baseZ+(Math.floor(i/4)-.5)*2.2,ty=terrainHeight(tx,tz)+.45+(i%3)*.18;m.visible=true;m.position.set(tx+(effect.route==='ridge'?4:-4)*(1-e),ty+9*(1-e),tz-3*(1-e));m.rotation.x=e*(i+.5);m.rotation.z=e*(i*.7);});});
       if(!effect)return null;
-      const arr=[];for(let i=0;i<8;i++)arr.push(h('mesh',{key:i,ref:r=>refs.current[i]=r,geometry:geo[i%4],material:mats.rock,visible:false,scale:[1.0+(i%3)*.14,.7+(i%2)*.15,.9+(i%4)*.08],castShadow:true,receiveShadow:true}));
+      const arr=[];for(let i=0;i<8;i++)arr.push(h('mesh',{key:i,ref:r=>refs.current[i]=r,geometry:geo[i%4],material:mats.rock,visible:false,scale:[1.0+(i%3)*.14,.7+(i%2)*.15,.9+(i%4)*.08],castShadow:false,receiveShadow:false}));
       const bx=effect.route==='ridge'?-47:13,by=terrainHeight(bx,-184)+1.35;
       return h(React.Fragment,null,h('group',null,...arr),h(RigidBody,{type:'fixed',colliders:false},h(CuboidCollider,{args:[3.4,1.45,2.1],position:[bx,by,-184]})));
     }
@@ -1307,14 +1349,14 @@ async function bootApp() {
       const iron=useMemo(()=>new THREE.MeshStandardMaterial({color:0x51544c,metalness:.48,roughness:.72}),[]);
       const dark=useMemo(()=>new THREE.MeshStandardMaterial({color:0x171e21,roughness:.9}),[]);
       const parts=[
-        h('mesh',{key:'base',geometry:rockA,material:mats.rock,scale:[4.4,2.1,4.0],position:[0,1.1,0],castShadow:true,receiveShadow:true}),
-        h('mesh',{key:'west-foundation',geometry:rockB,material:mats.rock,scale:[2.7,1.3,2.9],position:[-2.4,1.4,1.4],receiveShadow:true}),
-        h('mesh',{key:'east-foundation',geometry:rockC,material:mats.rock,scale:[2.1,1.1,2.4],position:[2.4,1.2,1.1],receiveShadow:true}),
-        h('mesh',{key:'tower',position:[.2,5.6,0],castShadow:true,receiveShadow:true},h('cylinderGeometry',{args:[2.45,2.9,7.7,16]}),h('primitive',{object:mats.stone,attach:'material'})),
-        h('mesh',{key:'parapet',position:[.2,9.34,0],castShadow:true},h('cylinderGeometry',{args:[2.70,2.60,.31,16]}),h('primitive',{object:mats.rock,attach:'material'})),
-        h('mesh',{key:'roof',position:[.2,10.24,0],castShadow:true},h('coneGeometry',{args:[2.78,2.1,16]}),h('meshStandardMaterial',{color:'#49463e',roughness:1})),
-        h('mesh',{key:'door',position:[0,2.75,2.72],castShadow:true},h('boxGeometry',{args:[1.25,2.12,.20]}),h('primitive',{object:mats.wood,attach:'material'})),
-        h('mesh',{key:'lintel',position:[0,3.86,2.83],castShadow:true},h('boxGeometry',{args:[1.62,.18,.38]}),h('primitive',{object:mats.stone,attach:'material'})),
+        h('mesh',{key:'base',geometry:rockA,material:mats.rock,scale:[4.4,2.1,4.0],position:[0,1.1,0],castShadow:false,receiveShadow:false}),
+        h('mesh',{key:'west-foundation',geometry:rockB,material:mats.rock,scale:[2.7,1.3,2.9],position:[-2.4,1.4,1.4],receiveShadow:false}),
+        h('mesh',{key:'east-foundation',geometry:rockC,material:mats.rock,scale:[2.1,1.1,2.4],position:[2.4,1.2,1.1],receiveShadow:false}),
+        h('mesh',{key:'tower',position:[.2,5.6,0],castShadow:false,receiveShadow:false},h('cylinderGeometry',{args:[2.45,2.9,7.7,16]}),h('primitive',{object:mats.stone,attach:'material'})),
+        h('mesh',{key:'parapet',position:[.2,9.34,0],castShadow:false},h('cylinderGeometry',{args:[2.70,2.60,.31,16]}),h('primitive',{object:mats.rock,attach:'material'})),
+        h('mesh',{key:'roof',position:[.2,10.24,0],castShadow:false},h('coneGeometry',{args:[2.78,2.1,16]}),h('meshStandardMaterial',{color:'#49463e',roughness:1})),
+        h('mesh',{key:'door',position:[0,2.75,2.72],castShadow:false},h('boxGeometry',{args:[1.25,2.12,.20]}),h('primitive',{object:mats.wood,attach:'material'})),
+        h('mesh',{key:'lintel',position:[0,3.86,2.83],castShadow:false},h('boxGeometry',{args:[1.62,.18,.38]}),h('primitive',{object:mats.stone,attach:'material'})),
         h('mesh',{key:'door-brace',position:[0,2.70,2.84],rotation:[0,0,.62]},h('boxGeometry',{args:[1.42,.12,.11]}),h('primitive',{object:mats.bark,attach:'material'})),
         h('mesh',{key:'window',position:[2.78,6.4,.12],rotation:[0,Math.PI/2,0]},h('boxGeometry',{args:[.72,1.12,.10]}),h('primitive',{object:dark,attach:'material'})),
         h('mesh',{key:'window-b',position:[.25,7.0,2.62]},h('boxGeometry',{args:[.55,.9,.13]}),h('primitive',{object:dark,attach:'material'})),
@@ -1324,14 +1366,14 @@ async function bootApp() {
       ];
       for(let k=0;k<7;k++){
         const a=k*2*Math.PI/7;
-        parts.push(h('mesh',{key:'buttress'+k,position:[.2+2.73*Math.cos(a),3.25,2.73*Math.sin(a)],rotation:[0,-a,0],castShadow:k%2===0,receiveShadow:true},h('boxGeometry',{args:[.42,2.2,.55]}),h('primitive',{object:mats.stone,attach:'material'})));
+        parts.push(h('mesh',{key:'buttress'+k,position:[.2+2.73*Math.cos(a),3.25,2.73*Math.sin(a)],rotation:[0,-a,0],castShadow:k%2===0,receiveShadow:false},h('boxGeometry',{args:[.42,2.2,.55]}),h('primitive',{object:mats.stone,attach:'material'})));
       }
       return h(RigidBody,{type:'fixed',colliders:false},
         h(BallCollider,{args:[3.4],position:[OUTPOST.x,y+1.7,OUTPOST.z]}),
         h(CuboidCollider,{args:[2.2,4.5,2.2],position:[OUTPOST.x+.35,y+7.2,OUTPOST.z-.1]}),
         h('group',{position:[OUTPOST.x,y,OUTPOST.z],rotation:[0,-.22,0]},...parts));
     }
-    // E3.8: decorative waterfall removed; the western shoulder is now ordinary rock terrain.
+    // E3.9: decorative waterfall removed; the western shoulder is now ordinary rock terrain.
     function Mountains(){
       const mesh=useMemo(()=>{
         const layers=[];
@@ -1358,7 +1400,7 @@ async function bootApp() {
 
         function Valley({materials}){
       return h(React.Fragment,null,
-        h(Terrain,{mat:materials.forest}),h(Paths,{mat:materials.path}),h(River,null),h(RiverBarriers,null),h(Bridge,{mats:materials}),h(Ford,{mats:materials}),h(Forest,{mats:materials}),h(GroundCover,{mats:materials}),h(RockField,{mats:materials}),h(SemanticLandmarks,{mats:materials}),h(WindField,null),
+        h(Terrain,{mat:materials.forest}),h(Paths,{mat:materials.path,coreMat:materials.pathCore,vergeMat:materials.verge}),h(StormRain3D,null),h(LightningSceneLight,null),h(River,null),h(RiverBarriers,null),h(Bridge,{mats:materials}),h(Ford,{mats:materials}),h(Forest,{mats:materials}),h(GroundCover,{mats:materials}),h(RockField,{mats:materials}),h(SemanticLandmarks,{mats:materials}),h(WindField,null),
         h(Signpost,{position:[0,0,151],rotation:0,lines:['BRIDGE  ←','FORD  →'],mats:materials}),
         h(Signpost,{position:[0,0,48],rotation:0,lines:['PINE TRAIL  ←','BIRCH HOLLOW  →'],mats:materials}),
         h(Signpost,{position:[0,0,-84],rotation:0,lines:['SWITCHBACK  ←','RIDGE  →'],mats:materials}),
@@ -1409,7 +1451,7 @@ async function bootApp() {
       refreshChatUI();
 
       const windy=session.routes.woodland==='birch' && inBirchWindZone(p);
-      windNote?.classList.toggle('active',windy);
+      if(!windy)windNote?.classList.remove('active');
       if(windy!==worldState.windExposed){
         worldState.windExposed=windy;
         window.dispatchEvent(new CustomEvent('mera-wind-state',{detail:{active:windy}}));
@@ -1495,19 +1537,27 @@ async function bootApp() {
     }
     function Player({onCharacterReady}){
       const controllerRef=useRef();
-      const [windSlow,setWindSlow]=useState(false);
-      useEffect(()=>{
-        const fn=e=>setWindSlow(!!e.detail?.active);
-        window.addEventListener('mera-wind-state',fn);
-        return()=>window.removeEventListener('mera-wind-state',fn);
-      },[]);
+      const [windMode,setWindMode]=useState('none');
+      const prev=useRef(null),modeRef=useRef('none');
+      useFrame(()=>{
+        const c=controllerRef.current,p=c?.currPos;if(!p)return;
+        const active=session.routes.woodland==='birch'&&inBirchWindZone(p);
+        let mode='none';
+        if(active){
+          if(prev.current){const dx=p.x-prev.current.x,dz=p.z-prev.current.z,len=Math.hypot(dx,dz);if(len>.003){const dot=(dx/len)*WIND_DIR.x+(dz/len)*WIND_DIR.y;mode=dot>.35?'tail':dot<-.35?'head':'cross';}else mode='cross';}
+          else mode='cross';
+        }
+        prev.current={x:p.x,z:p.z};
+        if(mode!==modeRef.current){modeRef.current=mode;setWindMode(mode);if(windNote){windNote.textContent=mode==='head'?'HEADWIND · MOVEMENT REDUCED':mode==='tail'?'TAILWIND · MOVEMENT BOOSTED':mode==='cross'?'CROSSWIND':'WIND EXPOSURE';windNote.classList.toggle('active',mode!=='none');}logEvent('wind_physics',{mode});}
+      });
+      const speed=windMode==='head'?{walk:.82,run:1.15,acc:.36}:windMode==='tail'?{walk:2.55,run:4.25,acc:.13}:windMode==='cross'?{walk:1.42,run:2.18,acc:.25}:{walk:1.95,run:3.35,acc:.20};
       return h(React.Fragment,null,
         h(EcctrlAnimationStateController,{ecctrl:controllerRef}),
         h(DirectKeyboardInput,{controllerRef}),
         h(Ecctrl,{
           ref:controllerRef,position:[0,4,216],capsuleHalfHeight:.55,capsuleRadius:.32,floatHeight:.20,
-          maxWalkVel:windSlow?1.05:1.95,maxRunVel:windSlow?1.48:3.35,
-          accDeltaTime:windSlow?.30:.20,decDeltaTime:windSlow?.18:.20,
+          maxWalkVel:speed.walk,maxRunVel:speed.run,
+          accDeltaTime:speed.acc,decDeltaTime:.20,
           jumpVel:4.8,slopeMaxAngle:.90,enableToggleRun:false,groundDetection:'shapeCast',friction:0,linearDamping:.15,angularDamping:1.0
         },h(ModelBoundary,null,h(AnimatedCharacter,{onReady:onCharacterReady}))),
         h(FollowCamera,{controllerRef}),h(Diagnostics,{controllerRef})
@@ -1515,13 +1565,21 @@ async function bootApp() {
     }
     function Scene({onCharacterReady}){
       const materials=useLandscapeMaterials();
-      return h(React.Fragment,null,h('color',{attach:'background',args:['#66767d']}),h('fog',{attach:'fog',args:['#718084',58,410]}),h('hemisphereLight',{intensity:.88,color:'#d7e2e4',groundColor:'#485346'}),h('ambientLight',{intensity:.12,color:'#c9d4d0'}),h('directionalLight',{position:[-40,63,28],intensity:1.38,color:'#e5edf0',castShadow:true,'shadow-mapSize-width':1024,'shadow-mapSize-height':1024,'shadow-camera-left':-59,'shadow-camera-right':59,'shadow-camera-top':59,'shadow-camera-bottom':-59,'shadow-camera-near':4,'shadow-camera-far':145,'shadow-bias':-.00014}),h('directionalLight',{position:[31,20,-32],intensity:.28,color:'#9db8c8'}),h(Physics,{gravity:[0,-9.81,0],timeStep:'vary'},h(Valley,{materials}),h(Player,{onCharacterReady})));
+      return h(React.Fragment,null,
+        h('color',{attach:'background',args:['#4e5b61']}),
+        h('fog',{attach:'fog',args:['#5e696c',42,330]}),
+        h('hemisphereLight',{intensity:.78,color:'#cbd8dc',groundColor:'#333d35'}),
+        h('ambientLight',{intensity:.10,color:'#a9b7b8'}),
+        h('directionalLight',{position:[-38,58,28],intensity:.92,color:'#cfdde2'}),
+        h('directionalLight',{position:[34,24,-30],intensity:.18,color:'#8ca3ae'}),
+        h(Physics,{gravity:[0,-9.81,0],timeStep:'vary'},h(Valley,{materials}),h(Player,{onCharacterReady}))
+      );
     }
     function App(){
       const [ready,setReady]=useState(false),once=useRef(false);
-      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking the fixed Heart voice pack…';loadfill.style.width='90%';try{await verifyHeartVoicePack();setReady(true);bootStatus.textContent='Ecctrl, Rapier, fixed Heart voice pack and the E3.8 storm ascent are ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
+      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking the fixed Heart voice pack…';loadfill.style.width='90%';try{await verifyHeartVoicePack();setReady(true);bootStatus.textContent='Ecctrl, Rapier, fixed Heart voice pack and the E3.9 storm ascent are ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
       useEffect(()=>{if(!ready)return;enterBtn.onclick=()=>{boot.classList.add('hidden');beginIntro();};},[ready]);
-      return h(Canvas,{shadows:true,dpr:[1,1.18],camera:{position:[4.8,3.2,224],fov:54,near:.1,far:650},gl:{antialias:true,powerPreference:'high-performance'},onCreated:({gl})=>{gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=.92;loadfill.style.width='78%';}},h(Suspense,{fallback:null},h(Scene,{onCharacterReady})));
+      return h(Canvas,{shadows:false,dpr:[1,1.18],camera:{position:[4.8,3.2,224],fov:54,near:.1,far:650},gl:{antialias:true,powerPreference:'high-performance'},onCreated:({gl})=>{gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=.92;loadfill.style.width='78%';}},h(Suspense,{fallback:null},h(Scene,{onCharacterReady})));
     }
 
     const root=createRoot(document.getElementById('root'));root.render(h(App));

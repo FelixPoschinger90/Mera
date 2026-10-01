@@ -1,13 +1,19 @@
-# Third-party notices — MERA E3.8
+# Third-party notices — MERA E3.9
+
+## Poly Haven — CC0
+MERA uses Poly Haven assets under the CC0 license. E3.9 adds static render/impostor images from:
+- Pine Tree 01 — modeling Rico Cilliers, photography Rob Tuytel
+- Fir Tree 01 — Rico Cilliers / Rob Tuytel
+- Tree Small 02 — Rico Cilliers
+- Rock Moss Set 01 — Kless Gyzen
+
+The project also retains Poly Haven forest-ground, path, mossy-rock and weathered-plank PBR textures. These resources are fetched from Poly Haven's public CDN at runtime.
 
 ## MERA local procedural artwork
-The nine `assets/*.png` texture assets were generated specifically for this prototype and are bundled locally. They depict pine branches, deciduous foliage, grasses, reeds, ferns, wildflowers and bark; they are not paid or third-party photo assets.
+The bundled `assets/*.png` ground-cover/bark textures from the earlier visual pass remain local and were generated specifically for this prototype.
 
 ## Kokoro / Heart voice
-The fixed WAV recordings in the user's existing `audio/` directory were generated with Kokoro Heart (`af_heart`) and are not included or modified by this patch. Kokoro ONNX model licensing: Apache-2.0; the model is not loaded by the participant runtime.
-
-## Poly Haven CC0
-The game continues to load its existing ground, path, mossy-rock and weathered-wood PBR textures from Poly Haven under CC0. Exact URLs are retained in `main.js`.
+The fixed WAV recordings in the user's existing `audio/` directory were generated with Kokoro Heart (`af_heart`). They are not modified or included by this patch. Kokoro ONNX model licensing: Apache-2.0.
 
 ## Three.js Soldier
 The temporary animated Soldier is loaded from the publicly hosted Three.js example GLB and remains a development-character placeholder.
