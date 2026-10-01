@@ -1,10 +1,10 @@
-# MERA E3.7 — Landscape & Atmosphere (visual pass)
+# MERA E3.8 — Storm Ascent environmental rebuild
 
-E3.7 builds on the user-tested **E3.6.1** baseline. This is a visual-production pass, **not** a change to the experiment, route/commitment logic, control scheme, fixed Heart speech, optional text-only MERA chat, or the ending. All three choice sets and the final writing task remain in place.
+E3.8 builds on the working E3.7/E3.6.1 study game. The player character, Heart voice pack, lexical exposure logic, chatbot, irreversible route choices, consequence scenes and outpost writing task are preserved. This release changes the environment and route mechanics only.
 
-## How to update your existing GitHub Pages repository
+## GitHub Pages update
 
-**KEEP the entire existing `audio/` directory.** It already contains your fixed Kokoro Heart WAV recordings; this release does not include, replace or regenerate them.
+Keep your existing `audio/` directory unchanged. It contains the fixed Heart WAV recordings and is not included in this ZIP.
 
 Upload/replace the five root files:
 
@@ -14,30 +14,38 @@ Upload/replace the five root files:
 - `README.md`
 - `THIRD_PARTY_NOTICES.md`
 
-**NEW: upload the complete `assets/` directory from this ZIP** to the repository root as well. The nine image files inside it are required for the updated vegetation and bark. Do not upload only the root files: the new local textures would be missing and the game would fail to initialize. Do not upload the optional artwork-generation script, which is deliberately not included in the deployment ZIP.
+Keep/upload the included `assets/` directory. The nine PNG assets are the same local vegetation/bark artwork used by E3.7, so if they are already present on GitHub you do not need to delete them first.
 
-Your repo should contain `index.html`, `main.js`, `styles.css`, `README.md`, `THIRD_PARTY_NOTICES.md`, `assets/` (nine PNGs), and your **existing** `audio/` folder (23 fixed Heart WAVs).
+After deployment, hard-refresh with `Ctrl+Shift+R`.
 
-After the GitHub Pages deployment completes, hard-refresh (`Ctrl+Shift+R`). If the scene fails to load, check that `assets/pine_branch.png` and `assets/grass_tuft.png` are publicly accessible at your Pages URL; leave `audio/` intact.
+## E3.8 changes
 
-## Visual changes
+- Persistent rain is visible during gameplay rather than only in the opening sequence.
+- Intermittent lightning continues during the field run; the HUD and study interfaces remain above the weather layer.
+- The decorative waterfall has been removed completely from the rendered world. Its former cliff is reduced to an ordinary rocky shoulder.
+- The exposed eastern woodland route now contains visibly stronger gust particles and **significantly reduces movement speed** while the player remains in the exposed wind zone.
+- The sheltered pine route is substantially denser: more pines, more physical trunks, heavier fern understory and a narrower trail corridor.
+- The upper map has been reshaped. The Northern Outpost now sits roughly 27 world units above the third decision area instead of on a low hill.
+- The virdex ridge climbs almost directly toward the outpost and becomes markedly steep near the summit.
+- The teebu switchback reaches the same summit over roughly twice the walking distance, with broad lateral turns and a much lower average grade.
+- The former flat/shared gap between the end of the two ascent routes and the outpost has been reduced to only the final few metres.
+- Ascent signs, route locks, rockfall consequence positions and cinematic cameras were moved to match the new mountain geometry.
+- The overall lighting/fog is darker and cooler to match the incoming-storm narrative.
 
-- Replaces the obvious conical pines and polyhedral round foliage with instanced three-dimensional branch-and-leaf assemblies using **nine bundled procedural alpha-cutout artwork textures** (pine boughs, broadleaf clusters, birch leaves, grasses, reed heads, ferns, meadow flowers, tree bark and birch bark).
-- Populates pine forest with fern understory and the exposed alternative with sparse meadow flowers. Adds small rocks along trail verges while retaining the existing physical obstacle layout.
-- Adds more terrain-color variety, worn earth near pathways and irregular erosion at the far valley walls.
-- Replaces the flat striped waterfall rectangle with layered, shaped water geometry, animated water shading, splash mist, bankside rocks and a foam ring at the plunge pool. River water also receives subtler flow/shallow-bank highlights.
-- Replaces the distant row of cones with layered irregular ridge meshes, and adjusts daylight, atmospheric fog and colour grading.
-- Adds structural details to the existing outpost tower without moving its physical colliders or arrival trigger.
+## Deliberately unchanged
 
-## What has deliberately NOT changed
+- Current Soldier character and its proven Ecctrl animation/controller setup. Character replacement is postponed until this environmental build passes.
+- River decision and bridge/ford consequences.
+- Approved Heart voice clips and subtitles.
+- Six lexical items and their current route assignments.
+- Optional text-only MERA assistant.
+- Outpost completion sequence and final guide task.
 
-- Stable Ecctrl Soldier skeleton, input and animation. The Soldier model remains an **external development placeholder**, not a newly licensed detailed expedition-character asset.
-- River/woodland/ascent path geometry and route triggers, lexical signs, consequences and route-locking colliders.
-- MERA's exact approved script, fixed local Heart WAV filenames, lexical exposures, optional text-only assistant and final guide task.
-- The existing CC0 Poly Haven ground, path, wood and rock texture URLs. React/Three/Ecctrl and the example Soldier still load from existing external hosts. **The new nine textures are local**, but the whole game is not yet fully offline/self-contained.
+## Technical validation performed
 
-## Limits and testing
+- `main.js` passes Node JavaScript syntax validation.
+- All nine bundled `assets/*.png` references are present in the package.
+- The direct ridge and long switchback reach the same summit. Numerically, the ridge is about 129 world units long while the switchback is about 243; the direct ridge therefore carries approximately twice the average grade.
+- The steepest direct-ridge segment remains below the Ecctrl configured walkable-slope limit.
 
-The new foliage is authored geometry with alpha-cutout textures, **not purchased or downloaded photorealistic tree meshes**. It is a significant improvement over geometric cones/green rods, but a final character/vegetation asset pipeline remains a separate step for higher-end realism. This container could perform source syntax checks, asset integrity checks, and ZIP verification; it could **not run the full 3D game against the external CDNs**. Check the actual appearance and FPS on GitHub Pages, especially around the pine trail and waterfall. Use E3.6.1 as your rollback if necessary.
-
-No server-side study-data collection has been added; final responses remain downloadable as pilot JSON.
+The container could not complete a reliable full rendered browser playthrough against all external CDN resources, so actual appearance, collision feel and FPS still require the GitHub Pages field test.

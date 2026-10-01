@@ -16,6 +16,8 @@ const navPanel = document.getElementById('nav-panel');
 const navCopy = document.getElementById('nav-copy');
 const navState = document.getElementById('nav-state');
 const windNote = document.getElementById('wind-note');
+const fieldWeather = document.getElementById('field-weather');
+const fieldLightning = document.getElementById('field-lightning');
 const chatToggle = document.getElementById('chat-toggle');
 const chatPanel = document.getElementById('chat-panel');
 const chatClose = document.getElementById('chat-close');
@@ -34,7 +36,7 @@ window.addEventListener('unhandledrejection', event => {
 
 function showBootError(err) {
   const message = err?.stack || err?.message || String(err);
-  bootStatus.textContent = 'E3.7 failed to initialize.';
+  bootStatus.textContent = 'E3.8 failed to initialize.';
   bootError.textContent = message;
   bootError.classList.remove('hidden');
   enterBtn.disabled = true;
@@ -67,7 +69,7 @@ const STUDY = {
 };
 
 const session = {
-  build: 'MERA_E3_7_VISUAL',
+  build: 'MERA_E3_8_STORM_ASCENT',
   startedAt: null,
   finishedAt: null,
   routes: {river:null, woodland:null, ascent:null},
@@ -98,7 +100,8 @@ let outpostSubtitleTimers = [];
 const worldState = {
   introActive:false,
   cinematic:null,
-  effects:{river:null,woodland:null,ascent:null}
+  effects:{river:null,woodland:null,ascent:null},
+  windExposed:false
 };
 
 function nowMs(){ return performance.now(); }
@@ -130,7 +133,26 @@ function radioCrackle(duration=.22, volume=.075){
 }
 function sleep(ms){ return new Promise(resolve=>setTimeout(resolve,ms)); }
 
-// E3.7 retains the verified E3.6.1 fixed Heart audio layer unchanged.
+let fieldStormTimer=null;
+function pulseFieldLightning(){
+  if(!fieldLightning || !gameStarted || session.finishedAt) return;
+  fieldLightning.classList.remove('flash');
+  void fieldLightning.offsetWidth;
+  fieldLightning.classList.add('flash');
+  setTimeout(()=>fieldLightning?.classList.remove('flash'),620);
+}
+function scheduleFieldLightning(){
+  clearTimeout(fieldStormTimer);
+  if(!gameStarted || session.finishedAt) return;
+  const delay=5200+Math.random()*7200;
+  fieldStormTimer=setTimeout(()=>{pulseFieldLightning();scheduleFieldLightning();},delay);
+}
+function startFieldWeather(){
+  fieldWeather?.classList.remove('hidden');
+  scheduleFieldLightning();
+}
+
+// E3.8 retains the verified E3.6.1 fixed Heart audio layer unchanged.
 // Participants only download/play the resulting WAV files; Kokoro is not loaded in-game.
 let activeMeraAudio = null;
 const VOICE_CLIPS = {
@@ -248,7 +270,7 @@ async function beginIntro(){
   stopMeraVoice();
   const durationMs=getVoiceDurationMs('intro',50000);
   const started=performance.now();
-  worldState.cinematic={id:'intro',started,duration:durationMs+900,from:[-10,16.5,231],to:[-2,9.0,202],lookAt:[7,8,-218],intro:true};
+  worldState.cinematic={id:'intro',started,duration:durationMs+900,from:[-10,16.5,231],to:[-2,9.0,202],lookAt:[10,30,-218],intro:true};
   setIntroLine('— crrk —',{crackle:true});
   lightningFlash(Math.min(1100,durationMs*.025));
   lightningFlash(durationMs*.18);lightningFlash(durationMs*.49);lightningFlash(durationMs*.78);
@@ -262,6 +284,7 @@ async function beginIntro(){
   session.startedAt=new Date().toISOString();
   logEvent('game_start',{intro:'storm_emergency_transmission',voice:'kokoro_heart_prerendered'});
   hud.classList.remove('hidden');help.classList.remove('hidden');routeStatus.classList.remove('hidden');
+  startFieldWeather();
   chatToggle.classList.remove('hidden');refreshChatUI();
 }
 function pumpNavQueue() {
@@ -314,8 +337,8 @@ function startConsequence(kind){
       ? {caption:'THE OPEN ROUTE CLOSES',camera:[44,10,-1],lookAt:[31,2,-13],voice:'Treefall behind us. The open route is blocked.'}
       : {caption:'THE PINE ROUTE CLOSES',camera:[-44,10,-1],lookAt:[-31,2,-13],voice:'Treefall behind us. The forest route is blocked.'},
     ascent: route==='ridge'
-      ? {caption:'THE SWITCHBACK GIVES WAY',camera:[-44,17,-139],lookAt:[-31,7,-143],voice:'Rockfall below us. The switchback is closed.'}
-      : {caption:'ROCKFALL CLOSES THE RIDGE',camera:[44,17,-139],lookAt:[27,8,-145],voice:'Rockfall on the ridge. The direct route is closed.'}
+      ? {caption:'THE SWITCHBACK GIVES WAY',camera:[-58,31,-181],lookAt:[-46,18,-185],voice:'Rockfall below us. The switchback is closed.'}
+      : {caption:'ROCKFALL CLOSES THE RIDGE',camera:[35,34,-181],lookAt:[13,20,-186],voice:'Rockfall on the ridge. The direct route is closed.'}
   }[kind];
   closeChat();
   chatToggle.classList.add('hidden');
@@ -627,10 +650,12 @@ async function bootApp() {
       central:[[0,90],[5,74],[-3,58],[0,40]],
       pine:[[0,40],[-14,34],[-27,23],[-34,8],[-32,-10],[-24,-26],[-12,-41],[0,-52]],
       birch:[[0,40],[15,34],[29,23],[36,7],[33,-10],[25,-27],[12,-42],[0,-52]],
-      upper:[[0,-52],[4,-68],[-2,-84],[0,-91]],
-      switchback:[[0,-91],[-15,-98],[-29,-109],[-35,-123],[-34,-139],[-25,-153],[-11,-169],[8,-181]],
-      ridge:[[0,-91],[15,-98],[26,-110],[32,-125],[31,-141],[25,-156],[17,-170],[8,-181]],
-      final:[[8,-181],[10,-196],[10,-216]]
+      upper:[[0,-52],[4,-66],[-2,-80],[0,-91]],
+      // E3.8: the direct ridge now climbs almost straight to the high outpost.
+      ridge:[[0,-91],[10,-101],[16,-113],[19,-126],[18,-140],[16,-154],[14,-169],[12,-184],[11,-199],[10,-214]],
+      // The alternative gains the same elevation through a much longer traverse.
+      switchback:[[0,-91],[-18,-97],[-39,-105],[-52,-116],[-47,-128],[-27,-138],[-48,-149],[-54,-161],[-35,-172],[-50,-184],[-44,-196],[-23,-205],[1,-212],[10,-214]],
+      final:[[10,-214],[10,-218]]
     };
     const OUTPOST = {x:10,z:-218};
 
@@ -644,16 +669,22 @@ async function bootApp() {
 
     function baseHeight(x,z){
       let y=.25*Math.sin(x*.12)*Math.cos(z*.042)+.12*Math.sin((x+z)*.18);
-      // Start shelf and broad valley undulation.
+      // Start shelf and broad lower-valley undulation remain as in the proven map.
       y += 1.2*Math.exp(-((x)*(x))/400-((z-207)*(z-207))/430);
       y += .7*Math.exp(-((x+28)*(x+28))/700-((z-6)*(z-6))/900);
       y += .65*Math.exp(-((x-30)*(x-30))/750-((z-5)*(z-5))/900);
-      // Final outpost hill.
-      y += 5.4*Math.exp(-((x-OUTPOST.x)*(x-OUTPOST.x))/260-((z-OUTPOST.z)*(z-OUTPOST.z))/360);
-      // Western waterfall cliff and eastern rocky ridge.
-      y += 8.6*Math.exp(-((x+58)*(x+58))/210-((z+28)*(z+28))/520);
-      y += 3.2*Math.exp(-((x-49)*(x-49))/290-((z+125)*(z+125))/800);
-      // Subtle erosion without an expensive height map or altered route topology.
+
+      // E3.8 final mountain: remove the flat gap before the outpost. From the third
+      // decision onward the ground rises continuously to a clearly elevated station.
+      const mountainProgress=clamp((-z-88)/132,0,1);
+      y += 24.5*Math.pow(mountainProgress,1.32);
+      // A compact summit shelf lifts the station without creating a second valley.
+      y += 3.8*Math.exp(-((x-OUTPOST.x)*(x-OUTPOST.x))/240-((z-OUTPOST.z)*(z-OUTPOST.z))/230);
+
+      // Former waterfall cliff is reduced to an ordinary rocky shoulder.
+      y += 2.7*Math.exp(-((x+58)*(x+58))/240-((z+28)*(z+28))/560);
+      y += 3.0*Math.exp(-((x-49)*(x-49))/290-((z+125)*(z+125))/800);
+      // Subtle erosion without an expensive height map or altered lower-route topology.
       y += .085*Math.sin(x*.81+z*.18)*Math.cos(z*.64-x*.21);
       return y;
     }
@@ -677,18 +708,12 @@ async function bootApp() {
         depth*=1-.72*ford;
         y-=depth;
       }
-      // Birch hollow is lower/sheltered.
+      // Birch hollow is lower and more exposed than the crowded pine branch.
       y -= .65*Math.exp(-((x-29)*(x-29))/210-((z-2)*(z-2))/650);
 
-      // The final decision is mechanically meaningful: the eastern ridge climbs much
-      // harder and sooner, while the western switchback gains the same height gradually.
-      if(z < -88 && z > -184){
-        const ridgeD = distancePolyline(x,z,PATHS.ridge);
-        const switchD = distancePolyline(x,z,PATHS.switchback);
-        const progress = clamp((-z-88)/96,0,1);
-        if(ridgeD < 9.5) y += 4.9*progress*(1-smooth01(ridgeD/9.5));
-        if(switchD < 9.0) y += 2.25*progress*(1-smooth01(switchD/9.0));
-      }
+      // Both branches climb the same mountain. The direct ridge is steep because it
+      // advances almost straight uphill; the switchback spreads the same elevation
+      // gain over roughly twice the walking distance.
       return y;
     }
 
@@ -713,7 +738,7 @@ async function bootApp() {
       return tex;
     }
 
-    // E3.7: genuine alpha-cutout branch and ground-cover artwork, generated and
+    // E3.8: genuine alpha-cutout branch and ground-cover artwork, generated and
     // bundled under assets/. Existing CC0 PBR terrain/rock textures remain intact.
     function useLandscapeMaterials(){
       const textures=useTexture([
@@ -871,9 +896,19 @@ async function bootApp() {
         const s=.85+rng()*.95;
         trees.push({x,z,s,type,rot:rng()*Math.PI*2,collision:s>.98&&Math.abs(x)<62&&z<210&&z>-210});
       }
-      // Pine branch denser, birch branch lighter.
-      for(let i=0;i<42;i++){const x=-42+rng()*24,z=-34+rng()*72;if(!nearTrail(x,z,2.8))trees.push({x,z,s:.8+rng()*.8,type:'pine',rot:rng()*6.28,collision:true});}
-      for(let i=0;i<34;i++){const x=18+rng()*27,z=-34+rng()*72;if(!nearTrail(x,z,2.8))trees.push({x,z,s:.72+rng()*.65,type:'birch',rot:rng()*6.28,collision:true});}
+      // Pine branch is intentionally crowded: a narrow sheltered corridor with trunks
+      // close to the route, while the exposed eastern alternative stays visually open.
+      for(let i=0;i<52;i++){const x=-44+rng()*27,z=-38+rng()*80;if(!nearTrail(x,z,2.55))trees.push({x,z,s:.9+rng()*.82,type:'pine',rot:rng()*6.28,collision:true});}
+      for(let i=0;i<112;i++){
+        const p=PATHS.pine,k=Math.floor(rng()*(p.length-1)),t=rng();
+        const x0=p[k][0]+(p[k+1][0]-p[k][0])*t,z0=p[k][1]+(p[k+1][1]-p[k][1])*t;
+        const vx=p[k+1][0]-p[k][0],vz=p[k+1][1]-p[k][1],ll=Math.max(.001,Math.hypot(vx,vz));
+        const side=(rng()<.5?-1:1)*(2.65+rng()*4.4);
+        const x=x0-vz/ll*side,z=z0+vx/ll*side;
+        if(Math.abs(x)>60||Math.abs(z-riverCenterZ(x))<7)continue;
+        trees.push({x,z,s:.82+rng()*.92,type:'pine',rot:rng()*6.28,collision:(i%3===0)});
+      }
+      for(let i=0;i<25;i++){const x=19+rng()*26,z=-34+rng()*72;if(!nearTrail(x,z,3.1))trees.push({x,z,s:.72+rng()*.62,type:'birch',rot:rng()*6.28,collision:i%4===0});}
       // Outer tree belt disguises compact map; terrain walls enforce limits.
       for(let i=0;i<86;i++){const side=i%2?-1:1,x=side*(66+rng()*7),z=-220+rng()*440;trees.push({x,z,s:1.0+rng()*.75,type:'pine',rot:rng()*6.28,collision:false});}
       for(let i=0;i<74;i++){const z=i%2?226:-227,x=-65+rng()*130;trees.push({x,z,s:1.0+rng()*.7,type:'pine',rot:rng()*6.28,collision:false});}
@@ -895,8 +930,8 @@ async function bootApp() {
       }
       // Fern understory follows the wooded branches; meadow flowers make the
       // more exposed birch alternative visibly distinct without path rails.
-      for(let i=0;i<950;i++){
-        const pineSide=rng()<.70;
+      for(let i=0;i<1650;i++){
+        const pineSide=rng()<.82;
         const x=pineSide?(-51+rng()*40):(14+rng()*35),z=-42+rng()*91;
         if(nearTrail(x,z,1.7)||Math.abs(z-riverCenterZ(x))<7)continue;
         ferns.push({x,z,s:.47+rng()*.55,rot:rng()*6.28});
@@ -927,7 +962,7 @@ async function bootApp() {
       return h(RigidBody,{type:'fixed',colliders:'trimesh',friction:1,restitution:0},h('mesh',{geometry,material:mat,receiveShadow:true}));
     }
     function Paths({mat}){
-      const geos=useMemo(()=>Object.entries(PATHS).map(([k,p])=>makeStripGeometry(p,k==='south'||k==='central'||k==='upper'||k==='final'?3.25:2.8)),[]);
+      const geos=useMemo(()=>Object.entries(PATHS).map(([k,p])=>makeStripGeometry(p,k==='pine'?2.35:k==='birch'?3.25:(k==='south'||k==='central'||k==='upper'||k==='final'?3.25:2.8))),[]);
       return h(React.Fragment,null,...geos.map((geometry,i)=>h('mesh',{key:i,geometry,material:mat,receiveShadow:true})));
     }
     function River(){
@@ -992,7 +1027,7 @@ async function bootApp() {
     function Forest({mats}){
       const pine=useMemo(makePineGeometries,[]),broad=useMemo(makeBroadGeometries,[]),birch=useMemo(makeBirchGeometries,[]);
       const p=layout.trees.filter(t=>t.type==='pine'),b=layout.trees.filter(t=>t.type==='broad'),bi=layout.trees.filter(t=>t.type==='birch');
-      const colliderTrees=layout.trees.filter(t=>t.collision).slice(0,95);
+      const colliderTrees=layout.trees.filter(t=>t.collision).sort((a,b)=>{const pa=(a.x<2&&a.z<43&&a.z>-46)?1:0,pb=(b.x<2&&b.z<43&&b.z>-46)?1:0;return pb-pa;}).slice(0,135);
       return h(React.Fragment,null,
         h(InstancedBatch,{geometry:pine.trunk,material:mats.bark,items:p,kind:'tree'}),
         h(InstancedBatch,{geometry:pine.foliage,material:mats.pine,items:p,kind:'tree',leafTint:'pine'}),
@@ -1095,10 +1130,10 @@ async function bootApp() {
     function WindField(){
       const ref=useRef();
       const data=useMemo(()=>{
-        const n=130,pos=new Float32Array(n*3),speed=new Float32Array(n);
+        const n=260,pos=new Float32Array(n*3),speed=new Float32Array(n);
         for(let i=0;i<n;i++){
-          const x=12+rng()*38,z=-31+rng()*72;
-          pos[i*3]=x;pos[i*3+1]=terrainHeight(x,z)+.8+rng()*3.4;pos[i*3+2]=z;speed[i]=5+rng()*7;
+          const x=9+rng()*45,z=-34+rng()*76;
+          pos[i*3]=x;pos[i*3+1]=terrainHeight(x,z)+.55+rng()*4.1;pos[i*3+2]=z;speed[i]=9+rng()*9;
         }
         const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
         return {g,speed,n};
@@ -1107,12 +1142,12 @@ async function bootApp() {
         const attr=data.g.attributes.position;
         for(let i=0;i<data.n;i++){
           let x=attr.getX(i)+data.speed[i]*dt,z=attr.getZ(i)-data.speed[i]*.16*dt;
-          if(x>51){x=12;z=-31+rng()*72;}
+          if(x>56){x=9;z=-34+rng()*76;}
           attr.setX(i,x);attr.setZ(i,z);attr.setY(i,terrainHeight(x,z)+.8+(i%7)*.42);
         }
         attr.needsUpdate=true;
       });
-      const mat=useMemo(()=>new THREE.PointsMaterial({color:0xdbe7c5,size:.10,transparent:true,opacity:.52,depthWrite:false}),[]);
+      const mat=useMemo(()=>new THREE.PointsMaterial({color:0xe5eee3,size:.13,transparent:true,opacity:.68,depthWrite:false}),[]);
       return h('points',{ref,geometry:data.g,material:mat});
     }
 
@@ -1176,8 +1211,8 @@ async function bootApp() {
       if(routes.river==='ford')addLog('rf',16.8,138.8,1.06);
       if(routes.woodland==='pine')addLog('wp',-11.5,35.2,-1.16);
       if(routes.woodland==='birch')addLog('wb',11.5,35.2,1.16);
-      if(routes.ascent==='ridge')addRocks('ar',11.5,-98.5,1.13);
-      if(routes.ascent==='switchback')addRocks('as',-11.5,-98.5,-1.13);
+      if(routes.ascent==='ridge')addRocks('ar',-13.5,-97.5,1.13);
+      if(routes.ascent==='switchback')addRocks('as',12.5,-98.0,-1.13);
       return h(RigidBody,{type:'fixed',colliders:false},...locks);
     }
 
@@ -1223,8 +1258,8 @@ async function bootApp() {
         h(LexicalSignpost,{key:'lex-bli',position:[34,0,127],rotation:-.12,kind:'river',route:'ford',lines:['BLICKET','CROSSING'],mats}),
         h(LexicalSignpost,{key:'lex-bos',position:[-37,0,13],rotation:.10,kind:'woodland',route:'pine',lines:['BOSKOT','TRAIL'],mats}),
         h(LexicalSignpost,{key:'lex-fif',position:[37,0,13],rotation:-.10,kind:'woodland',route:'birch',lines:['FIFFIN','TRAIL'],mats}),
-        h(LexicalSignpost,{key:'lex-vir',position:[36,0,-120],rotation:-.08,kind:'ascent',route:'ridge',lines:['VIRDEX','RIDGE'],mats}),
-        h(LexicalSignpost,{key:'lex-tee',position:[-39,0,-120],rotation:.08,kind:'ascent',route:'switchback',lines:['TEEBU','PATH'],mats})
+        h(LexicalSignpost,{key:'lex-vir',position:[24,0,-121],rotation:-.08,kind:'ascent',route:'ridge',lines:['VIRDEX','RIDGE'],mats}),
+        h(LexicalSignpost,{key:'lex-tee',position:[-44,0,-118],rotation:.08,kind:'ascent',route:'switchback',lines:['TEEBU','PATH'],mats})
       );
     }
 
@@ -1241,13 +1276,14 @@ async function bootApp() {
 
     function WoodlandConsequenceFx({mats}){
       const left=useRef(),right=useRef(),[effect,setEffect]=useState(null);
+      const pineGeo=useMemo(makePineGeometries,[]);
       useEffect(()=>{const fn=e=>{if(e.detail?.kind==='woodland')setEffect({...e.detail});};window.addEventListener('mera-consequence',fn);return()=>window.removeEventListener('mera-consequence',fn);},[]);
       useFrame(()=>{if(!effect)return;const t=Math.min(1,(performance.now()-effect.started)/2300),e=t*t*(3-2*t),target=effect.route==='pine'?right.current:left.current;if(target){const sign=effect.route==='pine'?1:-1;target.rotation.z=sign*1.43*e;}});
       const makeTree=(ref,x,z)=>{
         const y=terrainHeight(x,z);
-        return h('group',{ref,position:[x,y,z]},
-          h('mesh',{position:[0,3.2,0],castShadow:true},h('cylinderGeometry',{args:[.28,.43,6.4,9]}),h('primitive',{object:mats.bark,attach:'material'})),
-          h('mesh',{position:[0,6.5,0],castShadow:true},h('coneGeometry',{args:[2.25,5.1,9]}),h('primitive',{object:mats.pine,attach:'material'}))
+        return h('group',{ref,position:[x,y,z],scale:[1.22,1.22,1.22]},
+          h('mesh',{geometry:pineGeo.trunk,material:mats.bark,castShadow:true}),
+          h('mesh',{geometry:pineGeo.foliage,material:mats.pine,castShadow:true})
         );
       };
       const blockedX=effect?(effect.route==='pine'?31:-31):0, blockedY=effect?terrainHeight(blockedX,-13)+.48:0;
@@ -1258,11 +1294,11 @@ async function bootApp() {
       const refs=useRef([]),[effect,setEffect]=useState(null);
       const geo=useMemo(()=>[81,82,83,84].map(makeRockGeometry),[]);
       useEffect(()=>{const fn=e=>{if(e.detail?.kind==='ascent'){refs.current=[];setEffect({...e.detail});}};window.addEventListener('mera-consequence',fn);return()=>window.removeEventListener('mera-consequence',fn);},[]);
-      useFrame(()=>{if(!effect)return;const baseX=effect.route==='ridge'?-29:27,baseZ=-145;refs.current.forEach((m,i)=>{if(!m)return;const t=Math.min(1,Math.max(0,(performance.now()-effect.started-i*70)/1900)),e=1-Math.pow(1-t,3),tx=baseX+(i%4-1.5)*1.3,tz=baseZ+(Math.floor(i/4)-.5)*2.2,ty=terrainHeight(tx,tz)+.45+(i%3)*.18;m.visible=true;m.position.set(tx+(effect.route==='ridge'?4:-4)*(1-e),ty+9*(1-e),tz-3*(1-e));m.rotation.x=e*(i+.5);m.rotation.z=e*(i*.7);});});
+      useFrame(()=>{if(!effect)return;const baseX=effect.route==='ridge'?-47:13,baseZ=-184;refs.current.forEach((m,i)=>{if(!m)return;const t=Math.min(1,Math.max(0,(performance.now()-effect.started-i*70)/1900)),e=1-Math.pow(1-t,3),tx=baseX+(i%4-1.5)*1.3,tz=baseZ+(Math.floor(i/4)-.5)*2.2,ty=terrainHeight(tx,tz)+.45+(i%3)*.18;m.visible=true;m.position.set(tx+(effect.route==='ridge'?4:-4)*(1-e),ty+9*(1-e),tz-3*(1-e));m.rotation.x=e*(i+.5);m.rotation.z=e*(i*.7);});});
       if(!effect)return null;
       const arr=[];for(let i=0;i<8;i++)arr.push(h('mesh',{key:i,ref:r=>refs.current[i]=r,geometry:geo[i%4],material:mats.rock,visible:false,scale:[1.0+(i%3)*.14,.7+(i%2)*.15,.9+(i%4)*.08],castShadow:true,receiveShadow:true}));
-      const bx=effect.route==='ridge'?-29:27,by=terrainHeight(bx,-145)+1.35;
-      return h(React.Fragment,null,h('group',null,...arr),h(RigidBody,{type:'fixed',colliders:false},h(CuboidCollider,{args:[3.4,1.45,2.1],position:[bx,by,-145]})));
+      const bx=effect.route==='ridge'?-47:13,by=terrainHeight(bx,-184)+1.35;
+      return h(React.Fragment,null,h('group',null,...arr),h(RigidBody,{type:'fixed',colliders:false},h(CuboidCollider,{args:[3.4,1.45,2.1],position:[bx,by,-184]})));
     }
 
     function Outpost({mats}){
@@ -1295,72 +1331,7 @@ async function bootApp() {
         h(CuboidCollider,{args:[2.2,4.5,2.2],position:[OUTPOST.x+.35,y+7.2,OUTPOST.z-.1]}),
         h('group',{position:[OUTPOST.x,y,OUTPOST.z],rotation:[0,-.22,0]},...parts));
     }
-    function makeWaterfallSheet(n){
-      const pos=[],uv=[],indices=[],across=10,down=40;
-      for(let j=0;j<=down;j++){
-        const t=j/down,y=.68+9.53*(1-t),width=3.05+(t*.98),forward=-1.18+2.90*t*t;
-        for(let i=0;i<=across;i++){
-          const u=i/across,xx=(u-.5)*width+.08*Math.sin(t*18.+n*3.2+u*5.1);
-          const zz=forward+.09*Math.sin(u*8.2+t*23.+n*2.)+n*.075;
-          pos.push(xx,y,zz);uv.push(u,t);
-          if(i<across&&j<down){const a=j*(across+1)+i,b=a+across+1;indices.push(a,b,a+1,a+1,b,b+1);}
-        }
-      }
-      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-      g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(indices);g.computeVertexNormals();return g;
-    }
-    function WaterfallSpray(){
-      const data=useMemo(()=>{
-        const n=100,xyz=new Float32Array(n*3),velocity=new Float32Array(n*3);
-        for(let i=0;i<n;i++){
-          xyz[i*3]=(Math.sin(i*47.1)*1.42);xyz[i*3+1]=.5+Math.abs(Math.sin(i*17.3))*2.15;
-          xyz[i*3+2]=2+Math.cos(i*11.5)*1.2;
-          velocity[i*3]=Math.sin(i*15.1)*.5;velocity[i*3+1]=.44+Math.sin(i*7.7)*.18;
-          velocity[i*3+2]=Math.cos(i*8.9)*.25;
-        }
-        const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(xyz,3));return {g,n,velocity};
-      },[]);
-      useFrame((_,dt)=>{
-        const a=data.g.attributes.position;
-        for(let i=0;i<data.n;i++){
-          const y=a.getY(i)+data.velocity[i*3+1]*dt;
-          a.setXYZ(i,a.getX(i)+data.velocity[i*3]*dt,y>2.8?.32:y,a.getZ(i)+data.velocity[i*3+2]*dt);
-        }
-        a.needsUpdate=true;
-      });
-      const mat=useMemo(()=>new THREE.PointsMaterial({color:0xddece9,size:.13,transparent:true,opacity:.53,depthWrite:false}),[]);
-      return h('points',{geometry:data.g,material:mat});
-    }
-    function Waterfall({mats}){
-      const sheets=useMemo(()=>[0,1,2].map(makeWaterfallSheet),[]);
-      const fallMat=useMemo(()=>new THREE.ShaderMaterial({transparent:true,side:THREE.DoubleSide,depthWrite:false,
-        uniforms:{time:{value:0}},vertexShader:`varying vec2 vUv;
-          void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
-        fragmentShader:`varying vec2 vUv;uniform float time;
-          void main(){float v=vUv.y,u=vUv.x;float drift=v*27.-time*3.7;
-            float stream=sin(u*53.+sin(drift*1.9)*3.)*.5+.5;
-            float fine=sin(u*121.+drift*2.7)*.5+.5;
-            float spray=smoothstep(.79,.99,v)*(.25+.22*fine);
-            float side=1.-smoothstep(.22,.48,abs(u-.5));
-            vec3 c=mix(vec3(.33,.63,.70),vec3(.91,.96,.95),.29+.37*stream+.23*fine+spray);
-            gl_FragColor=vec4(c,(.36+.26*stream+.15*spray)*side);}`}),[]);
-      const flowMat=useMemo(()=>new THREE.MeshStandardMaterial({color:0x70a6aa,roughness:.30,metalness:.05,transparent:true,opacity:.83,depthWrite:false,side:THREE.DoubleSide}),[]);
-      const foam=useMemo(()=>new THREE.MeshBasicMaterial({color:0xcce2db,transparent:true,opacity:.37,depthWrite:false,side:THREE.DoubleSide}),[]);
-      const cliff=useMemo(()=>makeRockGeometry(21),[]);
-      const sideRock=useMemo(()=>makeRockGeometry(22),[]);
-      const x=-57,z=-30,base=terrainHeight(x,z),creek=useMemo(()=>makeStripGeometry([[-57,-20],[-50,-8],[-43,6],[-38,22],[-35,41]],1.6,-.06),[]);
-      useFrame((_,dt)=>fallMat.uniforms.time.value+=dt);
-      return h('group',null,
-        h('mesh',{position:[x,base+5.1,z-3.4],scale:[6.5,8.2,4],castShadow:true,receiveShadow:true,geometry:cliff,material:mats.rock}),
-        h('mesh',{position:[x-3.35,base+4.15,z-.2],scale:[2.2,4.55,2.1],geometry:sideRock,material:mats.rock,receiveShadow:true}),
-        h('mesh',{position:[x+3.45,base+4.85,z-.55],scale:[2.3,5.15,2.6],geometry:sideRock,material:mats.rock,receiveShadow:true}),
-        h('mesh',{position:[x,base+10.30,z-1.70],rotation:[-Math.PI/2,0,0]},h('circleGeometry',{args:[3.05,32]}),h('primitive',{object:flowMat,attach:'material'})),
-        h('group',{position:[x,base,z+.1]},...sheets.map((g,i)=>h('mesh',{key:i,geometry:g,material:fallMat,renderOrder:3+i})),h(WaterfallSpray,null)),
-        h('mesh',{position:[x,base+.43,z+1.62],rotation:[-Math.PI/2,0,0]},h('circleGeometry',{args:[3.45,40]}),h('primitive',{object:flowMat,attach:'material'})),
-        h('mesh',{position:[x,base+.46,z+1.6],rotation:[-Math.PI/2,0,0]},h('ringGeometry',{args:[1.45,2.95,40]}),h('primitive',{object:foam,attach:'material'})),
-        h('mesh',{geometry:creek,material:flowMat})
-      );
-    }
+    // E3.8: decorative waterfall removed; the western shoulder is now ordinary rock terrain.
     function Mountains(){
       const mesh=useMemo(()=>{
         const layers=[];
@@ -1392,7 +1363,7 @@ async function bootApp() {
         h(Signpost,{position:[0,0,48],rotation:0,lines:['PINE TRAIL  ←','BIRCH HOLLOW  →'],mats:materials}),
         h(Signpost,{position:[0,0,-84],rotation:0,lines:['SWITCHBACK  ←','RIDGE  →'],mats:materials}),
         h(DecisionLandforms,{mats:materials}),h(DynamicRouteLocks,{mats:materials}),h(DynamicLexicalSigns,{mats:materials}),h(RiverConsequenceFx,null),h(WoodlandConsequenceFx,{mats:materials}),h(AscentConsequenceFx,{mats:materials}),
-        h(Outpost,{mats:materials}),h(OutpostBeacon,null),h(Waterfall,{mats:materials}),h(Mountains,null)
+        h(Outpost,{mats:materials}),h(OutpostBeacon,null),h(Mountains,null)
       );
     }
 
@@ -1428,7 +1399,7 @@ async function bootApp() {
       return h(EcctrlCameraControls,{ref:controls,makeDefault:true,smoothTime:.12,minDistance:3.0,maxDistance:7.0,minPolarAngle:.50,maxPolarAngle:1.28,dollyToCursor:false,truckSpeed:0,azimuthRotateSpeed:.8,polarRotateSpeed:.75});
     }
 
-    function inBirchWindZone(p){ return p.x>12 && p.x<49 && p.z<38 && p.z>-29; }
+    function inBirchWindZone(p){ return p.x>9 && p.x<55 && p.z<40 && p.z>-34; }
     function inFordWater(p){ return p.x>24 && p.x<38 && p.z<132 && p.z>116; }
 
     function updateStudyFromPosition(p){
@@ -1439,6 +1410,10 @@ async function bootApp() {
 
       const windy=session.routes.woodland==='birch' && inBirchWindZone(p);
       windNote?.classList.toggle('active',windy);
+      if(windy!==worldState.windExposed){
+        worldState.windExposed=windy;
+        window.dispatchEvent(new CustomEvent('mera-wind-state',{detail:{active:windy}}));
+      }
       if(windy && !fired.has('wind_event_logged')){
         fired.add('wind_event_logged');
         session.environmentalEvents.push({type:'strong_gusts',route:'birch'});
@@ -1492,15 +1467,15 @@ async function bootApp() {
       if(session.routes.ascent==='ridge'){
         showNav('virdex_intro','The virdex ridge is steep and direct. Expect a hard climb.',{target:'virdex',exposure:'context',duration:10000,voice:'The virdex ridge is steep and direct. Expect a hard climb.',voiceRate:.94});
         if(p.z<-137)showNav('virdex_bare','Keep climbing the virdex ridge. The outpost is close.',{target:'virdex',exposure:'bare',duration:8500,voice:'Keep climbing the virdex ridge. The outpost is close.',voiceRate:.94});
-        if(p.z<-173)startConsequence('ascent');
+        if(p.z<-196)startConsequence('ascent');
       }
       if(session.routes.ascent==='switchback'){
         showNav('teebu_intro','The teebu path climbs gradually through long turns. It is slower, but easier.',{target:'teebu',exposure:'context',duration:10000,voice:'The teebu path climbs gradually through long turns. It is slower, but easier.',voiceRate:.94});
         if(p.z<-145)showNav('teebu_bare','Stay on the teebu path. Do not cut across the slope.',{target:'teebu',exposure:'bare',duration:8500,voice:'Stay on the teebu path. Do not cut across the slope.',voiceRate:.94});
-        if(p.z<-173)startConsequence('ascent');
+        if(p.z<-196)startConsequence('ascent');
       }
 
-      if(p.z<-198)showNav('final_neutral','Outpost in range. Emergency relay handshake starting.',{duration:7000});
+      if(p.z<-210)showNav('final_neutral','Outpost in range. Emergency relay handshake starting.',{duration:7000});
       if(Math.hypot(p.x-OUTPOST.x,p.z-OUTPOST.z)<6.5) finishStudy({x:OUTPOST.x,y:terrainHeight(OUTPOST.x,OUTPOST.z),z:OUTPOST.z});
     }
 
@@ -1511,7 +1486,7 @@ async function bootApp() {
           document.getElementById('anim-state').textContent=animState||'—';document.getElementById('grounded').textContent=c.isOnGround?'YES':'NO';const p=c.currPos;
           if(p){
             const region=document.getElementById('region');
-            if(p.z>155)region.textContent='SOUTHERN APPROACH';else if(p.z>106)region.textContent='RIVER CROSSING';else if(p.z>45)region.textContent='CENTRAL VALLEY';else if(p.z>-48)region.textContent='WOODLAND';else if(p.z>-88)region.textContent='UPPER BASIN';else if(p.z>-181)region.textContent='FINAL ASCENT';else region.textContent='OUTPOST APPROACH';
+            if(p.z>155)region.textContent='SOUTHERN APPROACH';else if(p.z>106)region.textContent='RIVER CROSSING';else if(p.z>45)region.textContent='CENTRAL VALLEY';else if(p.z>-48)region.textContent='WOODLAND';else if(p.z>-88)region.textContent='UPPER BASIN';else if(p.z>-210)region.textContent='FINAL ASCENT';else region.textContent='OUTPOST APPROACH';
             updateStudyFromPosition(p);
           }
         }
@@ -1520,17 +1495,33 @@ async function bootApp() {
     }
     function Player({onCharacterReady}){
       const controllerRef=useRef();
-      return h(React.Fragment,null,h(EcctrlAnimationStateController,{ecctrl:controllerRef}),h(DirectKeyboardInput,{controllerRef}),h(Ecctrl,{ref:controllerRef,position:[0,4,216],capsuleHalfHeight:.55,capsuleRadius:.32,floatHeight:.20,maxWalkVel:1.95,maxRunVel:3.35,jumpVel:4.8,slopeMaxAngle:.90,enableToggleRun:false,groundDetection:'shapeCast',friction:0,linearDamping:.15,angularDamping:1.0},h(ModelBoundary,null,h(AnimatedCharacter,{onReady:onCharacterReady}))),h(FollowCamera,{controllerRef}),h(Diagnostics,{controllerRef}));
+      const [windSlow,setWindSlow]=useState(false);
+      useEffect(()=>{
+        const fn=e=>setWindSlow(!!e.detail?.active);
+        window.addEventListener('mera-wind-state',fn);
+        return()=>window.removeEventListener('mera-wind-state',fn);
+      },[]);
+      return h(React.Fragment,null,
+        h(EcctrlAnimationStateController,{ecctrl:controllerRef}),
+        h(DirectKeyboardInput,{controllerRef}),
+        h(Ecctrl,{
+          ref:controllerRef,position:[0,4,216],capsuleHalfHeight:.55,capsuleRadius:.32,floatHeight:.20,
+          maxWalkVel:windSlow?1.05:1.95,maxRunVel:windSlow?1.48:3.35,
+          accDeltaTime:windSlow?.30:.20,decDeltaTime:windSlow?.18:.20,
+          jumpVel:4.8,slopeMaxAngle:.90,enableToggleRun:false,groundDetection:'shapeCast',friction:0,linearDamping:.15,angularDamping:1.0
+        },h(ModelBoundary,null,h(AnimatedCharacter,{onReady:onCharacterReady}))),
+        h(FollowCamera,{controllerRef}),h(Diagnostics,{controllerRef})
+      );
     }
     function Scene({onCharacterReady}){
       const materials=useLandscapeMaterials();
-      return h(React.Fragment,null,h('color',{attach:'background',args:['#93a5ab']}),h('fog',{attach:'fog',args:['#a7b3b4',74,465]}),h('hemisphereLight',{intensity:1.13,color:'#e3eef0',groundColor:'#535d49'}),h('ambientLight',{intensity:.17,color:'#d7e1d7'}),h('directionalLight',{position:[-40,63,28],intensity:2.08,color:'#fff0d7',castShadow:true,'shadow-mapSize-width':1024,'shadow-mapSize-height':1024,'shadow-camera-left':-59,'shadow-camera-right':59,'shadow-camera-top':59,'shadow-camera-bottom':-59,'shadow-camera-near':4,'shadow-camera-far':135,'shadow-bias':-.00014}),h('directionalLight',{position:[31,20,-32],intensity:.34,color:'#bad1dd'}),h(Physics,{gravity:[0,-9.81,0],timeStep:'vary'},h(Valley,{materials}),h(Player,{onCharacterReady})));
+      return h(React.Fragment,null,h('color',{attach:'background',args:['#66767d']}),h('fog',{attach:'fog',args:['#718084',58,410]}),h('hemisphereLight',{intensity:.88,color:'#d7e2e4',groundColor:'#485346'}),h('ambientLight',{intensity:.12,color:'#c9d4d0'}),h('directionalLight',{position:[-40,63,28],intensity:1.38,color:'#e5edf0',castShadow:true,'shadow-mapSize-width':1024,'shadow-mapSize-height':1024,'shadow-camera-left':-59,'shadow-camera-right':59,'shadow-camera-top':59,'shadow-camera-bottom':-59,'shadow-camera-near':4,'shadow-camera-far':145,'shadow-bias':-.00014}),h('directionalLight',{position:[31,20,-32],intensity:.28,color:'#9db8c8'}),h(Physics,{gravity:[0,-9.81,0],timeStep:'vary'},h(Valley,{materials}),h(Player,{onCharacterReady})));
     }
     function App(){
       const [ready,setReady]=useState(false),once=useRef(false);
-      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking the fixed Heart voice pack…';loadfill.style.width='90%';try{await verifyHeartVoicePack();setReady(true);bootStatus.textContent='Ecctrl, Rapier, fixed Heart voice pack and the revised 3D study valley are ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
+      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking the fixed Heart voice pack…';loadfill.style.width='90%';try{await verifyHeartVoicePack();setReady(true);bootStatus.textContent='Ecctrl, Rapier, fixed Heart voice pack and the E3.8 storm ascent are ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
       useEffect(()=>{if(!ready)return;enterBtn.onclick=()=>{boot.classList.add('hidden');beginIntro();};},[ready]);
-      return h(Canvas,{shadows:true,dpr:[1,1.18],camera:{position:[4.8,3.2,224],fov:54,near:.1,far:650},gl:{antialias:true,powerPreference:'high-performance'},onCreated:({gl})=>{gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=1.075;loadfill.style.width='78%';}},h(Suspense,{fallback:null},h(Scene,{onCharacterReady})));
+      return h(Canvas,{shadows:true,dpr:[1,1.18],camera:{position:[4.8,3.2,224],fov:54,near:.1,far:650},gl:{antialias:true,powerPreference:'high-performance'},onCreated:({gl})=>{gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=.92;loadfill.style.width='78%';}},h(Suspense,{fallback:null},h(Scene,{onCharacterReady})));
     }
 
     const root=createRoot(document.getElementById('root'));root.render(h(App));
