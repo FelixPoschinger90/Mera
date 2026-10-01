@@ -36,7 +36,7 @@ window.addEventListener('unhandledrejection', event => {
 
 function showBootError(err) {
   const message = err?.stack || err?.message || String(err);
-  bootStatus.textContent = 'E3.9.1 failed to initialize.';
+  bootStatus.textContent = 'E3.9.2 failed to initialize.';
   bootError.textContent = message;
   bootError.classList.remove('hidden');
   enterBtn.disabled = true;
@@ -771,7 +771,7 @@ async function bootApp() {
           textures[i].wrapS=textures[i].wrapT=barkTex?THREE.RepeatWrapping:THREE.ClampToEdgeWrapping;
           if(barkTex)textures[i].repeat.set(2,1);
         }
-        // E3.9.1: dedicated local dirt/gravel texture for unmistakable walking paths.
+        // E3.9.2: dedicated local dirt/gravel texture for unmistakable walking paths.
         textures[21].colorSpace=THREE.SRGBColorSpace;
         textures[21].anisotropy=4;
         textures[21].wrapS=textures[21].wrapT=THREE.RepeatWrapping;
@@ -783,23 +783,23 @@ async function bootApp() {
       });
       return useMemo(()=>({
         forest:new THREE.MeshStandardMaterial({map:textures[0],normalMap:textures[1],roughness:.99,color:0xc8d0bb,vertexColors:true}),
-        // E3.9.1: paths are intentionally more legible than the surrounding forest floor.
+        // E3.9.2: paths are intentionally more legible than the surrounding forest floor.
         // The outer shoulder remains worn/grass-mixed; the inner bed uses a dedicated
         // dirt/gravel texture and a slight emissive lift so it remains readable in rain.
-        path:new THREE.MeshStandardMaterial({
-          map:textures[2],normalMap:textures[3],roughness:.99,color:0xd2b48b,
-          emissive:new THREE.Color(0x24170e),emissiveIntensity:.12,
-          polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2
+        // E3.9.2: trails must remain visually readable in the storm. These are
+        // intentionally unlit materials: rain/lightning can darken the world without
+        // making the hiking route disappear into the forest floor.
+        path:new THREE.MeshBasicMaterial({
+          map:textures[21],color:0xc7aa7c,toneMapped:false,
+          polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4
         }),
-        pathCore:new THREE.MeshStandardMaterial({
-          map:textures[21],normalMap:textures[3],roughness:1,color:0xd8ba8f,
-          emissive:new THREE.Color(0x2a1a10),emissiveIntensity:.18,
+        pathCore:new THREE.MeshBasicMaterial({
+          map:textures[21],color:0xead1a6,toneMapped:false,
+          polygonOffset:true,polygonOffsetFactor:-6,polygonOffsetUnits:-6
+        }),
+        verge:new THREE.MeshBasicMaterial({
+          map:textures[21],color:0xa78a63,toneMapped:false,
           polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3
-        }),
-        verge:new THREE.MeshStandardMaterial({
-          map:textures[2],normalMap:textures[3],roughness:1,color:0x8d765b,
-          emissive:new THREE.Color(0x17100a),emissiveIntensity:.08,
-          polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1
         }),
         rock:new THREE.MeshStandardMaterial({map:textures[4],normalMap:textures[5],roughness:.98,color:0xc2c2ae}),
         wood:new THREE.MeshStandardMaterial({map:textures[6],normalMap:textures[7],roughness:.95,color:0xb1a08b}),
@@ -1011,24 +1011,24 @@ async function bootApp() {
     }
     function Paths({mat,coreMat,vergeMat}){
       const specs=useMemo(()=>Object.entries(PATHS).map(([k,p])=>{
-        // E3.9.1: continuous, unmistakable hiking trails. They remain visual guidance
+        // E3.9.2: continuous, unmistakable hiking trails. They remain visual guidance
         // only; the player can leave them wherever the route geometry permits.
         const outer=
-          k==='pine'?3.65:
-          k==='birch'?4.85:
-          k==='switchback'?4.45:
-          k==='ridge'?3.45:
-          (k==='south'||k==='central'||k==='upper'||k==='final'?5.15:4.65);
+          k==='pine'?4.25:
+          k==='birch'?5.45:
+          k==='switchback'?5.10:
+          k==='ridge'?4.05:
+          (k==='south'||k==='central'||k==='upper'||k==='final'?5.85:5.20);
         const inner=
-          k==='pine'?2.28:
-          k==='birch'?3.10:
-          k==='switchback'?2.85:
-          k==='ridge'?2.18:
-          (k==='south'||k==='central'||k==='upper'||k==='final'?3.35:2.95);
+          k==='pine'?2.95:
+          k==='birch'?3.85:
+          k==='switchback'?3.55:
+          k==='ridge'?2.80:
+          (k==='south'||k==='central'||k==='upper'||k==='final'?4.10:3.65);
         return {
           k,
-          outer:makeStripGeometry(p,outer,.105),
-          inner:makeStripGeometry(p,inner,.155)
+          outer:makeStripGeometry(p,outer,.18),
+          inner:makeStripGeometry(p,inner,.235)
         };
       }),[]);
       return h(React.Fragment,null,
@@ -1128,7 +1128,7 @@ async function bootApp() {
       const rockCard=useMemo(()=>makeRockCardGeometry(4.7,2.05),[]);
       const major=layout.rocks.filter((_,i)=>i%3!==0);
       const close=layout.rocks.filter((_,i)=>i%3===0);
-      // E3.9.1: all visually meaningful landscape rocks are now solid. The previous
+      // E3.9.2: all visually meaningful landscape rocks are now solid. The previous
       // pass only gave a subset colliders, which made the new photoreal rock cards
       // visibly walk-through. Tiny path pebbles remain decorative by design.
       const colliders=layout.rocks.filter(r=>
@@ -1634,7 +1634,7 @@ async function bootApp() {
     }
     function App(){
       const [ready,setReady]=useState(false),once=useRef(false);
-      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking the fixed Heart voice pack…';loadfill.style.width='90%';try{await verifyHeartVoicePack();setReady(true);bootStatus.textContent='Ecctrl, Rapier, fixed Heart voice pack and the E3.9.1 path and rock-collision pass is ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
+      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking the fixed Heart voice pack…';loadfill.style.width='90%';try{await verifyHeartVoicePack();setReady(true);bootStatus.textContent='Ecctrl, Rapier, fixed Heart voice pack and the E3.9.2 path and rock-collision pass is ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
       useEffect(()=>{if(!ready)return;enterBtn.onclick=()=>{boot.classList.add('hidden');beginIntro();};},[ready]);
       return h(Canvas,{shadows:false,dpr:[1,1.18],camera:{position:[4.8,3.2,224],fov:54,near:.1,far:650},gl:{antialias:true,powerPreference:'high-performance'},onCreated:({gl})=>{gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=.92;loadfill.style.width='78%';}},h(Suspense,{fallback:null},h(Scene,{onCharacterReady})));
     }
