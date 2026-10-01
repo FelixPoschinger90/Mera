@@ -1,13 +1,20 @@
-# MERA Character Proof C2 — Quaternius fixed
+# MERA E3.10-C3 — Adventurer character proof
 
-Standalone test only. It does not replace or modify MERA E3.9.4.
+Upload these four files over the previous character-proof files. Their names are deliberately unchanged, so the existing GitHub Pages test URL ending in `MERA_CHARACTER_PROOF.html` remains valid.
 
-## Changes from C1
-- Corrected the visual facing used by the Quaternius proof so forward movement no longer presents the character backwards.
-- Added a render-only field outfit attached to the existing Quaternius skeleton: olive jacket/sleeves, dark trousers, boots and simple webbing.
-- No MERA terrain, decision logic, lexical items, audio, route state, or study code is present here.
+This proof is isolated from MERA proper. It does not replace `index.html`, `main.js`, `styles.css`, terrain, lexical logic, routes, triggers, or any study content.
+
+## Asset
+
+Quaternius — **Adventurer**, from the Ultimate Modular Men Pack. The pack/model is released under CC0 / public domain terms. This proof loads a mirrored GLB through jsDelivr only to avoid adding a large binary asset to the disposable test package.
+
+If this character is approved for MERA, vendor the original Adventurer asset into the MERA repository rather than depending permanently on the mirror.
 
 ## Test
-Upload the four files together and open `MERA_CHARACTER_PROOF.html`. Test W/S, strafing/turning, running, jumping, slopes/steps, and look for clothing clipping at shoulders, elbows, hips and knees.
 
-If this proof does not look stable, keep the existing Soldier character. Do not transplant it into MERA.
+- WASD / arrows: move
+- Shift: run
+- Space: jump
+- Drag: camera
+
+Check forward-facing orientation, idle/walk/run transitions, turning, feet on terrain, jumping, clothing/gear, and camera scale.
