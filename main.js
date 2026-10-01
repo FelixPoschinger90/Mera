@@ -36,7 +36,7 @@ window.addEventListener('unhandledrejection', event => {
 
 function showBootError(err) {
   const message = err?.stack || err?.message || String(err);
-  bootStatus.textContent = 'E3.9.2 failed to initialize.';
+  bootStatus.textContent = 'E3.9.3 failed to initialize.';
   bootError.textContent = message;
   bootError.classList.remove('hidden');
   enterBtn.disabled = true;
@@ -771,7 +771,7 @@ async function bootApp() {
           textures[i].wrapS=textures[i].wrapT=barkTex?THREE.RepeatWrapping:THREE.ClampToEdgeWrapping;
           if(barkTex)textures[i].repeat.set(2,1);
         }
-        // E3.9.2: dedicated local dirt/gravel texture for unmistakable walking paths.
+        // E3.9.3: dedicated local dirt/gravel texture for unmistakable walking paths.
         textures[21].colorSpace=THREE.SRGBColorSpace;
         textures[21].anisotropy=4;
         textures[21].wrapS=textures[21].wrapT=THREE.RepeatWrapping;
@@ -783,22 +783,22 @@ async function bootApp() {
       });
       return useMemo(()=>({
         forest:new THREE.MeshStandardMaterial({map:textures[0],normalMap:textures[1],roughness:.99,color:0xc8d0bb,vertexColors:true}),
-        // E3.9.2: paths are intentionally more legible than the surrounding forest floor.
+        // E3.9.3: paths are intentionally more legible than the surrounding forest floor.
         // The outer shoulder remains worn/grass-mixed; the inner bed uses a dedicated
         // dirt/gravel texture and a slight emissive lift so it remains readable in rain.
-        // E3.9.2: trails must remain visually readable in the storm. These are
+        // E3.9.3: trails must remain visually readable in the storm. These are
         // intentionally unlit materials: rain/lightning can darken the world without
         // making the hiking route disappear into the forest floor.
         path:new THREE.MeshBasicMaterial({
-          map:textures[21],color:0xc7aa7c,toneMapped:false,
+          map:textures[21],color:0xd6c29c,toneMapped:false,side:THREE.DoubleSide,
           polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4
         }),
         pathCore:new THREE.MeshBasicMaterial({
-          map:textures[21],color:0xead1a6,toneMapped:false,
+          map:textures[21],color:0xf2dfb9,toneMapped:false,side:THREE.DoubleSide,
           polygonOffset:true,polygonOffsetFactor:-6,polygonOffsetUnits:-6
         }),
         verge:new THREE.MeshBasicMaterial({
-          map:textures[21],color:0xa78a63,toneMapped:false,
+          map:textures[21],color:0xbfa77e,toneMapped:false,side:THREE.DoubleSide,
           polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3
         }),
         rock:new THREE.MeshStandardMaterial({map:textures[4],normalMap:textures[5],roughness:.98,color:0xc2c2ae}),
@@ -845,7 +845,7 @@ async function bootApp() {
         const w=width*(1+.04*Math.sin(i*.9)+.024*Math.sin(i*2.13));
         const l=p.clone().addScaledVector(side,w*.5),r=p.clone().addScaledVector(side,-w*.5);
         l.y=terrainHeight(l.x,l.z)+yOffset;r.y=terrainHeight(r.x,r.z)+yOffset;
-        pos.push(l.x,l.y,l.z,r.x,r.y,r.z);uv.push(0,t*12,1,t*12);if(i<segs){const a=i*2,b=a+1,c=a+2,d=a+3;idx.push(a,b,c,b,d,c);}
+        pos.push(l.x,l.y,l.z,r.x,r.y,r.z);uv.push(0,t*12,1,t*12);if(i<segs){const a=i*2,b=a+1,c=a+2,d=a+3;idx.push(a,c,b,b,c,d);}
       }
       const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();return g;
     }
@@ -1011,7 +1011,7 @@ async function bootApp() {
     }
     function Paths({mat,coreMat,vergeMat}){
       const specs=useMemo(()=>Object.entries(PATHS).map(([k,p])=>{
-        // E3.9.2: continuous, unmistakable hiking trails. They remain visual guidance
+        // E3.9.3: continuous, unmistakable hiking trails. They remain visual guidance
         // only; the player can leave them wherever the route geometry permits.
         const outer=
           k==='pine'?4.25:
@@ -1128,7 +1128,7 @@ async function bootApp() {
       const rockCard=useMemo(()=>makeRockCardGeometry(4.7,2.05),[]);
       const major=layout.rocks.filter((_,i)=>i%3!==0);
       const close=layout.rocks.filter((_,i)=>i%3===0);
-      // E3.9.2: all visually meaningful landscape rocks are now solid. The previous
+      // E3.9.3: all visually meaningful landscape rocks are now solid. The previous
       // pass only gave a subset colliders, which made the new photoreal rock cards
       // visibly walk-through. Tiny path pebbles remain decorative by design.
       const colliders=layout.rocks.filter(r=>
@@ -1634,7 +1634,7 @@ async function bootApp() {
     }
     function App(){
       const [ready,setReady]=useState(false),once=useRef(false);
-      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking the fixed Heart voice pack…';loadfill.style.width='90%';try{await verifyHeartVoicePack();setReady(true);bootStatus.textContent='Ecctrl, Rapier, fixed Heart voice pack and the E3.9.2 path and rock-collision pass is ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
+      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking the fixed Heart voice pack…';loadfill.style.width='90%';try{await verifyHeartVoicePack();setReady(true);bootStatus.textContent='Ecctrl, Rapier, fixed Heart voice pack and the E3.9.3 path and rock-collision pass is ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
       useEffect(()=>{if(!ready)return;enterBtn.onclick=()=>{boot.classList.add('hidden');beginIntro();};},[ready]);
       return h(Canvas,{shadows:false,dpr:[1,1.18],camera:{position:[4.8,3.2,224],fov:54,near:.1,far:650},gl:{antialias:true,powerPreference:'high-performance'},onCreated:({gl})=>{gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=.92;loadfill.style.width='78%';}},h(Suspense,{fallback:null},h(Scene,{onCharacterReady})));
     }
