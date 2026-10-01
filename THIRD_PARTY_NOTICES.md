@@ -1,19 +1,16 @@
-# Third-party notices — MERA E3.6.1
+# Third-party notices — MERA E3.7
 
-This prototype uses open-source libraries and freely licensed assets as described in the project source.
+## MERA E3.7 procedural artwork
+The nine `assets/*.png` texture assets in this patch were generated specifically for this prototype and bundled locally. They depict pine branches, deciduous foliage, grasses, reeds, ferns, wildflowers and bark; they are not third-party photo or paid model downloads.
 
-## Kokoro TTS / Heart voice
+## Kokoro / Heart voice
+The pre-existing 23 WAV recordings in the user's `audio/` folder were generated with Kokoro Heart (`af_heart`) and are **not** included or modified by this patch. Kokoro ONNX model licensing: Apache-2.0; the model is not loaded by the participant runtime.
 
-The fixed MERA voice stimuli are intended to be generated during development with `Kokoro-82M-v1.0-ONNX` using the `af_heart` voice and Kokoro.js. The Kokoro ONNX model repository is licensed under Apache-2.0. The model itself is not required or distributed by the participant runtime; only the generated WAV stimuli are served with the game.
+## Poly Haven CC0
+The current game still loads ground, path, mossy-rock and weathered-wood PBR textures from Poly Haven under CC0; the exact URLs remain in `main.js`.
 
-## Poly Haven
+## Three.js Soldier
+The temporary animated Soldier is loaded from the publicly hosted Three.js example GLB. It remains a development-character placeholder.
 
-Ground, path, rock and wood texture resources are loaded from Poly Haven. Poly Haven assets are released under CC0.
-
-## Three.js example Soldier model
-
-The temporary player character is loaded from the Three.js examples host. It remains a development placeholder.
-
-## Ecctrl / React Three Fiber / Rapier / Three.js / React
-
-The game uses these open-source libraries through browser ESM imports. See the respective upstream projects for their licenses and notices.
+## Open-source libraries
+The original application uses React, React Three Fiber, Drei, Three.js, Rapier, Zustand and Ecctrl (browser ESM/CDN imports). See their respective upstream license files for the exact notices.

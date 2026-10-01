@@ -1,10 +1,12 @@
-# MERA E3.6.1 — Signs & Outpost correction
+# MERA E3.7 — Landscape & Atmosphere (visual pass)
 
-This is a **targeted patch** to the verified E3.6 game. The controller, existing terrain, six lexical forms, fixed Heart WAV names, decision/consequence logic, and text-only chat remain unchanged.
+E3.7 builds on the user-tested **E3.6.1** baseline. This is a visual-production pass, **not** a change to the experiment, route/commitment logic, control scheme, fixed Heart speech, optional text-only MERA chat, or the ending. All three choice sets and the final writing task remain in place.
 
-## Upload / existing audio
+## How to update your existing GitHub Pages repository
 
-**Your populated `audio/` directory must stay exactly where it is in the GitHub repository. Do not delete it or regenerate the Heart recordings.** This ZIP contains only the five replacement root files:
+**KEEP the entire existing `audio/` directory.** It already contains your fixed Kokoro Heart WAV recordings; this release does not include, replace or regenerate them.
+
+Upload/replace the five root files:
 
 - `index.html`
 - `main.js`
@@ -12,25 +14,30 @@ This is a **targeted patch** to the verified E3.6 game. The controller, existing
 - `README.md`
 - `THIRD_PARTY_NOTICES.md`
 
-Use **Add file → Upload files** in GitHub to replace the files with the same names. Upload to the repository root. The game continues to read the existing `audio/*.wav` files, including `outro.wav`. The Heart generator is no longer needed to apply this patch.
+**NEW: upload the complete `assets/` directory from this ZIP** to the repository root as well. The nine image files inside it are required for the updated vegetation and bark. Do not upload only the root files: the new local textures would be missing and the game would fail to initialize. Do not upload the optional artwork-generation script, which is deliberately not included in the deployment ZIP.
 
-## Correction 1: permanent branch-specific signs
+Your repo should contain `index.html`, `main.js`, `styles.css`, `README.md`, `THIRD_PARTY_NOTICES.md`, `assets/` (nine PNGs), and your **existing** `audio/` folder (23 fixed Heart WAVs).
 
-All six physical markers now exist in the landscape from the initial render, *further ahead* on the paths rather than behind the route-commitment triggers. From a distance their boards are visible but their labels are not legible. Lettering is shown only if (a) the player commits to that branch and (b) gets within 17 world units of the marker. The unchosen form is never disclosed by the sign. Proximity is logged as `lexical_sign_in_range`, and is **not** treated as proof that the participant actually looked at the sign.
+After the GitHub Pages deployment completes, hard-refresh (`Ctrl+Shift+R`). If the scene fails to load, check that `assets/pine_branch.png` and `assets/grass_tuft.png` are publicly accessible at your Pages URL; leave `audio/` intact.
 
-## Correction 2: outpost completion
+## Visual changes
 
-E3.6 froze because `finishStudy()` referenced `OUTPOST` and `terrainHeight`, which were scoped inside the 3D scene setup. E3.6.1 explicitly passes the outpost coordinates and terrain height to the completion function.
+- Replaces the obvious conical pines and polyhedral round foliage with instanced three-dimensional branch-and-leaf assemblies using **nine bundled procedural alpha-cutout artwork textures** (pine boughs, broadleaf clusters, birch leaves, grasses, reed heads, ferns, meadow flowers, tree bark and birch bark).
+- Populates pine forest with fern understory and the exposed alternative with sparse meadow flowers. Adds small rocks along trail verges while retaining the existing physical obstacle layout.
+- Adds more terrain-color variety, worn earth near pathways and irregular erosion at the far valley walls.
+- Replaces the flat striped waterfall rectangle with layered, shaped water geometry, animated water shading, splash mist, bankside rocks and a foam ring at the plunge pool. River water also receives subtler flow/shallow-bank highlights.
+- Replaces the distant row of cones with layered irregular ridge meshes, and adjusts daylight, atmospheric fog and colour grading.
+- Adds structural details to the existing outpost tower without moving its physical colliders or arrival trigger.
 
-The relay cinematic now also includes a **CONTINUE TO ROUTE GUIDE** control, which becomes available after 1.8 seconds. Normally the writing task opens after Heart finishes the outro recording. If the recording fails, is blocked, or never signals completion, an independent watchdog opens the writing task rather than leaving the participant trapped. The transition reason is logged as `guide_task_displayed`.
+## What has deliberately NOT changed
 
-The final free-text guide is still stored in the current session until the pilot JSON is downloaded; there is **no server-side collection** in this build.
+- Stable Ecctrl Soldier skeleton, input and animation. The Soldier model remains an **external development placeholder**, not a newly licensed detailed expedition-character asset.
+- River/woodland/ascent path geometry and route triggers, lexical signs, consequences and route-locking colliders.
+- MERA's exact approved script, fixed local Heart WAV filenames, lexical exposures, optional text-only assistant and final guide task.
+- The existing CC0 Poly Haven ground, path, wood and rock texture URLs. React/Three/Ecctrl and the example Soldier still load from existing external hosts. **The new nine textures are local**, but the whole game is not yet fully offline/self-contained.
 
-## Check on GitHub Pages
+## Limits and testing
 
-1. Hard refresh the game (Ctrl+Shift+R).
-2. Approach each branch: the marker should already be visible ahead; after choosing it, the relevant label becomes readable nearby.
-3. Reach the outpost: the full Heart outro should play, then the writing interface should open. The continue control can also open it early.
-4. Enter a guide and save/download the pilot JSON.
+The new foliage is authored geometry with alpha-cutout textures, **not purchased or downloaded photorealistic tree meshes**. It is a significant improvement over geometric cones/green rods, but a final character/vegetation asset pipeline remains a separate step for higher-end realism. This container could perform source syntax checks, asset integrity checks, and ZIP verification; it could **not run the full 3D game against the external CDNs**. Check the actual appearance and FPS on GitHub Pages, especially around the pine trail and waterfall. Use E3.6.1 as your rollback if necessary.
 
-The runtime continues to fetch React/Three/Ecctrl, Soldier and landscape textures from the same external hosts as E3.6; only the existing fixed Heart WAV pack is local.
+No server-side study-data collection has been added; final responses remain downloadable as pilot JSON.
