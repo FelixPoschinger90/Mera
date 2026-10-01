@@ -36,7 +36,7 @@ window.addEventListener('unhandledrejection', event => {
 
 function showBootError(err) {
   const message = err?.stack || err?.message || String(err);
-  bootStatus.textContent = 'E3.9.3 failed to initialize.';
+  bootStatus.textContent = 'E3.9.4 failed to initialize.';
   bootError.textContent = message;
   bootError.classList.remove('hidden');
   enterBtn.disabled = true;
@@ -720,6 +720,16 @@ async function bootApp() {
       // Birch hollow is lower and more exposed than the crowded pine branch.
       y -= .65*Math.exp(-((x-29)*(x-29))/210-((z-2)*(z-2))/650);
 
+      // E3.9.4: real hiking trails are worn into the ground rather than laid on top.
+      // Lower the terrain gently along every route centreline and blend back into
+      // surrounding grass over ~1.7 m. This is shallow enough not to constrain
+      // movement, but makes the trail read as compacted/incised terrain.
+      const trailDist=Math.min(...Object.values(PATHS).map(q=>distancePolyline(x,z,q)));
+      if(trailDist<1.72){
+        const erosion=1-smooth01(trailDist/1.72);
+        y-=0.115*erosion;
+      }
+
       // Both branches climb the same mountain. The direct ridge is steep because it
       // advances almost straight uphill; the switchback spreads the same elevation
       // gain over roughly twice the walking distance.
@@ -771,7 +781,7 @@ async function bootApp() {
           textures[i].wrapS=textures[i].wrapT=barkTex?THREE.RepeatWrapping:THREE.ClampToEdgeWrapping;
           if(barkTex)textures[i].repeat.set(2,1);
         }
-        // E3.9.3: dedicated local dirt/gravel texture for unmistakable walking paths.
+        // E3.9.4: dedicated local wet dirt/gravel texture for unmistakable walking paths.
         textures[21].colorSpace=THREE.SRGBColorSpace;
         textures[21].anisotropy=4;
         textures[21].wrapS=textures[21].wrapT=THREE.RepeatWrapping;
@@ -783,22 +793,22 @@ async function bootApp() {
       });
       return useMemo(()=>({
         forest:new THREE.MeshStandardMaterial({map:textures[0],normalMap:textures[1],roughness:.99,color:0xc8d0bb,vertexColors:true}),
-        // E3.9.3: paths are intentionally more legible than the surrounding forest floor.
+        // E3.9.4: paths remain legible than the surrounding forest floor.
         // The outer shoulder remains worn/grass-mixed; the inner bed uses a dedicated
         // dirt/gravel texture and a slight emissive lift so it remains readable in rain.
-        // E3.9.3: trails must remain visually readable in the storm. These are
+        // E3.9.4: trails must remain visually readable in the storm. These are
         // intentionally unlit materials: rain/lightning can darken the world without
         // making the hiking route disappear into the forest floor.
         path:new THREE.MeshBasicMaterial({
-          map:textures[21],color:0xd6c29c,toneMapped:false,side:THREE.DoubleSide,
+          map:textures[21],color:0xa9a28f,toneMapped:false,side:THREE.DoubleSide,
           polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4
         }),
         pathCore:new THREE.MeshBasicMaterial({
-          map:textures[21],color:0xf2dfb9,toneMapped:false,side:THREE.DoubleSide,
+          map:textures[21],color:0xc3baa3,toneMapped:false,side:THREE.DoubleSide,
           polygonOffset:true,polygonOffsetFactor:-6,polygonOffsetUnits:-6
         }),
         verge:new THREE.MeshBasicMaterial({
-          map:textures[21],color:0xbfa77e,toneMapped:false,side:THREE.DoubleSide,
+          map:textures[21],color:0x817b6c,toneMapped:false,side:THREE.DoubleSide,
           polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3
         }),
         rock:new THREE.MeshStandardMaterial({map:textures[4],normalMap:textures[5],roughness:.98,color:0xc2c2ae}),
@@ -1011,24 +1021,26 @@ async function bootApp() {
     }
     function Paths({mat,coreMat,vergeMat}){
       const specs=useMemo(()=>Object.entries(PATHS).map(([k,p])=>{
-        // E3.9.3: continuous, unmistakable hiking trails. They remain visual guidance
+        // E3.9.4: continuous, incised hiking trails. They remain visual guidance
         // only; the player can leave them wherever the route geometry permits.
+        // E3.9.4: walking trails, not service roads. The inner compacted bed is
+        // ~1.8–2.6 m wide depending on context, with only a narrow worn shoulder.
         const outer=
-          k==='pine'?4.25:
-          k==='birch'?5.45:
-          k==='switchback'?5.10:
-          k==='ridge'?4.05:
-          (k==='south'||k==='central'||k==='upper'||k==='final'?5.85:5.20);
+          k==='pine'?2.35:
+          k==='birch'?2.90:
+          k==='switchback'?2.85:
+          k==='ridge'?2.35:
+          (k==='south'||k==='central'||k==='upper'||k==='final'?3.05:2.80);
         const inner=
-          k==='pine'?2.95:
-          k==='birch'?3.85:
-          k==='switchback'?3.55:
-          k==='ridge'?2.80:
-          (k==='south'||k==='central'||k==='upper'||k==='final'?4.10:3.65);
+          k==='pine'?1.82:
+          k==='birch'?2.28:
+          k==='switchback'?2.25:
+          k==='ridge'?1.80:
+          (k==='south'||k==='central'||k==='upper'||k==='final'?2.42:2.18);
         return {
           k,
-          outer:makeStripGeometry(p,outer,.18),
-          inner:makeStripGeometry(p,inner,.235)
+          outer:makeStripGeometry(p,outer,.012),
+          inner:makeStripGeometry(p,inner,.019)
         };
       }),[]);
       return h(React.Fragment,null,
@@ -1634,7 +1646,7 @@ async function bootApp() {
     }
     function App(){
       const [ready,setReady]=useState(false),once=useRef(false);
-      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking the fixed Heart voice pack…';loadfill.style.width='90%';try{await verifyHeartVoicePack();setReady(true);bootStatus.textContent='Ecctrl, Rapier, fixed Heart voice pack and the E3.9.3 path and rock-collision pass is ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
+      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking the fixed Heart voice pack…';loadfill.style.width='90%';try{await verifyHeartVoicePack();setReady(true);bootStatus.textContent='Ecctrl, Rapier, fixed Heart voice pack and the E3.9.4 incised-trail and rock-collision pass is ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
       useEffect(()=>{if(!ready)return;enterBtn.onclick=()=>{boot.classList.add('hidden');beginIntro();};},[ready]);
       return h(Canvas,{shadows:false,dpr:[1,1.18],camera:{position:[4.8,3.2,224],fov:54,near:.1,far:650},gl:{antialias:true,powerPreference:'high-performance'},onCreated:({gl})=>{gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=.92;loadfill.style.width='78%';}},h(Suspense,{fallback:null},h(Scene,{onCharacterReady})));
     }

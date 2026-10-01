@@ -1,27 +1,13 @@
-# MERA E3.9.3 — Path & Rock Collision Correction
+# MERA E3.9.4 — Incised Hiking Trails
 
-Focused correction built directly on the accepted E3.9 storm environment. Gameplay, Heart audio, lexical logic, weather, wind physics, route locking, character, consequences and outpost ending are unchanged.
+Focused correction based on E3.9.3. Gameplay, storm, Heart audio, route logic, solid rocks and character are unchanged.
 
-## Changes in E3.9.3
+## Changes
+- Continuous trail network retained.
+- Trails narrowed from road-like ribbons to hiking-trail proportions.
+- Pine/ridge trails are narrowest; open/switchback trails remain modestly wider.
+- Terrain is lowered ~11.5 cm at trail centrelines and blended into surrounding grass, so paths read as worn into the landscape rather than laid on top.
+- Trail meshes sit only 1–2 cm above the incised terrain to avoid z-fighting.
+- `assets/trail_dirt.png` is desaturated to a wet beige-grey compacted gravel/dirt tone.
 
-- Replaced subtle route markings with continuous, clearly visible hiking paths.
-- Added a dedicated bundled dirt/gravel trail texture (`assets/trail_dirt.png`).
-- Paths now have a broader worn shoulder plus a narrower compacted walking bed.
-- Route widths remain differentiated: BOSKOT is narrower, FIFFIN broader, VIRDEX direct/narrow, TEEBU longer/winding.
-- Raised path surfaces slightly and enabled polygon offset to prevent z-fighting in heavy rain.
-- Added physical Rapier colliders to all meaningful landscape rocks (s >= 0.55). Tiny decorative path pebbles remain non-colliding.
-
-## Deployment
-
-Replace the five root files and upload/replace the `assets/` folder. Keep the existing fixed Heart `audio/` folder unchanged.
-
-## Controls
-
-WASD / arrows: move · Shift: run · Space: jump · mouse drag: camera.
-
-
-E3.9.3 path correction: hiking trails use unlit pale gravel materials so they remain clearly visible during the storm; trail meshes are also wider and lifted slightly above terrain.
-
-
-## E3.9.3 connected-trail correction
-The hiking routes are a continuous visual network: shared approach -> decision fork -> two branch trails -> reconvergence -> shared trail to the next decision. The strip winding was corrected so the trail surfaces face upward and are visible from the gameplay camera; materials are double-sided as a safety fallback. No movement rails were added.
+For a minimal update from E3.9.3, replace `main.js`, `index.html`, and `assets/trail_dirt.png`. Existing audio stays untouched.
