@@ -630,8 +630,9 @@ async function bootApp() {
     const h = React.createElement;
     const { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } = React;
 
-    // Intentionally unchanged from the proven E1/E2 chassis.
-    const TEST_CHARACTER_URL = 'https://threejs.org/examples/models/gltf/Soldier.glb';
+    // Proven isolated character proof: Quaternius Adventurer. The model swap is
+    // visual only; Ecctrl movement, capsule physics and camera remain unchanged.
+    const TEST_CHARACTER_URL = 'https://cdn.jsdelivr.net/gh/FreePeak/opencombat@master/assets/characters/adventurer.glb';
 
     const ASSET = {
       forestDiff:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/forrest_ground_01/forrest_ground_01_diff_1k.jpg',
@@ -1318,10 +1319,12 @@ async function bootApp() {
           locks.push(h(BallCollider,{key:key+'c'+i,args:[1.05],position:[xx,y+1.05,zz]}));
         }
       };
-      if(routes.river==='bridge')addLog('rb',-16.8,138.8,-1.06);
-      if(routes.river==='ford')addLog('rf',16.8,138.8,1.06);
-      if(routes.woodland==='pine')addLog('wp',-11.5,35.2,-1.16);
-      if(routes.woodland==='birch')addLog('wb',11.5,35.2,1.16);
+      // Commitment locks the route NOT chosen, behind the player. The central
+      // landform spine already prevents lateral crossing until reconvergence.
+      if(routes.river==='bridge')addLog('rb',16.8,138.8,1.06);
+      if(routes.river==='ford')addLog('rf',-16.8,138.8,-1.06);
+      if(routes.woodland==='pine')addLog('wp',11.5,35.2,1.16);
+      if(routes.woodland==='birch')addLog('wb',-11.5,35.2,-1.16);
       if(routes.ascent==='ridge')addRocks('ar',-13.5,-97.5,1.13);
       if(routes.ascent==='switchback')addRocks('as',12.5,-98.0,-1.13);
       return h(RigidBody,{type:'fixed',colliders:false},...locks);
@@ -1481,10 +1484,54 @@ async function bootApp() {
     class ModelBoundary extends React.Component {constructor(props){super(props);this.state={error:null};}static getDerivedStateFromError(error){return{error};}componentDidCatch(error){showBootError(error);}render(){return this.state.error?null:this.props.children;}}
     function AnimatedCharacter({onReady}){
       const group=useRef(),{scene,animations}=useGLTF(TEST_CHARACTER_URL),{actions}=useAnimations(animations,group),animState=useEcctrlAnimationStore(s=>s.animationState);
-      useEffect(()=>{scene.traverse(obj=>{if(obj.isMesh||obj.isSkinnedMesh){obj.castShadow=true;obj.receiveShadow=true;if(obj.material){const ms=Array.isArray(obj.material)?obj.material:[obj.material];for(const m of ms)if('roughness'in m)m.roughness=Math.max(.55,m.roughness??.7);}}});},[scene]);
-      useEffect(()=>{if(actions?.Idle&&actions?.Walk&&actions?.Run)onReady?.();},[actions,onReady]);
-      useEffect(()=>{const map={IDLE:'Idle',WALK:'Walk',RUN:'Run',JUMP_START:'Idle',JUMP_IDLE:'Idle',JUMP_FALL:'Idle',JUMP_LAND:'Idle'},next=actions?.[map[animState]]||actions?.Idle;if(!next)return;next.reset().fadeIn(.16).play();return()=>next.fadeOut(.16);},[actions,animState]);
-      return h('group',{ref:group,position:[0,-.88,0],rotation:[0,Math.PI,0],scale:.92},h('primitive',{object:scene}));
+      const [norm,setNorm]=useState({offset:0});
+      const current=useRef(null),readySent=useRef(false);
+
+      useLayoutEffect(()=>{
+        scene.updateMatrixWorld(true);
+        const box=new THREE.Box3().setFromObject(scene);
+        const height=Math.max(.001,box.max.y-box.min.y);
+        scene.scale.setScalar(1.76/height);
+        scene.updateMatrixWorld(true);
+        const fitted=new THREE.Box3().setFromObject(scene);
+        setNorm({offset:-fitted.min.y});
+        scene.traverse(obj=>{
+          if(obj.isMesh||obj.isSkinnedMesh){
+            obj.frustumCulled=false;obj.castShadow=true;obj.receiveShadow=true;
+            const ms=Array.isArray(obj.material)?obj.material:[obj.material];
+            for(const m of ms)if(m&&'roughness' in m)m.roughness=Math.max(.58,m.roughness??.72);
+          }
+        });
+      },[scene]);
+
+      const chooseClip=state=>{
+        const names=animations.map(c=>c.name);
+        const idle=names.find(n=>/(^|\|)Idle$/i.test(n))||names.find(n=>/idle/i.test(n))||null;
+        const run=names.find(n=>/(^|\|)Run$/i.test(n))||names.find(n=>/run/i.test(n))||null;
+        if(state==='WALK'||state==='RUN')return run||idle;
+        if(state==='JUMP_START'||state==='JUMP_IDLE'||state==='JUMP_FALL'||state==='JUMP_LAND')return idle||run;
+        return idle||run||null;
+      };
+
+      useEffect(()=>{
+        if(readySent.current)return;
+        const names=animations.map(c=>c.name);
+        const hasIdle=names.some(n=>/(^|\|)Idle$/i.test(n)||/idle/i.test(n));
+        const hasRun=names.some(n=>/(^|\|)Run$/i.test(n)||/run/i.test(n));
+        if(actions&&hasIdle&&hasRun){readySent.current=true;onReady?.();}
+      },[actions,animations,onReady]);
+
+      useEffect(()=>{
+        const name=chooseClip(animState),next=name?actions?.[name]:null;if(!next)return;
+        const isRun=/(^|\|)Run$/i.test(name);
+        const speed=(animState==='WALK'&&isRun)?.62:1;
+        if(current.current===next){next.timeScale=speed;return;}
+        const prev=current.current;current.current=next;next.reset();next.timeScale=speed;next.setLoop(THREE.LoopRepeat,Infinity);next.fadeIn(.16).play();if(prev&&prev!==next)prev.fadeOut(.16);
+      },[actions,animState,animations]);
+
+      return h('group',{ref:group,position:[0,-.88,0],rotation:[0,0,0]},
+        h('group',{position:[0,norm.offset,0]},h('primitive',{object:scene}))
+      );
     }
     function DirectKeyboardInput({controllerRef}){
       const pressed=useRef({forward:false,backward:false,leftward:false,rightward:false,run:false,jump:false});

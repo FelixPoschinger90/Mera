@@ -15,8 +15,8 @@ The bundled `assets/*.png` ground-cover/bark textures from the earlier visual pa
 ## Kokoro / Heart voice
 The fixed WAV recordings in the user's existing `audio/` directory were generated with Kokoro Heart (`af_heart`). They are not modified or included by this patch. Kokoro ONNX model licensing: Apache-2.0.
 
-## Three.js Soldier
-The temporary animated Soldier is loaded from the publicly hosted Three.js example GLB and remains a development-character placeholder.
+## Quaternius Adventurer
+The player character uses the Quaternius Adventurer low-poly humanoid (CC0 release), loaded at runtime from the public OpenCombat GitHub mirror through jsDelivr. MERA uses the model's Idle and Run clips; walking reuses Run at reduced playback speed, while jump states retain the upright Idle pose because this GLB has no authored jump clip.
 
 ## Open-source libraries
 The application uses React, React Three Fiber, Drei, Three.js, Rapier, Zustand and Ecctrl through browser ESM/CDN imports. Refer to their upstream projects for exact license texts.
