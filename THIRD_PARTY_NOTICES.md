@@ -1,4 +1,4 @@
-# Third-party notices — MERA E4.1
+# Third-party notices — MERA E4.2
 
 ## Poly Haven — CC0
 
@@ -19,7 +19,7 @@ The bundled `assets/*.png` ground-cover, bark and trail textures are local MERA 
 
 ## Pexels photographic generalisation stimuli
 
-The E4.1 generalisation task uses fixed photographs made available as free-to-use images through Pexels. The image source pages are retained in each session record.
+The E4.2 generalisation task uses fixed photographs made available as free-to-use images through Pexels. The image source pages are retained in each session record.
 
 - River / bridge — Connor Scott McManus: https://www.pexels.com/photo/stream-in-forest-17479947/
 - River / ford — James Goddard: https://www.pexels.com/photo/tranquil-pathway-over-stepping-stones-in-a-stream-32286784/
@@ -32,7 +32,7 @@ Pexels license: https://www.pexels.com/license/
 
 ## Kokoro / Heart voice
 
-The fixed WAV stimuli in `audio/` were synthesized with Kokoro Heart (`af_heart`). Kokoro ONNX model licensing: Apache-2.0. The E4.1 game plays only pre-rendered WAV files; no speech-synthesis model is loaded during participant sessions.
+The fixed WAV stimuli in `audio/` were synthesized with Kokoro Heart (`af_heart`). Kokoro ONNX model licensing: Apache-2.0. The E4.2 game plays only pre-rendered WAV files; no speech-synthesis model is loaded during participant sessions.
 
 ## Quaternius Adventurer
 

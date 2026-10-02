@@ -1,6 +1,6 @@
-# MERA E4.1 — Counterbalanced Study Pilot
+# MERA E4.2 — Counterbalanced Study Pilot
 
-MERA E4.1 is the counterbalanced research-instrument build of *The Northern Outpost*. The accepted E3.9.5 gameplay, Adventurer character, terrain, storm system, route consequences and physical route locks are retained. The E4 layer adds controlled lexical assignment, exposure logging, post-game response tasks and complete pilot-session export. E4.1 additionally introduces fixed environmental storm audio, an expanded participant-facing field briefing, an earlier ford reinforcement trigger and photographic generalisation stimuli.
+MERA E4.2 is the counterbalanced research-instrument build of *The Northern Outpost*. The accepted E3.9.5 gameplay, Adventurer character, terrain, storm system, route consequences and physical route locks are retained. The E4 layer adds controlled lexical assignment, exposure logging, post-game response tasks and complete pilot-session export. E4.1 introduced fixed environmental storm audio, an earlier ford reinforcement trigger and photographic generalisation stimuli. E4.2 adds the participant research/consent briefing, a clearer completion/debrief screen and a more audible layered thunder response tied to lightning.
 
 ## Experimental structure
 
@@ -25,7 +25,7 @@ The three target forms attached to unchosen routes are not exposed. The optional
 
 ## Field presentation
 
-The entry screen establishes the participant as a reserve field worker and identifies MERA as the reserve's AI navigation guide before the field run begins. The spoken emergency transmission then establishes the storm damage, injured and missing team members, failed outpost relay and time pressure.
+The entry screen establishes the participant as an environmental field intern and identifies MERA as the reserve's AI navigation guide before the field run begins. The spoken emergency transmission then establishes the storm damage, injured and missing team members, failed outpost relay and time pressure.
 
 The journey uses fixed procedural environmental audio generated in the browser: continuous rain and low wind, plus thunder coupled to field lightning. Environmental audio is automatically ducked while MERA speaks so the pre-rendered lexical stimuli remain intelligible. Thunder is not played over an active MERA voice line.
 
@@ -51,7 +51,7 @@ The session record stores the generalisation stimulus identifier and source page
 
 The pilot export preserves both summary variables and the raw event history so that additional measures can be derived later. The session record includes:
 
-- anonymous session UUID, build and schema version;
+- random session UUID, build and schema version;
 - counterbalance condition and complete target-form-to-route mapping;
 - route choices, commitment positions and decision latencies;
 - each lexical voice event and playback result;

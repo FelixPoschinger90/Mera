@@ -56,7 +56,7 @@ const cinematicCaption = document.getElementById('cinematic-caption');
 const cinematicLine = document.getElementById('cinematic-line');
 const outpostContinue = document.getElementById('outpost-continue');
 
-const STUDY_VERSION = 'MERA_E4_1_COUNTERBALANCED_PILOT';
+const STUDY_VERSION = 'MERA_E4_2_COUNTERBALANCED_PILOT';
 const LEXICAL_ITEMS = ['menic','blicket','boskot','fiffin','virdex','teebu'];
 const SLOT_ORDER = [
   'river_bridge','river_ford','woodland_pine','woodland_birch','ascent_ridge','ascent_switchback'
@@ -166,7 +166,7 @@ function detectBrowserFamily(){
 }
 
 const session = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   build: STUDY_VERSION,
   sessionId: makeSessionId(),
   createdAt: new Date().toISOString(),
@@ -335,7 +335,11 @@ function pulseFieldLightning(){
   void fieldLightning.offsetWidth;
   fieldLightning.classList.add('flash');
   window.dispatchEvent(new CustomEvent('mera-lightning'));
-  if(!activeMeraAudio)thunderRumble(.09);else logEvent('thunder_suppressed_during_voice');
+  if(!activeMeraAudio){
+    const thunderDelay=220+Math.random()*620;
+    setTimeout(()=>{if(!activeMeraAudio)thunderRumble(.22);else logEvent('thunder_suppressed_during_voice');},thunderDelay);
+    logEvent('thunder_scheduled',{delayMs:Math.round(thunderDelay)});
+  }else logEvent('thunder_suppressed_during_voice');
   setTimeout(()=>fieldLightning?.classList.remove('flash'),620);
 }
 function scheduleFieldLightning(){
@@ -426,22 +430,38 @@ async function verifyHeartVoicePack(){
     throw new Error(`Heart voice pack is missing or unreadable (${failures.length} file${failures.length===1?'':'s'}). First missing: ${failures[0]}`);
   }
 }
-function thunderRumble(intensity=.12){
+function thunderRumble(intensity=.22){
   try{
     audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();
     if(audioCtx.state==='suspended')audioCtx.resume();
-    const sr=audioCtx.sampleRate,n=Math.floor(sr*1.5),b=audioCtx.createBuffer(1,n,sr),d=b.getChannelData(0);
-    for(let i=0;i<n;i++){const t=i/n;d[i]=(Math.random()*2-1)*Math.pow(1-t,2.2);}
-    const src=audioCtx.createBufferSource();src.buffer=b;
-    const lp=audioCtx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=125;
-    const g=audioCtx.createGain();g.gain.value=intensity;
-    src.connect(lp);lp.connect(g);g.connect(audioCtx.destination);src.start();
-  }catch(_){ }
+    const ctx=audioCtx,sr=ctx.sampleRate;
+
+    // Audible crack: retains mid-frequency energy so thunder remains perceptible
+    // on ordinary laptop speakers as well as headphones.
+    const crackN=Math.floor(sr*.42),crackBuffer=ctx.createBuffer(1,crackN,sr),crackData=crackBuffer.getChannelData(0);
+    for(let i=0;i<crackN;i++){const t=i/crackN;crackData[i]=(Math.random()*2-1)*Math.pow(1-t,3.4);}
+    const crack=ctx.createBufferSource();crack.buffer=crackBuffer;
+    const crackBP=ctx.createBiquadFilter();crackBP.type='bandpass';crackBP.frequency.value=620;crackBP.Q.value=.55;
+    const crackGain=ctx.createGain();crackGain.gain.value=intensity*.78;
+    crack.connect(crackBP);crackBP.connect(crackGain);crackGain.connect(ctx.destination);
+
+    // Longer low rumble gives the flash weight after the initial crack.
+    const rumbleN=Math.floor(sr*2.8),rumbleBuffer=ctx.createBuffer(1,rumbleN,sr),rumbleData=rumbleBuffer.getChannelData(0);
+    for(let i=0;i<rumbleN;i++){const t=i/rumbleN;const envelope=Math.pow(1-t,1.7)*(0.72+0.28*Math.sin(Math.PI*Math.min(1,t*4)));rumbleData[i]=(Math.random()*2-1)*envelope;}
+    const rumble=ctx.createBufferSource();rumble.buffer=rumbleBuffer;
+    const rumbleLP=ctx.createBiquadFilter();rumbleLP.type='lowpass';rumbleLP.frequency.value=310;rumbleLP.Q.value=.35;
+    const rumbleHP=ctx.createBiquadFilter();rumbleHP.type='highpass';rumbleHP.frequency.value=38;rumbleHP.Q.value=.25;
+    const rumbleGain=ctx.createGain();rumbleGain.gain.value=intensity*.68;
+    rumble.connect(rumbleHP);rumbleHP.connect(rumbleLP);rumbleLP.connect(rumbleGain);rumbleGain.connect(ctx.destination);
+
+    crack.start();rumble.start(ctx.currentTime+.07);
+    logEvent('thunder_played',{intensity:Math.round(intensity*100)/100});
+  }catch(error){logEvent('thunder_failed',{message:String(error?.message||error)});}
 }
 function lightningFlash(delay=0){
   setTimeout(()=>{
     intro.classList.remove('flash');void intro.offsetWidth;intro.classList.add('flash');
-    thunderRumble(.10);
+    thunderRumble(.18);
     setTimeout(()=>intro.classList.remove('flash'),650);
   },delay);
 }

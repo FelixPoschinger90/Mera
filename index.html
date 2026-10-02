@@ -43,18 +43,21 @@
 
   <div id="boot" class="screen">
     <div class="card">
-      <div class="kicker">MERA · NORTHERN OUTPOST · FIELD LINK</div>
-      <h1>You are the field responder.</h1>
-      <p class="mission-lead">You are a reserve field worker and the only mobile member of your team after last night’s storm. Your task is to reach the Northern Outpost and restore its emergency relay before the next storm front arrives.</p>
+      <div class="kicker">MERA · NORTHERN OUTPOST · RESEARCH FIELD SIMULATION</div>
+      <h1>Enter the reserve.</h1>
+      <p class="mission-lead">You are an environmental field intern assigned to a remote reserve outpost beyond normal signal coverage. Last night, the reserve was hit by a devastating storm. Members of your team are injured and missing. Your only guide is <strong>MERA</strong>, the reserve’s AI navigation system. You must reach the Northern Outpost and restore its emergency uplink so that emergency services can be contacted.</p>
       <div class="mission-brief">
-        <div><span>MERA</span><strong>MERA is the reserve’s AI navigation guide. She will provide route information over the field link, but her terrain data is incomplete and some decisions will be yours.</strong></div>
-        <div><span>CONTROL</span><strong>WASD move · Shift run · Space jump · mouse drag camera</strong></div>
-        <div><span>FIELD RULE</span><strong>Route choices are commitments. Once a branch closes behind you, continue until the routes meet again.</strong></div>
+        <div><span>YOUR GUIDE</span><strong>MERA will provide spoken navigation over the field link. Her terrain data is incomplete, so some route decisions will be yours.</strong></div>
+        <div><span>CONTROLS</span><strong>WASD move · Shift run · Space jump · mouse drag camera</strong></div>
+        <div><span>STUDY</span><strong>The simulation takes about 5 minutes of gameplay, followed by two brief written responses.</strong></div>
+      </div>
+      <div class="consent-note">
+        <strong>Research information.</strong> Gameplay behaviour, route choices, timings, movement, stimulus exposure and the written responses are recorded under a randomly generated session ID. The study does not ask for your name, email address or account details. Research data are used for scientific research only. Participation is voluntary; you may stop before completing the study by closing the page. By clicking <strong>ENTER</strong>, you confirm that you have read this information and consent to participate and to the use of your study data for scientific research.
       </div>
       <p id="boot-status">Loading the storm valley, MERA field link and Northern Outpost…</p>
       <div class="loadbar"><div id="loadfill"></div></div>
-      <p class="small">Headphones are recommended if available. The field link includes spoken guidance and environmental storm audio.</p>
-      <button id="enter" disabled>BEGIN FIELD RUN</button>
+      <p class="small">Headphones are recommended if available. Spoken guidance, rain, wind and thunder are part of the simulation.</p>
+      <button id="enter" disabled>ENTER</button>
       <pre id="boot-error" class="error hidden"></pre>
     </div>
   </div>
@@ -150,8 +153,8 @@
   <div id="complete-screen" class="screen hidden">
     <div class="card finish-card">
       <div class="kicker">FIELD RUN COMPLETE</div>
-      <h1>Complete.</h1>
-      <p>The pilot session record has been saved locally as <code id="completion-file"></code>.</p>
+      <h1>Thank you for participating in this journey.</h1>
+      <p>Your field report is complete. The pilot session record has been saved locally as <code id="completion-file"></code>.</p>
       <div class="finish-actions">
         <button id="download-session" class="secondary">DOWNLOAD SESSION JSON AGAIN</button>
         <button id="replay" class="secondary">START NEW SESSION</button>
