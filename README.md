@@ -1,130 +1,232 @@
-# MERA E4.5 — Counterbalanced Production Study
+# MERA — The Northern Outpost
 
-MERA developed iteratively from a movement and environment prototype into a controlled browser-based research instrument. The version sequence reflects changes in both technical implementation and experimental design rather than a series of independent game builds.
-E1 — Controller proof.
-The first version established the basic third-person interaction model using Ecctrl/Rapier: player movement, camera behaviour, collision handling and a controllable character in a minimal test environment. Its purpose was to determine whether a sufficiently smooth browser-based third-person experience could be achieved before constructing the experimental world.
-E2 — Environment prototype.
-E2 transferred the controller into the first compact version of The Northern Outpost. The focus shifted from isolated movement testing to environmental navigation: terrain, vegetation, route structure and a traversable valley were assembled into a coherent play space. The outpost became the visible destination and the map was deliberately constrained so that participants could explore locally without becoming lost in a large open world.
-E3 — Experimental gameplay structure.
-E3 established the core five-to-eight-minute gameplay loop and introduced three consequential route decisions: bridge versus ford, sheltered forest versus exposed route, and ridge versus switchback. Route selection began to affect subsequent access to the environment, and the outpost became the formal endpoint of the journey. This stage also introduced novel lexical items into MERA's guidance, route logging and a post-game free-text route description. The lexical inventory and exposure structure were subsequently revised as the experimental design became more precise.
-E3.9 — Environment, consequence and presentation refinement.
-The E3.9 series concentrated on making the environment legible and the decisions physically meaningful without substantially changing the underlying study concept. Storm rendering, rain and lightning were improved; directional wind effects were added; route branches were physically separated until their intended reconvergence; the woodland environment was made denser; and higher-quality CC0 vegetation and rock assets were introduced. Performance was also stabilised, including the removal of expensive shadow rendering where it did not materially improve the scene.
-E3.9.1 — Route readability and collision refinement.
-Continuous light dirt/gravel trails were added to make the intended hiking routes visible without forcing the participant to remain on them. Rock geometry and colliders were revised so that visually substantial objects also behaved as physical obstacles. The path texture was subsequently lightened to remain readable against the surrounding grass while retaining a relatively narrow, natural trail appearance.
-E3.9.4 — Reference gameplay baseline.
-By E3.9.4, the map layout, three decision sequence, environmental consequences, lexical signs, MERA guidance, outpost progression and general movement behaviour had stabilised sufficiently to serve as the reference build for later experimental changes. Subsequent development therefore avoided unnecessary alterations to terrain, navigation and decision geometry.
-E3.9.5 — Character and route-lock revision.
-The previous soldier character was replaced by a Quaternius Adventurer model after separate character-controller testing. Animation handling was adapted so that walking, running and jumping remained stable without changing the underlying Ecctrl controller. The non-selected branches were also corrected so that commitment to one route genuinely prevented traversal of the alternative route until the branches reconverged.
-E4.0 — Counterbalanced study pilot.
-E4.0 marked the transition from a gameplay prototype to a structured experimental instrument. The six final lexical forms — menic, blicket, boskot, fiffin, virdex and teebu — were decoupled from fixed physical routes through six counterbalanced mappings. Each participant therefore encounters exactly three lexical items, determined by their three route choices. Each encountered item receives three controlled exposures: one contextual spoken exposure, one route sign, and one spoken reinforcement. The three unchosen items remain unexposed. The post-game procedure was also formalised as a spontaneous route-description task followed by one generalisation task. E4.0 initially stored the complete study record as a locally exported JSON file for validation.
-E4.1 — Environmental audio and generalisation stimuli.
-Continuous rain and wind audio were added to reduce the otherwise empty acoustic environment, with environmental audio automatically attenuated while MERA speaks. Thunder was linked to lightning events. The timing of the second ford instruction was moved earlier so that its wording remained contextually appropriate during traversal. The generalisation task was redesigned to use fixed real-world photographic stimuli rather than schematic illustrations, with the exact stimulus identifier retained in the study record.
-E4.2 — Participant briefing and study framing.
-The entry sequence was expanded to establish the participant's role as an environmental field intern, the storm emergency, MERA's function as an AI navigation system and the objective of reaching the northern outpost to restore emergency communication. The same screen also introduced the study duration, research-data use and consent procedure. Completion messaging was revised to provide an explicit end to the participant experience. Thunder rendering was strengthened while remaining suppressed during controlled speech stimuli.
-E4.3 — Research telemetry and storage preparation.
-E4.3 expanded the event model so that behaviour could be reconstructed rather than represented only by summary values. Events began recording both session-relative and gameplay-relative timing, visibility interruptions, active versus hidden gameplay time, explicit consent acceptance and consent-text version. The storage schema for remote research-data submission was also introduced, using an insert-only Supabase configuration while local export remained active during validation.
-E4.4 — Production database integration.
-Remote storage was connected to a Frankfurt-hosted Supabase PostgreSQL database. Completion now submits the complete anonymous session record directly to the research database using a browser-safe publishable key and Row Level Security. Public clients have INSERT permission only and cannot retrieve, modify or delete existing records. Local participant-side JSON export was removed. A participant reaches the completion screen only after successful remote submission; failed submissions remain retryable from the final task.
-E4.5 — Production timing correction and instrument freeze candidate.
-The final production refinement separated the continuously running session clock from the gameplay clock after arrival at the outpost. This corrected response-time measurement for the route-description and generalisation tasks while preserving gameplay-duration measures independently. E4.5 retains the established gameplay, six-condition counterbalancing, fixed Heart/Kokoro speech stimuli, three-exposure lexical protocol, photographic generalisation task, consent logging, behavioural telemetry and remote database storage. It represents the production version intended for pilot validation and subsequent data collection.
-Across these iterations, the central experimental structure remained progressively more constrained rather than more complex: three consequential route choices, three encountered lexical items, three exposures per encountered item, spontaneous post-game production, and one transfer/generalisation measure. Later versions primarily improved stimulus control, environmental credibility, measurement precision and reproducibility while preserving the established navigation task.
+**Current production build:** `MERA_E4_5_COUNTERBALANCED_PRODUCTION`  
+**Session schema:** `6`  
+**Study format:** browser-based 3D field simulation with counterbalanced lexical exposure, free-text transfer measures and remote research-data storage.
+
+MERA is a compact experimental environment for studying whether novel lexical forms introduced by an AI navigation guide are later reused in independent human-directed descriptions and transferred to new but analogous situations. The participant crosses a storm-damaged reserve, makes three consequential route decisions, reaches the Northern Outpost, gives directions to a rescue team, and completes one photographic generalisation task.
+
+The production instrument is intentionally narrow: the environment provides a reason to use language, but the lexical manipulation, exposure sequence and recorded outcomes remain controlled.
+
+## Repository structure
+
+```text
+/
+├── index.html                Participant screens, consent, HUD and post-game tasks
+├── main.js                   Game world, MERA logic, counterbalancing, telemetry and submission
+├── styles.css                Interface and presentation styles
+├── study-config.js           Production storage configuration
+├── SUPABASE_SCHEMA.sql       Reproducible database table + Row Level Security policy
+├── THIRD_PARTY_NOTICES.md    Asset, image, voice and library provenance
+├── audio/                    Fixed pre-rendered MERA speech stimuli
+└── assets/                   Local textures and supporting visual assets
+```
+
+The application has no compilation/build step. `index.html` uses a pinned browser import map for React, Three.js, React Three Fiber, Drei, Rapier, Zustand and Ecctrl. The production build should be served over HTTP/HTTPS rather than opened with `file://`.
+
+For local inspection, for example:
+
+```bash
+python -m http.server 8000
+```
+
+Then open `http://localhost:8000/`.
+
+The deployed study additionally requires network access for the pinned ESM modules, selected remote visual assets/generalisation photographs, and Supabase submission.
+
+## Participant flow
+
+1. **Entry / consent.** The participant is introduced as an environmental field intern entering a remote reserve after a severe storm. MERA is identified as the reserve's AI navigation guide. Controls, approximate duration, recorded data and research use are stated before `ENTER`.
+2. **Emergency transmission.** MERA establishes the damaged communications, injured/missing team members and objective: reach the Northern Outpost and restore the emergency uplink.
+3. **Decision 1 — river.** Bridge or ford.
+4. **Decision 2 — woodland.** Sheltered pine route or exposed/open route.
+5. **Decision 3 — ascent.** Direct ridge or longer switchback.
+6. **Outpost.** The emergency relay is restored.
+7. **Route handover.** With MERA's navigation cache unavailable, the participant writes directions for the approaching rescue team.
+8. **Generalisation.** Three new photographic route sections corresponding to the three experienced route properties are shown in randomised A/B/C order. The participant describes them without lexical prompts.
+9. **Submission.** The complete session record is written to the production database. The completion screen is shown only after successful submission.
+
+Controls: **WASD** move · **Shift** run · **Space** jump · **mouse drag** camera.
 
 ## Experimental structure
 
-Each session is assigned one of six counterbalance conditions. The six target forms — `menic`, `blicket`, `boskot`, `fiffin`, `virdex`, and `teebu` — rotate across the six physical route slots:
+The six lexical forms are:
 
-- river / bridge
-- river / ford
-- woodland / pine
-- woodland / birch
-- ascent / ridge
-- ascent / switchback
+`menic` · `blicket` · `boskot` · `fiffin` · `virdex` · `teebu`
 
-Each target form occupies each physical route slot exactly once across the six conditions. Assignment is random unless a condition is explicitly fixed with the `condition=1` to `condition=6` URL parameter for controlled testing.
+`blicket`, `boskot`, `fiffin`, `virdex` and `teebu` were selected from an established pseudoword stimulus inventory; `menic` is a researcher-generated comparison item.
 
-A completed participant encounters exactly three target forms: one on the selected route at each of the three decisions. Each selected form has three controlled encounters in the same order:
+The six physical lexical slots are:
 
-1. spoken contextualisation;
-2. lexical sign exposure;
-3. spoken reinforcement.
+- `river_bridge`
+- `river_ford`
+- `woodland_pine`
+- `woodland_birch`
+- `ascent_ridge`
+- `ascent_switchback`
 
-The three target forms attached to unchosen routes are not exposed. The optional MERA text link remains descriptive and does not introduce target forms.
+Each session receives one of six cyclic counterbalance conditions. Each lexical form therefore occupies every physical slot once across the six conditions.
 
-## Participant entry and consent record
+| Condition | Bridge | Ford | Pine | Open/Birch | Ridge | Switchback |
+|---|---|---|---|---|---|---|
+| 1 | menic | blicket | boskot | fiffin | virdex | teebu |
+| 2 | blicket | boskot | fiffin | virdex | teebu | menic |
+| 3 | boskot | fiffin | virdex | teebu | menic | blicket |
+| 4 | fiffin | virdex | teebu | menic | blicket | boskot |
+| 5 | virdex | teebu | menic | blicket | boskot | fiffin |
+| 6 | teebu | menic | blicket | boskot | fiffin | virdex |
 
-The entry screen establishes the participant as an environmental field intern and identifies MERA as the reserve's AI navigation guide before the field run begins. It states the approximate study duration, the categories of recorded study data, the voluntary nature of participation and the scientific-research purpose of the data.
+Assignment is random in production. For controlled testing, a fixed condition can be requested with `?condition=1` through `?condition=6`.
 
-Pressing `ENTER` creates an explicit consent event in the session record. The record stores the acceptance timestamp, session-relative acceptance time and the consent-text version identifier `MERA_CONSENT_V1_2026_10_02`. No name, email address or account identifier is requested by the study interface.
+A completed participant encounters **exactly three lexical forms**, one on each chosen route. Each encountered form has exactly three nominal exposures:
 
-## Time model
+1. **context voice** — MERA names and characterises the chosen route;
+2. **lexical sign** — the assigned form appears on the selected route marker;
+3. **reinforcement voice** — MERA repeats the form during traversal.
 
-Every chronological event stores two clocks:
+The three forms assigned to unchosen routes remain unexposed. The optional MERA text interaction does not introduce target forms.
 
-- `sessionTime`: monotonic time from initial page/session creation;
-- `gameplayTime`: monotonic time from the start of controllable gameplay, or `null` for pre-game events.
+## Voice stimulus matrix
 
-The compatibility field `t` uses `gameplayTime` when gameplay has begun and `sessionTime` beforehand. This prevents loading, consent, intro, visibility and environmental events from collapsing to time zero.
+Speech is fixed and pre-rendered with Kokoro Heart (`af_heart`); no speech model runs during participation.
 
-Visibility interruptions are stored as explicit intervals. Derived timing contains both wall-clock gameplay duration and `hiddenDuringGameplay` / `activeGameplay`, allowing analyses to distinguish elapsed run duration from time during which the study page was not visible.
+Lexical filenames follow:
 
-Post-game response timestamps use the continuously running `sessionTime` clock rather than the gameplay clock, which stops when the outpost is reached. This preserves actual guide and generalisation response durations after gameplay has ended.
+```text
+audio/lex_<route-slot>_<target-form>_<context|reinforce>.wav
+```
 
-## Field presentation
+The counterbalanced lexical matrix contains:
 
-The spoken emergency transmission establishes the storm damage, injured and missing team members, failed outpost relay and time pressure. Continuous procedural rain and wind run during the field journey, with thunder coupled to lightning. Environmental audio is automatically ducked while MERA speaks, and field thunder is suppressed during active MERA voice playback.
+```text
+6 route slots × 6 lexical forms × 2 spoken encounters = 72 WAV files
+```
 
-## Voice stimuli
+The `audio/` directory also contains fixed intro, decision, consequence and outpost speech. Metadata files document the generated stimulus set and counterbalance mapping.
 
-The `audio/` directory contains the fixed Heart (`af_heart`) stimulus pack. Lexical recordings follow the naming convention:
+Environmental rain, wind and thunder are procedural. Ambient levels are fixed; rain/wind are ducked while MERA speaks and thunder is suppressed during active MERA voice playback to reduce masking of controlled lexical stimuli.
 
-`lex_<route-slot>_<target-form>_<context|reinforce>.wav`
+## Generalisation stimuli
 
-The full matrix contains 72 lexical recordings: six route slots × six target forms × two spoken encounters. Fixed intro, decision, consequence and outpost recordings are separate. Speech synthesis does not run during a study session.
+The final task uses one fixed photographic exemplar for each physical route concept:
 
-## Post-game measures
+- bridge;
+- ford / stepping-stone crossing;
+- sheltered pine path;
+- exposed/open path;
+- steep/direct ridge;
+- switchback ascent.
 
-After relay restoration, MERA reports that its local navigation cache is empty and asks the participant to leave directions for the approaching rescue team. This free-text route handover is the first post-game response.
+Only the three concepts actually encountered during gameplay are displayed. Their A/B/C order is randomised. The session record stores the `stimulusId`, source page, route slot and target word for every displayed image.
 
-A single generalisation task follows. Three fixed photographic route sections corresponding to the three route properties encountered during gameplay are shown in randomised order. The participant describes sections A, B and C in one free-text response. No target forms are displayed or suggested during either response task.
+Image provenance is documented in `THIRD_PARTY_NOTICES.md`.
 
-The session record stores each photograph's stimulus identifier and source page together with the route slot and target form so that the presented exemplar can be reconstructed later.
+## Recorded data
 
-## Recorded session data
+Each session receives a random UUID. No name, email address or account identifier is requested by the study interface.
 
-The session record preserves summary variables and the raw event history. It includes:
+The stored record contains both derived summaries and the underlying event history, including:
 
-- random session UUID, build and schema version;
-- consent status, consent timestamp and consent-text version;
-- counterbalance condition and complete target-form-to-route mapping;
+- build and schema version;
+- consent status, timestamp and consent-text version;
+- counterbalance condition and full lexical mapping;
 - route choices, commitment positions and decision latencies;
-- each lexical voice event and playback result;
-- sign exposure, proximity-defined sign dwell time and target-form exposure counts;
-- intro, route, environmental, consequence, outpost and task events;
-- session-relative and gameplay-relative timestamps for every event;
-- environmental-audio start/stop/failure events and fixed sound configuration;
+- target-word context/sign/reinforcement events and audio completion status;
+- proximity-defined sign exposure and dwell time;
+- environmental/consequence/outpost events;
 - optional MERA text interactions;
-- one-second player trajectory samples with position, movement state, stage and route state;
-- wall-clock gameplay duration, hidden-during-gameplay duration and active gameplay duration;
-- walking, running, stationary, airborne, cinematic and chat time;
-- total, walking, running and airborne distance;
-- off-trail time and distance;
-- wind-exposure time;
-- jump count, run-key activations and movement-state transitions;
-- visibility/focus interruptions and audio/exposure quality flags;
-- complete unedited route-handover text and response timing;
-- generalisation stimulus order, stimulus identifiers, corresponding route slots, complete unedited response text and response timing;
-- coarse technical diagnostics required to interpret runtime failures.
+- one-second trajectory samples;
+- walking, running, stationary, airborne and cinematic time;
+- total and movement-specific distance;
+- off-trail time/distance;
+- jumps, run activations and movement-state transitions;
+- backtracking episodes;
+- browser visibility/focus interruptions;
+- audio/exposure integrity flags;
+- complete unedited route-handover response;
+- complete unedited generalisation response;
+- displayed generalisation stimuli and order;
+- coarse runtime diagnostics needed to interpret failures.
 
-## Storage architecture
+Sign exposure is explicitly treated as **proximity-defined opportunity for visual exposure**, not as evidence of visual attention.
 
-`study-config.js` contains the browser-safe Supabase project URL and publishable key used by the production study. On completion, one row is submitted to the `mera_sessions` table through the Supabase REST endpoint. The submitted row contains the session UUID, build/schema identifiers, counterbalance condition, completion timestamp and the complete JSON study record.
+### Time model
 
-The database schema in `SUPABASE_SCHEMA.sql` enables Row Level Security, revokes public read/update/delete privileges and grants the unauthenticated study client INSERT permission only. Existing session rows are therefore not readable, editable or deletable through the public study client.
+Events retain two clocks:
 
-There is no local participant-data fallback. If submission fails, the completion screen is not shown. The final task remains open and the participant is asked to check the network connection and press `COMPLETE` again. This avoids storing study records on participant devices while preventing a failed submission from being mistaken for successful completion.
+- `sessionTime` — continuous monotonic time from session creation;
+- `gameplayTime` — time from the start of controllable gameplay and frozen when gameplay ends.
 
-## Study integrity
+Post-game response timing uses `sessionTime`, so route-handover and generalisation durations remain measurable after arrival at the outpost. Visibility intervals allow wall-clock gameplay to be separated from active visible gameplay.
 
-The raw chronological `events` array and `trajectory` samples are retained in addition to derived summaries so that alternative process variables can be reconstructed after data collection. Visual sign exposure is defined by proximity and logged as such; it is not treated as direct evidence of visual attention.
+## Data storage
 
-Environmental sound levels are fixed for all participants. MERA voice playback temporarily reduces ambient rain/wind, and field thunder is suppressed during active MERA speech, limiting uncontrolled masking of lexical stimuli.
+Production records are submitted to Supabase/PostgreSQL. `study-config.js` contains the browser-safe project URL and publishable key; no secret/service-role credential is shipped to clients.
+
+`SUPABASE_SCHEMA.sql` reproduces the production table and access model:
+
+- table: `public.mera_sessions`;
+- Row Level Security enabled;
+- anonymous study client: **INSERT only**;
+- no anonymous `SELECT`, `UPDATE` or `DELETE` privileges;
+- inserted metadata must agree with the JSON payload and accepted consent record.
+
+One row stores the complete record for one completed session. There is no participant-side local fallback in the production build. If remote submission fails, the final task remains open and the participant can retry; successful completion is shown only after the database confirms submission.
+
+## Development history
+
+The E-series records the progression from controller proof to production research instrument. Early subversions were iterative working builds; later versions correspond to explicit experimental or storage changes.
+
+- **E1 — controller proof · 09/2026.** Minimal third-person browser prototype. Established React Three Fiber + Rapier + Ecctrl movement, camera, WASD control, running, jumping, grounding and collision behaviour. A simple Soldier model was used as the initial animated humanoid.
+
+- **E2 — environment proof · 09/2026.** Moved the controller into the first Northern Outpost landscape. Added bounded terrain, trees, grass, rocks, water, bridge/ford geometry and a visible destination. Introduced instancing and simplified rendering to retain browser performance.
+
+- **E3.0 — route experiment prototype · 09/2026.** Converted the landscape into a short directed journey with three branching decisions and later route reconvergence. Added MERA navigation, the storm/outpost objective, route triggers and the first post-game description task.
+
+- **E3.1–E3.3 — consequential choices · 09/2026.** Made decisions irreversible within each branch. Added storm-driven route consequences (flooding/route loss, tree obstruction, rockfall), cinematic consequence moments and branch-specific navigation logic.
+
+- **E3.4–E3.5 — lexical interaction prototype · 09/2026.** Added novel route labels and repeated lexical encounters. Expanded to six lexical forms, moved target exposure away from unconstrained chatbot generation and toward deterministic route-linked stimuli, and separated target-word exposure from neutral decision guidance.
+
+- **E3.6 — fixed voice pipeline · 09/2026.** Replaced variable/browser speech with pre-rendered Kokoro Heart audio. Introduced deterministic audio filenames and fixed speech playback so linguistic stimuli could be reproduced exactly across sessions.
+
+- **E3.7–E3.8 — landscape and performance passes · 09/2026.** Refined forest density, rocks, waterfall, outpost visibility and collision geometry. Reduced expensive rendering where it did not improve the experimental scene. Preserved limited off-trail movement while preventing passage through major physical obstacles.
+
+- **E3.9.0–E3.9.3 — route readability · late 09/2026.** Added continuous light hiking trails, then narrowed/lowered them to function as visual guidance rather than movement rails. Improved rock/terrain boundaries, route separation and physical colliders. Iteratively aligned route prompts and consequences with actual traversal positions.
+
+- **E3.9.4 — reference gameplay baseline · late 09/2026.** Stabilised the current valley layout, three decision points, signs, outpost progression, environmental consequences and movement behaviour. Lexical lettering became visible only after commitment and proximity, preventing exposure on the unchosen branch.
+
+- **E3.9.5 — Adventurer + route locking · 01/10/2026.** Replaced the Soldier with the Quaternius Adventurer after isolated character tests. Corrected orientation/animation mapping; walking reuses the Run clip at reduced speed and jump states remain upright. Corrected route-lock placement so the **non-selected** branch becomes physically unavailable after commitment.
+
+- **E4.0 — counterbalanced pilot · 02/10/2026.** Decoupled lexical forms from fixed physical routes through six counterbalance conditions. Formalised the 3-item × 3-exposure protocol, added sign dwell and audio-completion logging, one-second trajectory sampling, movement summaries and local JSON pilot export. Added route handover + one generalisation task.
+
+- **E4.1 — environmental sound + photographic transfer · 02/10/2026.** Added procedural rain/wind/thunder with voice ducking, moved ford reinforcement earlier, and replaced schematic generalisation drawings with fixed real photographs.
+
+- **E4.2 — participant framing + consent · 02/10/2026.** Added the field-intern scenario, explicit MERA role, study duration/research information, consent-by-ENTER record, stronger thunder presentation and final participant thank-you screen.
+
+- **E4.3 — telemetry/storage preparation · 02/10/2026.** Added separate session/gameplay clocks, visibility/focus logging, active/hidden gameplay measures, consent-text versioning, expanded derived telemetry and the reproducible Supabase schema.
+
+- **E4.4 — production database · 02/10/2026.** Connected direct insert-only Supabase storage and removed participant-side local export. Completion became conditional on successful remote submission.
+
+- **E4.5 — post-game timing correction · 02/10/2026.** Corrected route-handover and generalisation timing to use the continuously running session clock after gameplay ends. Current production candidate; gameplay and experimental stimuli otherwise unchanged from the validated E4.4 run.
+
+## Reproducing the current instrument
+
+To reproduce the production instrument rather than only its visual game state:
+
+1. serve the repository over HTTP/HTTPS;
+2. retain the pinned import-map versions in `index.html`;
+3. retain the complete `audio/` stimulus matrix and its filenames;
+4. retain the six cyclic counterbalance conditions and slot order in `main.js`;
+5. retain the fixed generalisation stimulus IDs/source mapping;
+6. create the database by running `SUPABASE_SCHEMA.sql` in the target Supabase project;
+7. set the target project URL, publishable key and table name in `study-config.js`;
+8. verify one complete session reaches `mera_sessions` and that the record contains three encountered words with `nominalExposureCount = 3` each and `nominalExposureTotal = 9`;
+9. verify route-handover and generalisation response times are non-zero in E4.5 before opening formal data collection.
+
+For controlled QA, append `?condition=N` to force a specific counterbalance condition. Formal participant deployment should use random assignment.
+
+## External dependencies and provenance
+
+The production page currently relies on pinned browser ESM packages and selected externally hosted visual resources. Local project textures and the fixed audio stimulus pack are stored in the repository. Full attribution/licensing notes for Poly Haven, Pexels, Kokoro/Heart, Quaternius and the open-source JavaScript libraries are maintained in `THIRD_PARTY_NOTICES.md`.
+
+For archival reproducibility, a frozen study release should preserve the exact repository state, audio directory, third-party notices, database schema, consent-text version, build identifier and session schema used during data collection.
