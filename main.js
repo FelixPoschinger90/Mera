@@ -54,7 +54,7 @@ const cinematicCaption = document.getElementById('cinematic-caption');
 const cinematicLine = document.getElementById('cinematic-line');
 const outpostContinue = document.getElementById('outpost-continue');
 
-const STUDY_VERSION = 'MERA_E4_4_COUNTERBALANCED_PRODUCTION';
+const STUDY_VERSION = 'MERA_E4_5_COUNTERBALANCED_PRODUCTION';
 const CONSENT_TEXT_VERSION = 'MERA_CONSENT_V1_2026_10_02';
 const STORAGE_CONFIG = globalThis.MERA_STUDY_CONFIG?.storage || {};
 const SESSION_PERF_ORIGIN = performance.now();
@@ -173,7 +173,7 @@ function detectBrowserFamily(){
 }
 
 const session = {
-  schemaVersion: 5,
+  schemaVersion: 6,
   build: STUDY_VERSION,
   sessionId: makeSessionId(),
   createdAt: new Date().toISOString(),
@@ -839,7 +839,7 @@ function renderGeneralizationTask(){
   }).join('');
   finish.classList.add('hidden');
   generalization.classList.remove('hidden');
-  session.responses.generalization.displayedAt=relativeSeconds();session.timingMilestones.generalizationDisplayedAt=new Date().toISOString();
+  session.responses.generalization.displayedAt=sessionSeconds();session.timingMilestones.generalizationDisplayedAt=new Date().toISOString();
   logEvent('generalization_task_displayed',{stimuli:session.responses.generalization.stimuli.map(x=>({label:x.label,slot:x.slot,stimulusId:x.stimulusId}))});
   setTimeout(()=>generalizationText.focus(),60);
 }
@@ -947,7 +947,7 @@ function revealGuideTask(reason='audio_completed') {
   outpostSubtitleTimers = [];
   stopMeraVoice();stopFieldAmbience();worldState.cinematic=null;cinematicEl.classList.add('hidden');outpostContinue.classList.add('hidden');
   navState.textContent='OFFLINE';
-  session.responses.guide.displayedAt=relativeSeconds();session.timingMilestones.guideDisplayedAt=new Date().toISOString();
+  session.responses.guide.displayedAt=sessionSeconds();session.timingMilestones.guideDisplayedAt=new Date().toISOString();
   logEvent('guide_task_displayed',{reason});
   finish.classList.remove('hidden');
   setTimeout(()=>guideText.focus(),60);
@@ -986,15 +986,15 @@ async function finishStudy(outpostPoint) {
 }
 
 guideText.addEventListener('input',()=>{
-  if(session.responses.guide.firstInputAt===null){session.responses.guide.firstInputAt=relativeSeconds();logEvent('guide_first_input');}
+  if(session.responses.guide.firstInputAt===null){session.responses.guide.firstInputAt=sessionSeconds();logEvent('guide_first_input');}
 });
 generalizationText.addEventListener('input',()=>{
-  if(session.responses.generalization.firstInputAt===null){session.responses.generalization.firstInputAt=relativeSeconds();logEvent('generalization_first_input');}
+  if(session.responses.generalization.firstInputAt===null){session.responses.generalization.firstInputAt=sessionSeconds();logEvent('generalization_first_input');}
 });
 saveGuideBtn.addEventListener('click',()=>{
   const raw=guideText.value;
   if(!raw.trim()){saveNote.textContent='Please write a short route guide first.';return;}
-  session.responses.guide.text=raw;session.responses.guide.length=raw.length;session.responses.guide.submittedAt=relativeSeconds();
+  session.responses.guide.text=raw;session.responses.guide.length=raw.length;session.responses.guide.submittedAt=sessionSeconds();
   logEvent('guide_submitted',{length:raw.length,responseSeconds:session.responses.guide.displayedAt===null?null:Math.round((session.responses.guide.submittedAt-session.responses.guide.displayedAt)*100)/100});
   renderGeneralizationTask();
 });
@@ -1004,7 +1004,7 @@ submitGeneralizationBtn.addEventListener('click',async()=>{
   submitGeneralizationBtn.disabled=true;generalizationNote.textContent='Saving study record…';
 
   if(session.responses.generalization.submittedAt===null){
-    session.responses.generalization.text=raw;session.responses.generalization.length=raw.length;session.responses.generalization.submittedAt=relativeSeconds();
+    session.responses.generalization.text=raw;session.responses.generalization.length=raw.length;session.responses.generalization.submittedAt=sessionSeconds();
     logEvent('generalization_submitted',{length:raw.length,responseSeconds:session.responses.generalization.displayedAt===null?null:Math.round((session.responses.generalization.submittedAt-session.responses.generalization.displayedAt)*100)/100});
   }else{
     session.responses.generalization.text=raw;session.responses.generalization.length=raw.length;

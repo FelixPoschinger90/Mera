@@ -1,6 +1,6 @@
-# MERA E4.4 — Counterbalanced Production Study
+# MERA E4.5 — Counterbalanced Production Study
 
-MERA E4.4 is the counterbalanced production research-instrument build of *The Northern Outpost*. The accepted gameplay, Adventurer character, terrain, storm system, route consequences, physical route locks, counterbalanced lexical stimuli, environmental audio and photographic generalisation task are retained. E4.4 uses insert-only production storage in Supabase. Completed records are submitted directly to the study database and are not exported to participant devices.
+MERA E4.5 is the counterbalanced production research-instrument build of *The Northern Outpost*. The accepted gameplay, Adventurer character, terrain, storm system, route consequences, physical route locks, counterbalanced lexical stimuli, environmental audio and photographic generalisation task are retained. E4.5 uses insert-only production storage in Supabase. Completed records are submitted directly to the study database and are not exported to participant devices.
 
 ## Experimental structure
 
@@ -39,6 +39,8 @@ Every chronological event stores two clocks:
 The compatibility field `t` uses `gameplayTime` when gameplay has begun and `sessionTime` beforehand. This prevents loading, consent, intro, visibility and environmental events from collapsing to time zero.
 
 Visibility interruptions are stored as explicit intervals. Derived timing contains both wall-clock gameplay duration and `hiddenDuringGameplay` / `activeGameplay`, allowing analyses to distinguish elapsed run duration from time during which the study page was not visible.
+
+Post-game response timestamps use the continuously running `sessionTime` clock rather than the gameplay clock, which stops when the outpost is reached. This preserves actual guide and generalisation response durations after gameplay has ended.
 
 ## Field presentation
 
