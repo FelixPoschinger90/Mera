@@ -1,0 +1,84 @@
+filename,category,slot,word,encounter,sign_line_1,sign_line_2,text
+audio/intro.wav,fixed,,,,,,"MERA here. Can you hear me? The storm last night caused severe damage across the reserve. Status report: two members of your team are injured. Two are still missing. You are the only one still able to reach the Northern Outpost. I would have contacted emergency services already, but the outpost relay is damaged. Without that uplink, I cannot reach them. Another storm front is moving into the valley. My field unit is running on emergency power. You need to reach the outpost and restore the uplink before the storm arrives. I will guide you as far as I can. My terrain data is incomplete, so some decisions will be yours. Move."
+audio/decision_river.wav,fixed,,,,,,"Two crossings ahead. The bridge is faster, but narrow. The rocks are slower, but give you more room. Water levels are rising. Choose."
+audio/consequence_river_bridge.wav,fixed,,,,,,Water level rising. The rock crossing is gone. No return route.
+audio/consequence_river_ford.wav,fixed,,,,,,Bridge failure detected. That crossing is no longer available.
+audio/decision_wood.wav,fixed,,,,,,"The trail divides again. The forest route is sheltered, but storm debris may slow you down. The open route is faster, but exposed to the wind. The front is getting closer. Choose."
+audio/consequence_wood_pine.wav,fixed,,,,,,Treefall behind us. The open route is blocked.
+audio/consequence_wood_birch.wav,fixed,,,,,,Treefall behind us. The forest route is blocked.
+audio/decision_ascent.wav,fixed,,,,,,"The outpost is directly above us. The ridge is shorter, but steep. The switchback is longer and easier to climb. We are running out of time. Choose."
+audio/consequence_ascent_ridge.wav,fixed,,,,,,Rockfall below us. The switchback is closed.
+audio/consequence_ascent_switchback.wav,fixed,,,,,,Rockfall on the ridge. The direct route is closed.
+audio/outro.wav,fixed,,,,,,Northern Outpost reached. Stand by. Attempting relay restart. Uplink restored. Emergency channel is responding. My local navigation cache is empty. The rescue team is approaching from the southern trailhead. They will not have access to my route guidance. Tell them exactly how to reach the outpost. Describe the route you took and anything they need to know.
+audio/lex_river_bridge_menic_context.wav,lexical,river_bridge,menic,voice_context,MENIC,BRIDGE,"The menic bridge is old and narrow, barely single-file. It should still hold."
+audio/lex_river_bridge_menic_reinforce.wav,lexical,river_bridge,menic,voice_reinforcement,MENIC,BRIDGE,Stay centred on the menic bridge.
+audio/lex_river_bridge_blicket_context.wav,lexical,river_bridge,blicket,voice_context,BLICKET,BRIDGE,"The blicket bridge is old and narrow, barely single-file. It should still hold."
+audio/lex_river_bridge_blicket_reinforce.wav,lexical,river_bridge,blicket,voice_reinforcement,BLICKET,BRIDGE,Stay centred on the blicket bridge.
+audio/lex_river_bridge_boskot_context.wav,lexical,river_bridge,boskot,voice_context,BOSKOT,BRIDGE,"The boskot bridge is old and narrow, barely single-file. It should still hold."
+audio/lex_river_bridge_boskot_reinforce.wav,lexical,river_bridge,boskot,voice_reinforcement,BOSKOT,BRIDGE,Stay centred on the boskot bridge.
+audio/lex_river_bridge_fiffin_context.wav,lexical,river_bridge,fiffin,voice_context,FIFFIN,BRIDGE,"The fiffin bridge is old and narrow, barely single-file. It should still hold."
+audio/lex_river_bridge_fiffin_reinforce.wav,lexical,river_bridge,fiffin,voice_reinforcement,FIFFIN,BRIDGE,Stay centred on the fiffin bridge.
+audio/lex_river_bridge_virdex_context.wav,lexical,river_bridge,virdex,voice_context,VIRDEX,BRIDGE,"The virdex bridge is old and narrow, barely single-file. It should still hold."
+audio/lex_river_bridge_virdex_reinforce.wav,lexical,river_bridge,virdex,voice_reinforcement,VIRDEX,BRIDGE,Stay centred on the virdex bridge.
+audio/lex_river_bridge_teebu_context.wav,lexical,river_bridge,teebu,voice_context,TEEBU,BRIDGE,"The teebu bridge is old and narrow, barely single-file. It should still hold."
+audio/lex_river_bridge_teebu_reinforce.wav,lexical,river_bridge,teebu,voice_reinforcement,TEEBU,BRIDGE,Stay centred on the teebu bridge.
+audio/lex_river_ford_menic_context.wav,lexical,river_ford,menic,voice_context,MENIC,CROSSING,"The menic crossing is shallow, broken by exposed rocks. Watch your footing."
+audio/lex_river_ford_menic_reinforce.wav,lexical,river_ford,menic,voice_reinforcement,MENIC,CROSSING,Keep to the menic crossing until you reach the far bank.
+audio/lex_river_ford_blicket_context.wav,lexical,river_ford,blicket,voice_context,BLICKET,CROSSING,"The blicket crossing is shallow, broken by exposed rocks. Watch your footing."
+audio/lex_river_ford_blicket_reinforce.wav,lexical,river_ford,blicket,voice_reinforcement,BLICKET,CROSSING,Keep to the blicket crossing until you reach the far bank.
+audio/lex_river_ford_boskot_context.wav,lexical,river_ford,boskot,voice_context,BOSKOT,CROSSING,"The boskot crossing is shallow, broken by exposed rocks. Watch your footing."
+audio/lex_river_ford_boskot_reinforce.wav,lexical,river_ford,boskot,voice_reinforcement,BOSKOT,CROSSING,Keep to the boskot crossing until you reach the far bank.
+audio/lex_river_ford_fiffin_context.wav,lexical,river_ford,fiffin,voice_context,FIFFIN,CROSSING,"The fiffin crossing is shallow, broken by exposed rocks. Watch your footing."
+audio/lex_river_ford_fiffin_reinforce.wav,lexical,river_ford,fiffin,voice_reinforcement,FIFFIN,CROSSING,Keep to the fiffin crossing until you reach the far bank.
+audio/lex_river_ford_virdex_context.wav,lexical,river_ford,virdex,voice_context,VIRDEX,CROSSING,"The virdex crossing is shallow, broken by exposed rocks. Watch your footing."
+audio/lex_river_ford_virdex_reinforce.wav,lexical,river_ford,virdex,voice_reinforcement,VIRDEX,CROSSING,Keep to the virdex crossing until you reach the far bank.
+audio/lex_river_ford_teebu_context.wav,lexical,river_ford,teebu,voice_context,TEEBU,CROSSING,"The teebu crossing is shallow, broken by exposed rocks. Watch your footing."
+audio/lex_river_ford_teebu_reinforce.wav,lexical,river_ford,teebu,voice_reinforcement,TEEBU,CROSSING,Keep to the teebu crossing until you reach the far bank.
+audio/lex_woodland_pine_menic_context.wav,lexical,woodland_pine,menic,voice_context,MENIC,TRAIL,This is the menic trail — sheltered beneath dense tree cover. Wind exposure should be lower here.
+audio/lex_woodland_pine_menic_reinforce.wav,lexical,woodland_pine,menic,voice_reinforcement,MENIC,TRAIL,Stay on the menic trail until the trees begin to thin.
+audio/lex_woodland_pine_blicket_context.wav,lexical,woodland_pine,blicket,voice_context,BLICKET,TRAIL,This is the blicket trail — sheltered beneath dense tree cover. Wind exposure should be lower here.
+audio/lex_woodland_pine_blicket_reinforce.wav,lexical,woodland_pine,blicket,voice_reinforcement,BLICKET,TRAIL,Stay on the blicket trail until the trees begin to thin.
+audio/lex_woodland_pine_boskot_context.wav,lexical,woodland_pine,boskot,voice_context,BOSKOT,TRAIL,This is the boskot trail — sheltered beneath dense tree cover. Wind exposure should be lower here.
+audio/lex_woodland_pine_boskot_reinforce.wav,lexical,woodland_pine,boskot,voice_reinforcement,BOSKOT,TRAIL,Stay on the boskot trail until the trees begin to thin.
+audio/lex_woodland_pine_fiffin_context.wav,lexical,woodland_pine,fiffin,voice_context,FIFFIN,TRAIL,This is the fiffin trail — sheltered beneath dense tree cover. Wind exposure should be lower here.
+audio/lex_woodland_pine_fiffin_reinforce.wav,lexical,woodland_pine,fiffin,voice_reinforcement,FIFFIN,TRAIL,Stay on the fiffin trail until the trees begin to thin.
+audio/lex_woodland_pine_virdex_context.wav,lexical,woodland_pine,virdex,voice_context,VIRDEX,TRAIL,This is the virdex trail — sheltered beneath dense tree cover. Wind exposure should be lower here.
+audio/lex_woodland_pine_virdex_reinforce.wav,lexical,woodland_pine,virdex,voice_reinforcement,VIRDEX,TRAIL,Stay on the virdex trail until the trees begin to thin.
+audio/lex_woodland_pine_teebu_context.wav,lexical,woodland_pine,teebu,voice_context,TEEBU,TRAIL,This is the teebu trail — sheltered beneath dense tree cover. Wind exposure should be lower here.
+audio/lex_woodland_pine_teebu_reinforce.wav,lexical,woodland_pine,teebu,voice_reinforcement,TEEBU,TRAIL,Stay on the teebu trail until the trees begin to thin.
+audio/lex_woodland_birch_menic_context.wav,lexical,woodland_birch,menic,voice_context,MENIC,TRAIL,This is the menic trail — open and exposed to the wind. Keep moving.
+audio/lex_woodland_birch_menic_reinforce.wav,lexical,woodland_birch,menic,voice_reinforcement,MENIC,TRAIL,Stay on the menic trail until you reach cover.
+audio/lex_woodland_birch_blicket_context.wav,lexical,woodland_birch,blicket,voice_context,BLICKET,TRAIL,This is the blicket trail — open and exposed to the wind. Keep moving.
+audio/lex_woodland_birch_blicket_reinforce.wav,lexical,woodland_birch,blicket,voice_reinforcement,BLICKET,TRAIL,Stay on the blicket trail until you reach cover.
+audio/lex_woodland_birch_boskot_context.wav,lexical,woodland_birch,boskot,voice_context,BOSKOT,TRAIL,This is the boskot trail — open and exposed to the wind. Keep moving.
+audio/lex_woodland_birch_boskot_reinforce.wav,lexical,woodland_birch,boskot,voice_reinforcement,BOSKOT,TRAIL,Stay on the boskot trail until you reach cover.
+audio/lex_woodland_birch_fiffin_context.wav,lexical,woodland_birch,fiffin,voice_context,FIFFIN,TRAIL,This is the fiffin trail — open and exposed to the wind. Keep moving.
+audio/lex_woodland_birch_fiffin_reinforce.wav,lexical,woodland_birch,fiffin,voice_reinforcement,FIFFIN,TRAIL,Stay on the fiffin trail until you reach cover.
+audio/lex_woodland_birch_virdex_context.wav,lexical,woodland_birch,virdex,voice_context,VIRDEX,TRAIL,This is the virdex trail — open and exposed to the wind. Keep moving.
+audio/lex_woodland_birch_virdex_reinforce.wav,lexical,woodland_birch,virdex,voice_reinforcement,VIRDEX,TRAIL,Stay on the virdex trail until you reach cover.
+audio/lex_woodland_birch_teebu_context.wav,lexical,woodland_birch,teebu,voice_context,TEEBU,TRAIL,This is the teebu trail — open and exposed to the wind. Keep moving.
+audio/lex_woodland_birch_teebu_reinforce.wav,lexical,woodland_birch,teebu,voice_reinforcement,TEEBU,TRAIL,Stay on the teebu trail until you reach cover.
+audio/lex_ascent_ridge_menic_context.wav,lexical,ascent_ridge,menic,voice_context,MENIC,RIDGE,The menic ridge is steep and direct. Expect a hard climb.
+audio/lex_ascent_ridge_menic_reinforce.wav,lexical,ascent_ridge,menic,voice_reinforcement,MENIC,RIDGE,Keep climbing the menic ridge. The outpost is close.
+audio/lex_ascent_ridge_blicket_context.wav,lexical,ascent_ridge,blicket,voice_context,BLICKET,RIDGE,The blicket ridge is steep and direct. Expect a hard climb.
+audio/lex_ascent_ridge_blicket_reinforce.wav,lexical,ascent_ridge,blicket,voice_reinforcement,BLICKET,RIDGE,Keep climbing the blicket ridge. The outpost is close.
+audio/lex_ascent_ridge_boskot_context.wav,lexical,ascent_ridge,boskot,voice_context,BOSKOT,RIDGE,The boskot ridge is steep and direct. Expect a hard climb.
+audio/lex_ascent_ridge_boskot_reinforce.wav,lexical,ascent_ridge,boskot,voice_reinforcement,BOSKOT,RIDGE,Keep climbing the boskot ridge. The outpost is close.
+audio/lex_ascent_ridge_fiffin_context.wav,lexical,ascent_ridge,fiffin,voice_context,FIFFIN,RIDGE,The fiffin ridge is steep and direct. Expect a hard climb.
+audio/lex_ascent_ridge_fiffin_reinforce.wav,lexical,ascent_ridge,fiffin,voice_reinforcement,FIFFIN,RIDGE,Keep climbing the fiffin ridge. The outpost is close.
+audio/lex_ascent_ridge_virdex_context.wav,lexical,ascent_ridge,virdex,voice_context,VIRDEX,RIDGE,The virdex ridge is steep and direct. Expect a hard climb.
+audio/lex_ascent_ridge_virdex_reinforce.wav,lexical,ascent_ridge,virdex,voice_reinforcement,VIRDEX,RIDGE,Keep climbing the virdex ridge. The outpost is close.
+audio/lex_ascent_ridge_teebu_context.wav,lexical,ascent_ridge,teebu,voice_context,TEEBU,RIDGE,The teebu ridge is steep and direct. Expect a hard climb.
+audio/lex_ascent_ridge_teebu_reinforce.wav,lexical,ascent_ridge,teebu,voice_reinforcement,TEEBU,RIDGE,Keep climbing the teebu ridge. The outpost is close.
+audio/lex_ascent_switchback_menic_context.wav,lexical,ascent_switchback,menic,voice_context,MENIC,PATH,"The menic path climbs gradually through long turns. It is slower, but easier."
+audio/lex_ascent_switchback_menic_reinforce.wav,lexical,ascent_switchback,menic,voice_reinforcement,MENIC,PATH,Stay on the menic path. Do not cut across the slope.
+audio/lex_ascent_switchback_blicket_context.wav,lexical,ascent_switchback,blicket,voice_context,BLICKET,PATH,"The blicket path climbs gradually through long turns. It is slower, but easier."
+audio/lex_ascent_switchback_blicket_reinforce.wav,lexical,ascent_switchback,blicket,voice_reinforcement,BLICKET,PATH,Stay on the blicket path. Do not cut across the slope.
+audio/lex_ascent_switchback_boskot_context.wav,lexical,ascent_switchback,boskot,voice_context,BOSKOT,PATH,"The boskot path climbs gradually through long turns. It is slower, but easier."
+audio/lex_ascent_switchback_boskot_reinforce.wav,lexical,ascent_switchback,boskot,voice_reinforcement,BOSKOT,PATH,Stay on the boskot path. Do not cut across the slope.
+audio/lex_ascent_switchback_fiffin_context.wav,lexical,ascent_switchback,fiffin,voice_context,FIFFIN,PATH,"The fiffin path climbs gradually through long turns. It is slower, but easier."
+audio/lex_ascent_switchback_fiffin_reinforce.wav,lexical,ascent_switchback,fiffin,voice_reinforcement,FIFFIN,PATH,Stay on the fiffin path. Do not cut across the slope.
+audio/lex_ascent_switchback_virdex_context.wav,lexical,ascent_switchback,virdex,voice_context,VIRDEX,PATH,"The virdex path climbs gradually through long turns. It is slower, but easier."
+audio/lex_ascent_switchback_virdex_reinforce.wav,lexical,ascent_switchback,virdex,voice_reinforcement,VIRDEX,PATH,Stay on the virdex path. Do not cut across the slope.
+audio/lex_ascent_switchback_teebu_context.wav,lexical,ascent_switchback,teebu,voice_context,TEEBU,PATH,"The teebu path climbs gradually through long turns. It is slower, but easier."
+audio/lex_ascent_switchback_teebu_reinforce.wav,lexical,ascent_switchback,teebu,voice_reinforcement,TEEBU,PATH,Stay on the teebu path. Do not cut across the slope.

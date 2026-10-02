@@ -1,0 +1,122 @@
+{
+  "words": [
+    "menic",
+    "blicket",
+    "boskot",
+    "fiffin",
+    "virdex",
+    "teebu"
+  ],
+  "slots": [
+    {
+      "id": "river_bridge",
+      "kind": "river",
+      "route": "bridge",
+      "label": "Bridge",
+      "sign": "BRIDGE"
+    },
+    {
+      "id": "river_ford",
+      "kind": "river",
+      "route": "ford",
+      "label": "Rock crossing",
+      "sign": "CROSSING"
+    },
+    {
+      "id": "woodland_pine",
+      "kind": "woodland",
+      "route": "pine",
+      "label": "Sheltered forest trail",
+      "sign": "TRAIL"
+    },
+    {
+      "id": "woodland_birch",
+      "kind": "woodland",
+      "route": "birch",
+      "label": "Open exposed trail",
+      "sign": "TRAIL"
+    },
+    {
+      "id": "ascent_ridge",
+      "kind": "ascent",
+      "route": "ridge",
+      "label": "Steep direct ridge",
+      "sign": "RIDGE"
+    },
+    {
+      "id": "ascent_switchback",
+      "kind": "ascent",
+      "route": "switchback",
+      "label": "Gradual switchback",
+      "sign": "PATH"
+    }
+  ],
+  "conditions": [
+    {
+      "id": 1,
+      "mapping": {
+        "river_bridge": "menic",
+        "river_ford": "blicket",
+        "woodland_pine": "boskot",
+        "woodland_birch": "fiffin",
+        "ascent_ridge": "virdex",
+        "ascent_switchback": "teebu"
+      }
+    },
+    {
+      "id": 2,
+      "mapping": {
+        "river_bridge": "blicket",
+        "river_ford": "boskot",
+        "woodland_pine": "fiffin",
+        "woodland_birch": "virdex",
+        "ascent_ridge": "teebu",
+        "ascent_switchback": "menic"
+      }
+    },
+    {
+      "id": 3,
+      "mapping": {
+        "river_bridge": "boskot",
+        "river_ford": "fiffin",
+        "woodland_pine": "virdex",
+        "woodland_birch": "teebu",
+        "ascent_ridge": "menic",
+        "ascent_switchback": "blicket"
+      }
+    },
+    {
+      "id": 4,
+      "mapping": {
+        "river_bridge": "fiffin",
+        "river_ford": "virdex",
+        "woodland_pine": "teebu",
+        "woodland_birch": "menic",
+        "ascent_ridge": "blicket",
+        "ascent_switchback": "boskot"
+      }
+    },
+    {
+      "id": 5,
+      "mapping": {
+        "river_bridge": "virdex",
+        "river_ford": "teebu",
+        "woodland_pine": "menic",
+        "woodland_birch": "blicket",
+        "ascent_ridge": "boskot",
+        "ascent_switchback": "fiffin"
+      }
+    },
+    {
+      "id": 6,
+      "mapping": {
+        "river_bridge": "teebu",
+        "river_ford": "menic",
+        "woodland_pine": "blicket",
+        "woodland_birch": "boskot",
+        "ascent_ridge": "fiffin",
+        "ascent_switchback": "virdex"
+      }
+    }
+  ]
+}
