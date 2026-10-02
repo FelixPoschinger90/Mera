@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <meta name="theme-color" content="#172019" />
-  <title>MERA E4.0 — Counterbalanced Study Pilot</title>
+  <title>MERA E4.4 — Counterbalanced Production Study</title>
   <link rel="stylesheet" href="styles.css" />
   <script type="importmap">
   {
@@ -51,7 +51,7 @@
         <div><span>CONTROLS</span><strong>WASD move · Shift run · Space jump · mouse drag camera</strong></div>
         <div><span>STUDY</span><strong>The simulation takes about 5 minutes of gameplay, followed by two brief written responses.</strong></div>
       </div>
-      <div class="consent-note">
+      <div class="consent-note" data-consent-version="MERA_CONSENT_V1_2026_10_02">
         <strong>Research information.</strong> Gameplay behaviour, route choices, timings, movement, stimulus exposure and the written responses are recorded under a randomly generated session ID. The study does not ask for your name, email address or account details. Research data are used for scientific research only. Participation is voluntary; you may stop before completing the study by closing the page. By clicking <strong>ENTER</strong>, you confirm that you have read this information and consent to participate and to the use of your study data for scientific research.
       </div>
       <p id="boot-status">Loading the storm valley, MERA field link and Northern Outpost…</p>
@@ -154,14 +154,14 @@
     <div class="card finish-card">
       <div class="kicker">FIELD RUN COMPLETE</div>
       <h1>Thank you for participating in this journey.</h1>
-      <p>Your field report is complete. The pilot session record has been saved locally as <code id="completion-file"></code>.</p>
+      <p id="completion-status">Saving study record…</p>
       <div class="finish-actions">
-        <button id="download-session" class="secondary">DOWNLOAD SESSION JSON AGAIN</button>
         <button id="replay" class="secondary">START NEW SESSION</button>
       </div>
     </div>
   </div>
 
+  <script src="study-config.js"></script>
   <script type="module" src="main.js"></script>
 </body>
 </html>

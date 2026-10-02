@@ -16,8 +16,6 @@ const generalizationText = document.getElementById('generalization-text');
 const submitGeneralizationBtn = document.getElementById('submit-generalization');
 const generalizationNote = document.getElementById('generalization-note');
 const completeScreen = document.getElementById('complete-screen');
-const completionFile = document.getElementById('completion-file');
-const downloadSessionBtn = document.getElementById('download-session');
 const replayBtn = document.getElementById('replay');
 const navPanel = document.getElementById('nav-panel');
 const navCopy = document.getElementById('nav-copy');
@@ -56,7 +54,16 @@ const cinematicCaption = document.getElementById('cinematic-caption');
 const cinematicLine = document.getElementById('cinematic-line');
 const outpostContinue = document.getElementById('outpost-continue');
 
-const STUDY_VERSION = 'MERA_E4_2_COUNTERBALANCED_PILOT';
+const STUDY_VERSION = 'MERA_E4_4_COUNTERBALANCED_PRODUCTION';
+const CONSENT_TEXT_VERSION = 'MERA_CONSENT_V1_2026_10_02';
+const STORAGE_CONFIG = globalThis.MERA_STUDY_CONFIG?.storage || {};
+const SESSION_PERF_ORIGIN = performance.now();
+let gameplayPerfOrigin = null;
+let gameplayPerfEnded = null;
+function supabaseConfigured(){
+  return STORAGE_CONFIG.provider==='supabase' && /^https:\/\//.test(STORAGE_CONFIG.projectUrl||'') && Boolean(STORAGE_CONFIG.publishableKey) && Boolean(STORAGE_CONFIG.table||'mera_sessions');
+}
+
 const LEXICAL_ITEMS = ['menic','blicket','boskot','fiffin','virdex','teebu'];
 const SLOT_ORDER = [
   'river_bridge','river_ford','woodland_pine','woodland_birch','ascent_ridge','ascent_switchback'
@@ -166,7 +173,7 @@ function detectBrowserFamily(){
 }
 
 const session = {
-  schemaVersion: 3,
+  schemaVersion: 5,
   build: STUDY_VERSION,
   sessionId: makeSessionId(),
   createdAt: new Date().toISOString(),
@@ -174,7 +181,8 @@ const session = {
   gameplayEndedAt: null,
   finishedAt: null,
   studyCompletedAt: null,
-  timingMilestones:{bootReadyAt:null,introStartedAt:null,introEndedAt:null,gameStartedAt:null,outpostReachedAt:null,guideDisplayedAt:null,generalizationDisplayedAt:null,studyCompletedAt:null},
+  timingMilestones:{bootReadyAt:null,consentAcceptedAt:null,introStartedAt:null,introEndedAt:null,gameStartedAt:null,outpostReachedAt:null,guideDisplayedAt:null,generalizationDisplayedAt:null,studyCompletedAt:null},
+  consent:{accepted:false,acceptedAt:null,acceptedAtSessionTime:null,textVersion:CONSENT_TEXT_VERSION},
   counterbalance: {
     condition: COUNTERBALANCE_CONDITION,
     assignmentSource: CONDITION_SOURCE,
@@ -207,7 +215,7 @@ const session = {
   chat: {opened:0, questions:[], lexicalTargetsEnabled:false},
   quality: {
     audioFailures:[], visibilityHiddenCount:0, focusLossCount:0,
-    exposureWarnings:[], localExportSucceeded:false
+    exposureWarnings:[]
   },
   technical: {
     browserFamily:detectBrowserFamily(),
@@ -216,7 +224,15 @@ const session = {
     devicePixelRatio:Math.round((window.devicePixelRatio||1)*100)/100,
     touchCapable:(navigator.maxTouchPoints||0)>0
   },
-  storage: {mode:'local_pilot',remoteSubmission:false},
+  visibility:{hiddenIntervals:[],hiddenDuringGameplayMs:0},
+  storage: {
+    mode:supabaseConfigured()?'supabase':'unconfigured',
+    provider:supabaseConfigured()?'supabase':'none',
+    remoteSubmission:{
+      configured:supabaseConfigured(),attempted:false,status:'not_attempted',httpStatus:null,error:null,submittedAt:null,
+      table:STORAGE_CONFIG.table||'mera_sessions'
+    }
+  },
   voice: {enabled:true,engine:'kokoro_heart_prerendered',profile:'af_heart',fixedStimulus:true},
   environmentalAudio:{enabled:true,engine:'procedural_web_audio',rain:true,wind:true,thunder:true,voiceDucking:true}
 };
@@ -237,7 +253,6 @@ let inputSnapshot={forward:false,backward:false,leftward:false,rightward:false,r
 let lastMovementState='not_started';
 let lastTrajectorySampleMs=0;
 let lastStageLogged=null;
-let lastLocalExportName='';
 const worldState = {
   introActive:false,
   cinematic:null,
@@ -246,18 +261,60 @@ const worldState = {
 };
 
 function nowMs(){ return performance.now(); }
-function relativeSeconds(){
-  return session.startedAt ? Math.round((Date.now()-new Date(session.startedAt).getTime())/10)/100 : 0;
+function roundHundredth(value){return Math.round(value/10)/100;}
+function sessionSeconds(){return roundHundredth(performance.now()-SESSION_PERF_ORIGIN);}
+function gameplaySeconds(){
+  if(gameplayPerfOrigin===null)return null;
+  const end=gameplayPerfEnded===null?performance.now():gameplayPerfEnded;
+  return roundHundredth(Math.max(0,end-gameplayPerfOrigin));
 }
+function relativeSeconds(){return gameplaySeconds()??0;}
 function logEvent(type, data={}) {
-  session.events.push({type,t:relativeSeconds(),...data});
+  const sessionTime=sessionSeconds(),gameplayTime=gameplaySeconds();
+  session.events.push({type,t:gameplayTime??sessionTime,sessionTime,gameplayTime,...data});
 }
 function inputActive(){
   return boot.classList.contains('hidden') && gameStarted && !chatOpen && !worldState.introActive && !worldState.cinematic && !session.finishedAt;
 }
+const visibilityClock={hiddenSincePerf:document.hidden?performance.now():null,hiddenSinceSessionTime:document.hidden?sessionSeconds():null,hiddenSinceGameplayPerf:null,hiddenSinceGameplayTime:null};
+function beginGameplayClock(){
+  gameplayPerfOrigin=performance.now();gameplayPerfEnded=null;
+  if(document.hidden&&visibilityClock.hiddenSinceGameplayPerf===null){
+    visibilityClock.hiddenSinceGameplayPerf=gameplayPerfOrigin;visibilityClock.hiddenSinceGameplayTime=0;
+  }
+}
+function currentHiddenGameplayMs(){
+  let total=session.visibility.hiddenDuringGameplayMs;
+  if(visibilityClock.hiddenSinceGameplayPerf!==null){
+    const end=gameplayPerfEnded===null?performance.now():gameplayPerfEnded;
+    total+=Math.max(0,end-visibilityClock.hiddenSinceGameplayPerf);
+  }
+  return total;
+}
+function closeVisibilityInterval(){
+  if(visibilityClock.hiddenSincePerf===null)return;
+  const now=performance.now(),endSession=sessionSeconds(),endGameplay=gameplaySeconds();
+  const gameplayDurationMs=visibilityClock.hiddenSinceGameplayPerf===null?0:Math.max(0,(gameplayPerfEnded===null?now:gameplayPerfEnded)-visibilityClock.hiddenSinceGameplayPerf);
+  if(gameplayDurationMs>0)session.visibility.hiddenDuringGameplayMs+=gameplayDurationMs;
+  session.visibility.hiddenIntervals.push({
+    startedAtSessionTime:visibilityClock.hiddenSinceSessionTime,
+    endedAtSessionTime:endSession,
+    durationSeconds:roundHundredth(now-visibilityClock.hiddenSincePerf),
+    startedAtGameplayTime:visibilityClock.hiddenSinceGameplayTime,
+    endedAtGameplayTime:endGameplay,
+    gameplayDurationSeconds:roundHundredth(gameplayDurationMs)
+  });
+  visibilityClock.hiddenSincePerf=null;visibilityClock.hiddenSinceSessionTime=null;visibilityClock.hiddenSinceGameplayPerf=null;visibilityClock.hiddenSinceGameplayTime=null;
+}
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){session.quality.visibilityHiddenCount++;logEvent('page_hidden');}
-  else logEvent('page_visible');
+  if(document.hidden){
+    session.quality.visibilityHiddenCount++;
+    if(visibilityClock.hiddenSincePerf===null){visibilityClock.hiddenSincePerf=performance.now();visibilityClock.hiddenSinceSessionTime=sessionSeconds();}
+    if(gameplayPerfOrigin!==null&&gameplayPerfEnded===null&&visibilityClock.hiddenSinceGameplayPerf===null){visibilityClock.hiddenSinceGameplayPerf=performance.now();visibilityClock.hiddenSinceGameplayTime=gameplaySeconds();}
+    logEvent('page_hidden');
+  }else{
+    closeVisibilityInterval();logEvent('page_visible');
+  }
 });
 window.addEventListener('blur',()=>{if(gameStarted&&!session.studyCompletedAt){session.quality.focusLossCount++;logEvent('window_blur');}});
 window.addEventListener('focus',()=>{if(gameStarted&&!session.studyCompletedAt)logEvent('window_focus');});
@@ -507,7 +564,7 @@ async function beginIntro(){
   intro.classList.remove('booting','flash');intro.classList.add('hidden');
   worldState.introActive=false;worldState.cinematic=null;gameStarted=true;
   session.timingMilestones.introEndedAt=new Date().toISOString();
-  session.startedAt=new Date().toISOString();session.timingMilestones.gameStartedAt=session.startedAt;
+  session.startedAt=new Date().toISOString();session.timingMilestones.gameStartedAt=session.startedAt;beginGameplayClock();
   logEvent('game_start',{intro:'storm_emergency_transmission',voice:'kokoro_heart_prerendered',counterbalanceCondition:session.counterbalance.condition,mapping:{...session.counterbalance.mapping}});
   hud.classList.remove('hidden');help.classList.remove('hidden');routeStatus.classList.remove('hidden');
   startFieldWeather();
@@ -819,6 +876,8 @@ function finalizeDerivedData(){
     timingSeconds:{
       totalSession:session.studyCompletedAt?Math.round((new Date(session.studyCompletedAt)-new Date(session.createdAt))/10)/100:null,
       gameplay:session.startedAt&&session.gameplayEndedAt?Math.round((new Date(session.gameplayEndedAt)-new Date(session.startedAt))/10)/100:null,
+      hiddenDuringGameplay:Math.round(currentHiddenGameplayMs()/10)/100,
+      activeGameplay:session.startedAt&&session.gameplayEndedAt?Math.max(0,Math.round(((new Date(session.gameplayEndedAt)-new Date(session.startedAt))-currentHiddenGameplayMs())/10)/100):null,
       guideResponse:session.responses.guide.displayedAt!==null&&session.responses.guide.submittedAt!==null?Math.round((session.responses.guide.submittedAt-session.responses.guide.displayedAt)*100)/100:null,
       generalizationResponse:session.responses.generalization.displayedAt!==null&&session.responses.generalization.submittedAt!==null?Math.round((session.responses.generalization.submittedAt-session.responses.generalization.displayedAt)*100)/100:null,
       walking:Math.round(ms.walkingMs/10)/100,
@@ -836,19 +895,47 @@ function finalizeDerivedData(){
     navigation:{backtrackingEpisodes:session.navigation.backtrackingEpisodes,maxBacktrackDistance:+session.navigation.maxBacktrackDistance.toFixed(2)}
   };
 }
-function sessionFilename(){return `mera_${STUDY_VERSION.toLowerCase()}_${session.sessionId.slice(0,8)}.json`;}
-function downloadSession({automatic=false}={}) {
-  const filename=sessionFilename();
-  try{
-    session.quality.localExportSucceeded=true;lastLocalExportName=filename;
-    logEvent(automatic?'local_export_auto':'local_export_manual',{filename});
-    if(session.studyCompletedAt)finalizeDerivedData();
-    const blob=new Blob([JSON.stringify(session,null,2)],{type:'application/json'});
-    const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);
-  }catch(error){
-    session.quality.localExportSucceeded=false;logEvent('local_export_failed',{message:String(error?.message||error)});
+async function submitSessionRemote(){
+  const remote=session.storage.remoteSubmission;
+  if(!supabaseConfigured()){
+    remote.configured=false;remote.status='not_configured';
+    return {ok:false,reason:'not_configured',error:'Study storage is not configured.'};
   }
-  return filename;
+  remote.configured=true;remote.attempted=true;remote.status='attempting';remote.error=null;remote.httpStatus=null;
+  logEvent('remote_submission_attempt',{provider:'supabase',table:remote.table});
+  finalizeDerivedData();
+  const submittedAt=new Date().toISOString();
+  const payload=typeof structuredClone==='function'?structuredClone(session):JSON.parse(JSON.stringify(session));
+  payload.storage.remoteSubmission={...payload.storage.remoteSubmission,status:'submitted',submittedAt};
+  const row={
+    session_id:session.sessionId,
+    study_version:session.build,
+    schema_version:session.schemaVersion,
+    counterbalance_condition:session.counterbalance.condition,
+    completed_at:session.studyCompletedAt,
+    payload
+  };
+  try{
+    const base=String(STORAGE_CONFIG.projectUrl||'').replace(/\/$/,'');
+    const table=encodeURIComponent(remote.table||'mera_sessions');
+    const response=await fetch(`${base}/rest/v1/${table}`,{
+      method:'POST',
+      headers:{'apikey':STORAGE_CONFIG.publishableKey,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify(row)
+    });
+    remote.httpStatus=response.status;
+    if(!response.ok){throw new Error(`HTTP ${response.status}: ${(await response.text()).slice(0,300)}`);}
+    remote.status='submitted';remote.submittedAt=submittedAt;session.storage.mode='supabase';
+    logEvent('remote_submission_succeeded',{provider:'supabase',table:remote.table,httpStatus:response.status});
+    return {ok:true};
+  }catch(error){
+    remote.status='failed';remote.error=String(error?.message||error);session.storage.mode='submission_failed';
+    logEvent('remote_submission_failed',{provider:'supabase',table:remote.table,message:remote.error});
+    return {ok:false,reason:'failed',error:remote.error};
+  }
+}
+async function persistCompletedSession(){
+  return submitSessionRemote();
 }
 // A blocked/missing audio event must never prevent collection of the free-text DV.
 function revealGuideTask(reason='audio_completed') {
@@ -869,7 +956,7 @@ outpostContinue.addEventListener('click',()=>revealGuideTask('participant_contin
 
 async function finishStudy(outpostPoint) {
   if (session.finishedAt || worldState.cinematic?.id === 'outro') return;
-  session.finishedAt=new Date().toISOString();session.gameplayEndedAt=session.finishedAt;session.timingMilestones.outpostReachedAt=session.finishedAt;
+  gameplayPerfEnded=performance.now();session.finishedAt=new Date().toISOString();session.gameplayEndedAt=session.finishedAt;session.timingMilestones.outpostReachedAt=session.finishedAt;
   session.mission.relayRestored=true;
   logEvent('relay_restored',{status:'emergency_uplink_online'});
   logEvent('outpost_reached',{routes:{...session.routes},position:{...lastPlayerPosition}});
@@ -911,16 +998,33 @@ saveGuideBtn.addEventListener('click',()=>{
   logEvent('guide_submitted',{length:raw.length,responseSeconds:session.responses.guide.displayedAt===null?null:Math.round((session.responses.guide.submittedAt-session.responses.guide.displayedAt)*100)/100});
   renderGeneralizationTask();
 });
-submitGeneralizationBtn.addEventListener('click',()=>{
-  const raw=generalizationText.value;
-  if(!raw.trim()){generalizationNote.textContent='Please describe sections A, B and C before completing the task.';return;}
-  session.responses.generalization.text=raw;session.responses.generalization.length=raw.length;session.responses.generalization.submittedAt=relativeSeconds();
-  logEvent('generalization_submitted',{length:raw.length,responseSeconds:session.responses.generalization.displayedAt===null?null:Math.round((session.responses.generalization.submittedAt-session.responses.generalization.displayedAt)*100)/100});
-  session.studyCompletedAt=new Date().toISOString();session.timingMilestones.studyCompletedAt=session.studyCompletedAt;logEvent('study_complete');finalizeDerivedData();
-  const filename=downloadSession({automatic:true});
-  generalization.classList.add('hidden');completeScreen.classList.remove('hidden');completionFile.textContent=filename;
+submitGeneralizationBtn.addEventListener('click',async()=>{
+  const raw=generalizationText.value.trim();
+  if(!raw){generalizationNote.textContent='Please describe sections A, B and C before completing the task.';return;}
+  submitGeneralizationBtn.disabled=true;generalizationNote.textContent='Saving study record…';
+
+  if(session.responses.generalization.submittedAt===null){
+    session.responses.generalization.text=raw;session.responses.generalization.length=raw.length;session.responses.generalization.submittedAt=relativeSeconds();
+    logEvent('generalization_submitted',{length:raw.length,responseSeconds:session.responses.generalization.displayedAt===null?null:Math.round((session.responses.generalization.submittedAt-session.responses.generalization.displayedAt)*100)/100});
+  }else{
+    session.responses.generalization.text=raw;session.responses.generalization.length=raw.length;
+    logEvent('remote_submission_retry',{attempt:(session.storage.remoteSubmission.retryCount||0)+1});
+  }
+  session.storage.remoteSubmission.retryCount=(session.storage.remoteSubmission.retryCount||0)+1;
+  if(!session.studyCompletedAt){
+    session.studyCompletedAt=new Date().toISOString();session.timingMilestones.studyCompletedAt=session.studyCompletedAt;logEvent('study_complete');
+  }
+  finalizeDerivedData();
+  const saved=await persistCompletedSession();
+  if(!saved.ok){
+    generalizationNote.textContent='The study record could not be submitted. Please check your internet connection and click COMPLETE again.';
+    submitGeneralizationBtn.disabled=false;
+    return;
+  }
+  generalization.classList.add('hidden');completeScreen.classList.remove('hidden');
+  const completionStatus=document.getElementById('completion-status');
+  completionStatus.textContent='Your study responses have been recorded successfully. You may now close this page.';
 });
-downloadSessionBtn.addEventListener('click',()=>downloadSession({automatic:false}));
 replayBtn.addEventListener('click',()=>location.reload());
 
 async function verifyGeneralizationPhotos(){
@@ -2123,7 +2227,7 @@ async function bootApp() {
     function App(){
       const [ready,setReady]=useState(false),once=useRef(false);
       const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking field-link audio and final-report photographs…';loadfill.style.width='90%';try{await Promise.all([verifyHeartVoicePack(),verifyGeneralizationPhotos()]);setReady(true);session.timingMilestones.bootReadyAt=new Date().toISOString();bootStatus.textContent='Field link, navigation guide, route geometry and report materials are ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
-      useEffect(()=>{if(!ready)return;enterBtn.onclick=()=>{startFieldAmbience();boot.classList.add('hidden');beginIntro();};},[ready]);
+      useEffect(()=>{if(!ready)return;enterBtn.onclick=()=>{if(!session.consent.accepted){session.consent.accepted=true;session.consent.acceptedAt=new Date().toISOString();session.consent.acceptedAtSessionTime=sessionSeconds();session.timingMilestones.consentAcceptedAt=session.consent.acceptedAt;logEvent('consent_accepted',{textVersion:CONSENT_TEXT_VERSION});}startFieldAmbience();boot.classList.add('hidden');beginIntro();};},[ready]);
       return h(Canvas,{shadows:false,dpr:[1,1.18],camera:{position:[4.8,3.2,224],fov:54,near:.1,far:650},gl:{antialias:true,powerPreference:'high-performance'},onCreated:({gl})=>{gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=.92;loadfill.style.width='78%';}},h(Suspense,{fallback:null},h(Scene,{onCharacterReady})));
     }
 
