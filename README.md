@@ -177,37 +177,37 @@ One row stores the complete record for one completed session. There is no partic
 
 The E-series records the progression from controller proof to production research instrument. Early subversions were iterative working builds; later versions correspond to explicit experimental or storage changes.
 
-- **E1 — controller proof · 09/2026.** Minimal third-person browser prototype. Established React Three Fiber + Rapier + Ecctrl movement, camera, WASD control, running, jumping, grounding and collision behaviour. A simple Soldier model was used as the initial animated humanoid.
+- **E1 — controller proof · 06/2026.** Minimal third-person browser prototype. Established React Three Fiber + Rapier + Ecctrl movement, camera, WASD control, running, jumping, grounding and collision behaviour. A simple Soldier model was used as the initial animated humanoid.
 
-- **E2 — environment proof · 09/2026.** Moved the controller into the first Northern Outpost landscape. Added bounded terrain, trees, grass, rocks, water, bridge/ford geometry and a visible destination. Introduced instancing and simplified rendering to retain browser performance.
+- **E2 — environment proof · 06/2026.** Moved the controller into the first Northern Outpost landscape. Added bounded terrain, trees, grass, rocks, water, bridge/ford geometry and a visible destination. Introduced instancing and simplified rendering to retain browser performance.
 
-- **E3.0 — route experiment prototype · 09/2026.** Converted the landscape into a short directed journey with three branching decisions and later route reconvergence. Added MERA navigation, the storm/outpost objective, route triggers and the first post-game description task.
+- **E3.0 — route experiment prototype · 07/2026.** Converted the landscape into a short directed journey with three branching decisions and later route reconvergence. Added MERA navigation, the storm/outpost objective, route triggers and the first post-game description task.
 
-- **E3.1–E3.3 — consequential choices · 09/2026.** Made decisions irreversible within each branch. Added storm-driven route consequences (flooding/route loss, tree obstruction, rockfall), cinematic consequence moments and branch-specific navigation logic.
+- **E3.1–E3.3 — consequential choices · 07/2026.** Made decisions irreversible within each branch. Added storm-driven route consequences (flooding/route loss, tree obstruction, rockfall), cinematic consequence moments and branch-specific navigation logic.
 
-- **E3.4–E3.5 — lexical interaction prototype · 09/2026.** Added novel route labels and repeated lexical encounters. Expanded to six lexical forms, moved target exposure away from unconstrained chatbot generation and toward deterministic route-linked stimuli, and separated target-word exposure from neutral decision guidance.
+- **E3.4–E3.5 — lexical interaction prototype · 08/2026.** Added novel route labels and repeated lexical encounters. Expanded to six lexical forms, moved target exposure away from unconstrained chatbot generation and toward deterministic route-linked stimuli, and separated target-word exposure from neutral decision guidance.
 
-- **E3.6 — fixed voice pipeline · 09/2026.** Replaced variable/browser speech with pre-rendered Kokoro Heart audio. Introduced deterministic audio filenames and fixed speech playback so linguistic stimuli could be reproduced exactly across sessions.
+- **E3.6 — fixed voice pipeline · 08/2026.** Replaced variable/browser speech with pre-rendered Kokoro Heart audio. Introduced deterministic audio filenames and fixed speech playback so linguistic stimuli could be reproduced exactly across sessions.
 
-- **E3.7–E3.8 — landscape and performance passes · 09/2026.** Refined forest density, rocks, waterfall, outpost visibility and collision geometry. Reduced expensive rendering where it did not improve the experimental scene. Preserved limited off-trail movement while preventing passage through major physical obstacles.
+- **E3.7–E3.8 — landscape and performance passes · 08/2026.** Refined forest density, rocks, waterfall, outpost visibility and collision geometry. Reduced expensive rendering where it did not improve the experimental scene. Preserved limited off-trail movement while preventing passage through major physical obstacles.
 
-- **E3.9.0–E3.9.3 — route readability · late 09/2026.** Added continuous light hiking trails, then narrowed/lowered them to function as visual guidance rather than movement rails. Improved rock/terrain boundaries, route separation and physical colliders. Iteratively aligned route prompts and consequences with actual traversal positions.
+- **E3.9.0–E3.9.3 — route readability · 09/2026.** Added continuous light hiking trails, then narrowed/lowered them to function as visual guidance rather than movement rails. Improved rock/terrain boundaries, route separation and physical colliders. Iteratively aligned route prompts and consequences with actual traversal positions.
 
-- **E3.9.4 — reference gameplay baseline · late 09/2026.** Stabilised the current valley layout, three decision points, signs, outpost progression, environmental consequences and movement behaviour. Lexical lettering became visible only after commitment and proximity, preventing exposure on the unchosen branch.
+- **E3.9.4 — reference gameplay baseline · 09/2026.** Stabilised the current valley layout, three decision points, signs, outpost progression, environmental consequences and movement behaviour. Lexical lettering became visible only after commitment and proximity, preventing exposure on the unchosen branch.
 
-- **E3.9.5 — Adventurer + route locking · 01/10/2026.** Replaced the Soldier with the Quaternius Adventurer after isolated character tests. Corrected orientation/animation mapping; walking reuses the Run clip at reduced speed and jump states remain upright. Corrected route-lock placement so the **non-selected** branch becomes physically unavailable after commitment.
+- **E3.9.5 — Adventurer + route locking · late 09/2026.** Replaced the Soldier with the Quaternius Adventurer after isolated character tests. Corrected orientation/animation mapping; walking reuses the Run clip at reduced speed and jump states remain upright. Corrected route-lock placement so the **non-selected** branch becomes physically unavailable after commitment.
 
-- **E4.0 — counterbalanced pilot · 02/10/2026.** Decoupled lexical forms from fixed physical routes through six counterbalance conditions. Formalised the 3-item × 3-exposure protocol, added sign dwell and audio-completion logging, one-second trajectory sampling, movement summaries and local JSON pilot export. Added route handover + one generalisation task.
+- **E4.0 — counterbalanced pilot · late 09/2026.** Decoupled lexical forms from fixed physical routes through six counterbalance conditions. Formalised the 3-item × 3-exposure protocol, added sign dwell and audio-completion logging, one-second trajectory sampling, movement summaries and local JSON pilot export. Added route handover + one generalisation task.
 
-- **E4.1 — environmental sound + photographic transfer · 02/10/2026.** Added procedural rain/wind/thunder with voice ducking, moved ford reinforcement earlier, and replaced schematic generalisation drawings with fixed real photographs.
+- **E4.1 — environmental sound + photographic transfer · 10/2026.** Added procedural rain/wind/thunder with voice ducking, moved ford reinforcement earlier, and replaced schematic generalisation drawings with fixed real photographs.
 
-- **E4.2 — participant framing + consent · 02/10/2026.** Added the field-intern scenario, explicit MERA role, study duration/research information, consent-by-ENTER record, stronger thunder presentation and final participant thank-you screen.
+- **E4.2 — participant framing + consent · 10/2026.** Added the field-intern scenario, explicit MERA role, study duration/research information, consent-by-ENTER record, stronger thunder presentation and final participant thank-you screen.
 
-- **E4.3 — telemetry/storage preparation · 02/10/2026.** Added separate session/gameplay clocks, visibility/focus logging, active/hidden gameplay measures, consent-text versioning, expanded derived telemetry and the reproducible Supabase schema.
+- **E4.3 — telemetry/storage preparation · 10/2026.** Added separate session/gameplay clocks, visibility/focus logging, active/hidden gameplay measures, consent-text versioning, expanded derived telemetry and the reproducible Supabase schema.
 
-- **E4.4 — production database · 02/10/2026.** Connected direct insert-only Supabase storage and removed participant-side local export. Completion became conditional on successful remote submission.
+- **E4.4 — production database · 10/2026.** Connected direct insert-only Supabase storage and removed participant-side local export. Completion became conditional on successful remote submission.
 
-- **E4.5 — post-game timing correction · 02/10/2026.** Corrected route-handover and generalisation timing to use the continuously running session clock after gameplay ends. Current production candidate; gameplay and experimental stimuli otherwise unchanged from the validated E4.4 run.
+- **E4.5 — post-game timing correction · 10/2026.** Corrected route-handover and generalisation timing to use the continuously running session clock after gameplay ends. Current production candidate; gameplay and experimental stimuli otherwise unchanged from the validated E4.4 run.
 
 ## Reproducing the current instrument
 
