@@ -43,13 +43,17 @@
 
   <div id="boot" class="screen">
     <div class="card">
-      <div class="kicker">MERA · E4.0 · COUNTERBALANCED STUDY PILOT</div>
-      <h1>Field link ready</h1>
-      <p class="mission-lead">A short storm transmission will establish the mission. MERA uses a fixed Heart neural voice; headphones are recommended if available.</p>
-      <div class="mission-brief"><div><span>CONTROL</span><strong>WASD · Shift · Space · mouse drag</strong></div><div><span>FIELD RULE</span><strong>Route choices are commitments. Once a branch closes behind you, continue until the routes meet again.</strong></div><div><span>MERA ASSIST</span><strong>Use the MERA icon for optional text-only route questions. Suggested questions change with your location.</strong></div></div>
-      <p id="boot-status">Loading the storm valley, field navigator and high outpost terrain…</p>
+      <div class="kicker">MERA · NORTHERN OUTPOST · FIELD LINK</div>
+      <h1>You are the field responder.</h1>
+      <p class="mission-lead">You are a reserve field worker and the only mobile member of your team after last night’s storm. Your task is to reach the Northern Outpost and restore its emergency relay before the next storm front arrives.</p>
+      <div class="mission-brief">
+        <div><span>MERA</span><strong>MERA is the reserve’s AI navigation guide. She will provide route information over the field link, but her terrain data is incomplete and some decisions will be yours.</strong></div>
+        <div><span>CONTROL</span><strong>WASD move · Shift run · Space jump · mouse drag camera</strong></div>
+        <div><span>FIELD RULE</span><strong>Route choices are commitments. Once a branch closes behind you, continue until the routes meet again.</strong></div>
+      </div>
+      <p id="boot-status">Loading the storm valley, MERA field link and Northern Outpost…</p>
       <div class="loadbar"><div id="loadfill"></div></div>
-      <p class="small">First launch can take a moment while the valley and field navigator load.</p>
+      <p class="small">Headphones are recommended if available. The field link includes spoken guidance and environmental storm audio.</p>
       <button id="enter" disabled>BEGIN FIELD RUN</button>
       <pre id="boot-error" class="error hidden"></pre>
     </div>
@@ -74,7 +78,7 @@
 
   <div id="hud" class="hidden">
     <div class="hud-left">
-      <div class="brand">MERA · E4.0</div>
+      <div class="brand">MERA</div>
       <div class="objective">Reach the outpost before the next storm · committed routes cannot be reversed</div>
       <div id="region" class="region">SOUTHERN APPROACH</div>
     </div>

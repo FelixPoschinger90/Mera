@@ -56,7 +56,7 @@ const cinematicCaption = document.getElementById('cinematic-caption');
 const cinematicLine = document.getElementById('cinematic-line');
 const outpostContinue = document.getElementById('outpost-continue');
 
-const STUDY_VERSION = 'MERA_E4_0_COUNTERBALANCED_PILOT';
+const STUDY_VERSION = 'MERA_E4_1_COUNTERBALANCED_PILOT';
 const LEXICAL_ITEMS = ['menic','blicket','boskot','fiffin','virdex','teebu'];
 const SLOT_ORDER = [
   'river_bridge','river_ford','woodland_pine','woodland_birch','ascent_ridge','ascent_switchback'
@@ -99,6 +99,45 @@ const ROUTE_META = {
     }
   }
 };
+const GENERALIZATION_STIMULI = {
+  river_bridge:{
+    id:'pexels_17479947_bridge',
+    src:'https://images.pexels.com/photos/17479947/pexels-photo-17479947.jpeg?auto=compress&cs=tinysrgb&w=900&h=540&fit=crop',
+    sourcePage:'https://www.pexels.com/photo/stream-in-forest-17479947/',
+    alt:'A wooden footbridge crossing a forest stream.'
+  },
+  river_ford:{
+    id:'pexels_32286784_ford',
+    src:'https://images.pexels.com/photos/32286784/pexels-photo-32286784.jpeg?auto=compress&cs=tinysrgb&w=900&h=540&fit=crop',
+    sourcePage:'https://www.pexels.com/photo/tranquil-pathway-over-stepping-stones-in-a-stream-32286784/',
+    alt:'Stepping stones crossing a shallow stream.'
+  },
+  woodland_pine:{
+    id:'pexels_4856731_pine',
+    src:'https://images.pexels.com/photos/4856731/pexels-photo-4856731.jpeg?auto=compress&cs=tinysrgb&w=900&h=540&fit=crop',
+    sourcePage:'https://www.pexels.com/photo/an-empty-forest-path-4856731/',
+    alt:'A narrow path under dense pine cover.'
+  },
+  woodland_birch:{
+    id:'pexels_17166390_open',
+    src:'https://images.pexels.com/photos/17166390/pexels-photo-17166390.jpeg?auto=compress&cs=tinysrgb&w=900&h=540&fit=crop',
+    sourcePage:'https://www.pexels.com/photo/footpath-in-a-meadow-with-trees-in-a-distance-17166390/',
+    alt:'An open footpath crossing an exposed meadow.'
+  },
+  ascent_ridge:{
+    id:'pexels_17731161_ridge',
+    src:'https://images.pexels.com/photos/17731161/pexels-photo-17731161.jpeg?auto=compress&cs=tinysrgb&w=900&h=540&fit=crop',
+    sourcePage:'https://www.pexels.com/photo/path-along-the-ridge-of-the-mountain-17731161/',
+    alt:'A direct hiking path following a steep mountain ridge.'
+  },
+  ascent_switchback:{
+    id:'pexels_16643312_switchback',
+    src:'https://images.pexels.com/photos/16643312/pexels-photo-16643312.jpeg?auto=compress&cs=tinysrgb&w=900&h=540&fit=crop',
+    sourcePage:'https://www.pexels.com/photo/zigzag-path-on-the-slope-of-a-rocky-mountain-16643312/',
+    alt:'A long zigzag path climbing a rocky mountain slope.'
+  }
+};
+
 const COUNTERBALANCE_CONDITIONS = Array.from({length:6},(_,shift)=>
   Object.fromEntries(SLOT_ORDER.map((slot,i)=>[slot,LEXICAL_ITEMS[(i+shift)%LEXICAL_ITEMS.length]]))
 );
@@ -127,7 +166,7 @@ function detectBrowserFamily(){
 }
 
 const session = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   build: STUDY_VERSION,
   sessionId: makeSessionId(),
   createdAt: new Date().toISOString(),
@@ -178,7 +217,8 @@ const session = {
     touchCapable:(navigator.maxTouchPoints||0)>0
   },
   storage: {mode:'local_pilot',remoteSubmission:false},
-  voice: {enabled:true,engine:'kokoro_heart_prerendered',profile:'af_heart',fixedStimulus:true}
+  voice: {enabled:true,engine:'kokoro_heart_prerendered',profile:'af_heart',fixedStimulus:true},
+  environmentalAudio:{enabled:true,engine:'procedural_web_audio',rain:true,wind:true,thunder:true,voiceDucking:true}
 };
 const fired = new Set();
 let navTimer = null;
@@ -186,6 +226,7 @@ let navBusy = false;
 const navQueue = [];
 let gameStarted = false;
 let audioCtx = null;
+const ambience={started:false,master:null,rainGain:null,windGain:null,sources:[],nodes:[]};
 let chatOpen = false;
 let lastPlayerPosition = {x:0,y:0,z:216};
 let lastChatStage = '';
@@ -239,13 +280,62 @@ function radioCrackle(duration=.22, volume=.075){
 function sleep(ms){ return new Promise(resolve=>setTimeout(resolve,ms)); }
 
 let fieldStormTimer=null;
+function fixedNoiseBuffer(ctx,seconds,seed){
+  const sr=ctx.sampleRate,n=Math.max(1,Math.floor(sr*seconds)),buffer=ctx.createBuffer(1,n,sr),data=buffer.getChannelData(0);
+  let x=seed>>>0;
+  for(let i=0;i<n;i++){x=(1664525*x+1013904223)>>>0;data[i]=((x/4294967296)*2-1);}
+  return buffer;
+}
+function setAmbienceDuck(ducked){
+  if(!ambience.started||!ambience.master||!audioCtx)return;
+  const t=audioCtx.currentTime;
+  ambience.master.gain.cancelScheduledValues(t);
+  ambience.master.gain.setTargetAtTime(ducked?.34:1,t,.12);
+}
+function startFieldAmbience(){
+  if(ambience.started)return;
+  try{
+    audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==='suspended')audioCtx.resume();
+    const ctx=audioCtx,master=ctx.createGain();master.gain.value=1;master.connect(ctx.destination);
+
+    const rain=ctx.createBufferSource();rain.buffer=fixedNoiseBuffer(ctx,4.7,0x4d455241);rain.loop=true;
+    const rainHP=ctx.createBiquadFilter();rainHP.type='highpass';rainHP.frequency.value=1050;rainHP.Q.value=.35;
+    const rainLP=ctx.createBiquadFilter();rainLP.type='lowpass';rainLP.frequency.value=7200;rainLP.Q.value=.25;
+    const rainGain=ctx.createGain();rainGain.gain.value=.030;
+    rain.connect(rainHP);rainHP.connect(rainLP);rainLP.connect(rainGain);rainGain.connect(master);rain.start();
+
+    const wind=ctx.createBufferSource();wind.buffer=fixedNoiseBuffer(ctx,6.3,0x53544f52);wind.loop=true;
+    const windHP=ctx.createBiquadFilter();windHP.type='highpass';windHP.frequency.value=75;windHP.Q.value=.4;
+    const windLP=ctx.createBiquadFilter();windLP.type='lowpass';windLP.frequency.value=950;windLP.Q.value=.5;
+    const windGain=ctx.createGain();windGain.gain.value=.018;
+    const lfo=ctx.createOscillator(),lfoDepth=ctx.createGain();lfo.frequency.value=.085;lfoDepth.gain.value=.008;
+    lfo.connect(lfoDepth);lfoDepth.connect(windGain.gain);
+    wind.connect(windHP);windHP.connect(windLP);windLP.connect(windGain);windGain.connect(master);wind.start();lfo.start();
+
+    ambience.started=true;ambience.master=master;ambience.rainGain=rainGain;ambience.windGain=windGain;
+    ambience.sources=[rain,wind,lfo];ambience.nodes=[rainHP,rainLP,windHP,windLP,rainGain,windGain,lfoDepth,master];
+    logEvent('ambient_audio_started',{rainGain:.030,windGain:.018,voiceDucking:true});
+  }catch(error){
+    session.quality.audioFailures.push({id:'environmental_ambience',status:'start_error',message:String(error?.message||error)});
+    logEvent('ambient_audio_failed',{message:String(error?.message||error)});
+  }
+}
+function stopFieldAmbience(){
+  if(!ambience.started)return;
+  try{
+    if(ambience.master&&audioCtx){const t=audioCtx.currentTime;ambience.master.gain.cancelScheduledValues(t);ambience.master.gain.setTargetAtTime(0,t,.22);}
+    setTimeout(()=>{for(const src of ambience.sources){try{src.stop();}catch(_){}};ambience.started=false;},700);
+    logEvent('ambient_audio_stopped');
+  }catch(_){ambience.started=false;}
+}
 function pulseFieldLightning(){
   if(!fieldLightning || !gameStarted || session.finishedAt) return;
   fieldLightning.classList.remove('flash');
   void fieldLightning.offsetWidth;
   fieldLightning.classList.add('flash');
   window.dispatchEvent(new CustomEvent('mera-lightning'));
-  thunderRumble(.085);
+  if(!activeMeraAudio)thunderRumble(.09);else logEvent('thunder_suppressed_during_voice');
   setTimeout(()=>fieldLightning?.classList.remove('flash'),620);
 }
 function scheduleFieldLightning(){
@@ -293,6 +383,7 @@ function stopMeraVoice(){
   if(activeMeraAudio){
     try{activeMeraAudio.pause();activeMeraAudio.currentTime=0;}catch(_){ }
     activeMeraAudio=null;
+    setAmbienceDuck(false);
   }
 }
 function playMeraClip(id){
@@ -302,11 +393,13 @@ function playMeraClip(id){
     stopMeraVoice();
     const a=preloadedVoice.get(id)||new Audio(src);
     activeMeraAudio=a;
+    setAmbienceDuck(true);
     try{a.currentTime=0;}catch(_){ }
     let settled=false;
     const done=status=>{
       if(settled)return;settled=true;
       if(activeMeraAudio===a)activeMeraAudio=null;
+      setAmbienceDuck(false);
       a.onended=null;a.onerror=null;
       logEvent('voice_line',{id,status,engine:'kokoro_heart_prerendered',voice:'af_heart'});
       resolve({status,duration:Number.isFinite(a.duration)?a.duration:0});
@@ -657,26 +750,20 @@ function routeSlotsExperienced(){
 function shuffled(items){
   const a=[...items];for(let i=a.length-1;i>0;i--){const j=secureRandomInt(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;
 }
-function stimulusSvg(slot){
-  const common=`viewBox="0 0 300 180" role="img" aria-label="Generalisation section"`;
-  const sky='<rect width="300" height="180" rx="16" fill="#77878a"/><path d="M0 112 Q75 88 150 108 T300 100 V180 H0Z" fill="#64715e"/>';
-  if(slot==='river_bridge')return `<svg ${common}>${sky}<path d="M0 126 Q150 145 300 124 V180 H0Z" fill="#425d66"/><path d="M88 108 L212 92" stroke="#6b5439" stroke-width="13"/><path d="M88 98 L212 82 M88 118 L212 102" stroke="#33291f" stroke-width="3"/><path d="M88 92 V124 M212 76 V108" stroke="#33291f" stroke-width="4"/></svg>`;
-  if(slot==='river_ford')return `<svg ${common}>${sky}<path d="M0 112 Q85 137 152 115 T300 121 V180 H0Z" fill="#496b75"/><g fill="#9b9b8d" stroke="#66675f" stroke-width="2"><ellipse cx="66" cy="134" rx="24" ry="10"/><ellipse cx="112" cy="123" rx="20" ry="9"/><ellipse cx="156" cy="132" rx="23" ry="10"/><ellipse cx="204" cy="119" rx="21" ry="9"/><ellipse cx="246" cy="130" rx="24" ry="10"/></g></svg>`;
-  if(slot==='woodland_pine')return `<svg ${common}><rect width="300" height="180" rx="16" fill="#43534a"/><path d="M132 180 Q145 110 151 76 Q162 112 170 180Z" fill="#9a8d72"/><g fill="#263d31"><path d="M22 180 L48 34 L75 180Z"/><path d="M64 180 L91 18 L118 180Z"/><path d="M188 180 L215 24 L244 180Z"/><path d="M228 180 L257 42 L285 180Z"/></g><g stroke="#1f3027" stroke-width="7"><path d="M49 65V180"/><path d="M92 49V180"/><path d="M215 53V180"/><path d="M258 68V180"/></g></svg>`;
-  if(slot==='woodland_birch')return `<svg ${common}><rect width="300" height="180" rx="16" fill="#849096"/><path d="M0 128 Q85 102 152 124 T300 111 V180 H0Z" fill="#8c9871"/><path d="M142 180 Q153 136 168 106 Q178 131 185 180Z" fill="#b5a88d"/><g stroke="#d8d1bc" stroke-width="5"><path d="M54 74V139"/><path d="M248 66V132"/></g><g stroke="#d8e0df" stroke-width="2" opacity=".72"><path d="M34 55l32 -8"/><path d="M215 47l43 -11"/><path d="M76 89l35 -7"/></g></svg>`;
-  if(slot==='ascent_ridge')return `<svg ${common}><rect width="300" height="180" rx="16" fill="#738086"/><path d="M0 180 L70 104 L133 120 L220 30 L300 76 V180Z" fill="#6f7167"/><path d="M139 180 Q166 126 192 83 Q207 57 220 30" fill="none" stroke="#b3a58b" stroke-width="12"/><g fill="#8e8d83"><circle cx="177" cy="111" r="10"/><circle cx="195" cy="77" r="8"/><circle cx="157" cy="143" r="7"/></g></svg>`;
-  return `<svg ${common}><rect width="300" height="180" rx="16" fill="#738086"/><path d="M0 180 L46 122 L110 108 L181 53 L249 32 L300 56 V180Z" fill="#77786b"/><path d="M67 168 L204 148 L105 126 L231 101 L135 78 L249 49" fill="none" stroke="#b9ad92" stroke-width="11" stroke-linejoin="round"/></svg>`;
-}
 function renderGeneralizationTask(){
   const slots=shuffled(routeSlotsExperienced());
-  session.responses.generalization.stimuli=slots.map((slot,i)=>({label:String.fromCharCode(65+i),slot,targetWord:LEXICAL_MAPPING[slot]}));
-  generalizationStimuli.innerHTML=session.responses.generalization.stimuli.map(s=>
-    `<div class="stimulus-card"><div class="stimulus-label">${s.label}</div>${stimulusSvg(s.slot)}</div>`
-  ).join('');
+  session.responses.generalization.stimuli=slots.map((slot,i)=>{
+    const photo=GENERALIZATION_STIMULI[slot];
+    return {label:String.fromCharCode(65+i),slot,targetWord:LEXICAL_MAPPING[slot],stimulusId:photo.id,sourcePage:photo.sourcePage};
+  });
+  generalizationStimuli.innerHTML=session.responses.generalization.stimuli.map(s=>{
+    const photo=GENERALIZATION_STIMULI[s.slot];
+    return `<div class="stimulus-card"><div class="stimulus-label">${s.label}</div><img src="${photo.src}" alt="${photo.alt}" draggable="false" referrerpolicy="no-referrer"></div>`;
+  }).join('');
   finish.classList.add('hidden');
   generalization.classList.remove('hidden');
   session.responses.generalization.displayedAt=relativeSeconds();session.timingMilestones.generalizationDisplayedAt=new Date().toISOString();
-  logEvent('generalization_task_displayed',{stimuli:session.responses.generalization.stimuli.map(x=>({label:x.label,slot:x.slot}))});
+  logEvent('generalization_task_displayed',{stimuli:session.responses.generalization.stimuli.map(x=>({label:x.label,slot:x.slot,stimulusId:x.stimulusId}))});
   setTimeout(()=>generalizationText.focus(),60);
 }
 function exposureIntegrity(){
@@ -751,7 +838,7 @@ function revealGuideTask(reason='audio_completed') {
   outpostWatchdog = null;
   outpostSubtitleTimers.forEach(clearTimeout);
   outpostSubtitleTimers = [];
-  stopMeraVoice();worldState.cinematic=null;cinematicEl.classList.add('hidden');outpostContinue.classList.add('hidden');
+  stopMeraVoice();stopFieldAmbience();worldState.cinematic=null;cinematicEl.classList.add('hidden');outpostContinue.classList.add('hidden');
   navState.textContent='OFFLINE';
   session.responses.guide.displayedAt=relativeSeconds();session.timingMilestones.guideDisplayedAt=new Date().toISOString();
   logEvent('guide_task_displayed',{reason});
@@ -815,6 +902,17 @@ submitGeneralizationBtn.addEventListener('click',()=>{
 });
 downloadSessionBtn.addEventListener('click',()=>downloadSession({automatic:false}));
 replayBtn.addEventListener('click',()=>location.reload());
+
+async function verifyGeneralizationPhotos(){
+  const entries=Object.values(GENERALIZATION_STIMULI),failures=[];
+  await Promise.all(entries.map(photo=>new Promise(resolve=>{
+    const img=new Image();let done=false;
+    const finish=ok=>{if(done)return;done=true;if(!ok)failures.push(photo.id);img.onload=null;img.onerror=null;resolve();};
+    img.onload=()=>finish(true);img.onerror=()=>finish(false);img.referrerPolicy='no-referrer';img.src=photo.src;
+    setTimeout(()=>finish(false),10000);
+  })));
+  if(failures.length)throw new Error(`Generalisation photographs could not be loaded (${failures.length}). First missing: ${failures[0]}`);
+}
 
 async function bootApp() {
   try {
@@ -1912,7 +2010,7 @@ async function bootApp() {
       if(session.routes.river){
         const route=session.routes.river,meta=routeMeta('river',route),word=lexicalFor('river',route),ls=session.lexicalState[meta.slot];
         showNav(clipIdFor('river',route,'context'),meta.context(word),{target:word,slot:meta.slot,exposure:'context',duration:10000,voice:true});
-        const reinforceThreshold=route==='bridge'?124:122;
+        const reinforceThreshold=route==='bridge'?124:129.5;
         if(ls.signEncountered && p.z<reinforceThreshold)showNav(clipIdFor('river',route,'reinforce'),meta.reinforce(word),{target:word,slot:meta.slot,exposure:'reinforce',duration:8500,voice:true});
         if(p.z<106 && ls.reinforceStatus!==null)startConsequence('river');
       }
@@ -2004,8 +2102,8 @@ async function bootApp() {
     }
     function App(){
       const [ready,setReady]=useState(false),once=useRef(false);
-      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking the fixed Heart voice pack…';loadfill.style.width='90%';try{await verifyHeartVoicePack();setReady(true);session.timingMilestones.bootReadyAt=new Date().toISOString();bootStatus.textContent='MERA E4.0 study logic, counterbalanced Heart voice pack, Adventurer controller and route geometry are ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
-      useEffect(()=>{if(!ready)return;enterBtn.onclick=()=>{boot.classList.add('hidden');beginIntro();};},[ready]);
+      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking field-link audio and final-report photographs…';loadfill.style.width='90%';try{await Promise.all([verifyHeartVoicePack(),verifyGeneralizationPhotos()]);setReady(true);session.timingMilestones.bootReadyAt=new Date().toISOString();bootStatus.textContent='Field link, navigation guide, route geometry and report materials are ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
+      useEffect(()=>{if(!ready)return;enterBtn.onclick=()=>{startFieldAmbience();boot.classList.add('hidden');beginIntro();};},[ready]);
       return h(Canvas,{shadows:false,dpr:[1,1.18],camera:{position:[4.8,3.2,224],fov:54,near:.1,far:650},gl:{antialias:true,powerPreference:'high-performance'},onCreated:({gl})=>{gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=.92;loadfill.style.width='78%';}},h(Suspense,{fallback:null},h(Scene,{onCharacterReady})));
     }
 
