@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <meta name="theme-color" content="#172019" />
-  <title>MERA E3.9.4 — Incised Hiking Trails</title>
+  <title>MERA E4.0 — Counterbalanced Study Pilot</title>
   <link rel="stylesheet" href="styles.css" />
   <script type="importmap">
   {
@@ -43,7 +43,7 @@
 
   <div id="boot" class="screen">
     <div class="card">
-      <div class="kicker">MERA · E3.9.4 · INCISED HIKING TRAILS</div>
+      <div class="kicker">MERA · E4.0 · COUNTERBALANCED STUDY PILOT</div>
       <h1>Field link ready</h1>
       <p class="mission-lead">A short storm transmission will establish the mission. MERA uses a fixed Heart neural voice; headphones are recommended if available.</p>
       <div class="mission-brief"><div><span>CONTROL</span><strong>WASD · Shift · Space · mouse drag</strong></div><div><span>FIELD RULE</span><strong>Route choices are commitments. Once a branch closes behind you, continue until the routes meet again.</strong></div><div><span>MERA ASSIST</span><strong>Use the MERA icon for optional text-only route questions. Suggested questions change with your location.</strong></div></div>
@@ -74,7 +74,7 @@
 
   <div id="hud" class="hidden">
     <div class="hud-left">
-      <div class="brand">MERA · E3.9.4</div>
+      <div class="brand">MERA · E4.0</div>
       <div class="objective">Reach the outpost before the next storm · committed routes cannot be reversed</div>
       <div id="region" class="region">SOUTHERN APPROACH</div>
     </div>
@@ -99,13 +99,13 @@
     <div id="nav-copy"></div>
   </div>
 
-  <button id="chat-toggle" class="chat-toggle hidden" aria-label="Open MERA assistant" title="Ask MERA">
+  <button id="chat-toggle" class="chat-toggle hidden" aria-label="Open MERA text link" title="Ask MERA">
     <span class="chat-pulse"></span><span class="chat-mark">M</span>
   </button>
-  <section id="chat-panel" class="chat-panel hidden" aria-label="MERA text assistant">
+  <section id="chat-panel" class="chat-panel hidden" aria-label="MERA text link">
     <div class="chat-head">
       <div><span class="nav-dot"></span><strong>MERA ASSIST</strong><span class="chat-silent">TEXT LINK</span></div>
-      <button id="chat-close" class="chat-close" aria-label="Close MERA assistant">×</button>
+      <button id="chat-close" class="chat-close" aria-label="Close MERA text link">×</button>
     </div>
     <div id="chat-context" class="chat-context">Limited uplink · route data only</div>
     <div id="chat-log" class="chat-log" aria-live="polite"></div>
@@ -122,16 +122,36 @@
   <div id="finish" class="screen hidden">
     <div class="card finish-card">
       <div class="kicker">RELAY RESTORED · ROUTE HANDOVER</div>
-      <h1>Guide the next field worker.</h1>
-      <p>The emergency uplink is back online. During the handover, MERA's local route cache was corrupted. Another field worker is due to follow from the southern trailhead, but MERA cannot guide them.</p>
-      <p><strong>Leave them a short set of directions.</strong> Mention the route you took, terrain or landmarks that mattered, and anything that would help them choose their way to this outpost.</p>
-      <textarea id="guide-text" maxlength="1800" placeholder="Write the route in your own words…"></textarea>
-      <div class="finish-actions">
-        <button id="save-guide">SAVE GUIDE</button>
-        <button id="download-session" class="secondary hidden">DOWNLOAD SESSION JSON</button>
-        <button id="replay" class="secondary">PLAY AGAIN</button>
-      </div>
+      <h1>Guide the rescue team.</h1>
+      <p>MERA's local navigation cache is empty. The rescue team is approaching from the southern trailhead and will not have access to MERA's route guidance.</p>
+      <p><strong>Tell them exactly how to reach the outpost.</strong> Describe the route you took and anything they need to know.</p>
+      <textarea id="guide-text" maxlength="2200" placeholder="Write the route in your own words…"></textarea>
+      <div class="finish-actions"><button id="save-guide">CONTINUE</button></div>
       <div id="save-note" class="save-note"></div>
+    </div>
+  </div>
+
+  <div id="generalization" class="screen hidden">
+    <div class="card generalization-card">
+      <div class="kicker">FINAL FIELD REPORT</div>
+      <h1>Describe the new sections.</h1>
+      <p>The rescue team has reached another part of the reserve. Describe sections <strong>A, B and C</strong> as precisely as you can so they know what to expect.</p>
+      <div id="generalization-stimuli" class="generalization-stimuli" aria-label="Three new route sections"></div>
+      <textarea id="generalization-text" maxlength="2200" placeholder="Describe sections A, B and C in your own words…"></textarea>
+      <div class="finish-actions"><button id="submit-generalization">COMPLETE</button></div>
+      <div id="generalization-note" class="save-note"></div>
+    </div>
+  </div>
+
+  <div id="complete-screen" class="screen hidden">
+    <div class="card finish-card">
+      <div class="kicker">FIELD RUN COMPLETE</div>
+      <h1>Complete.</h1>
+      <p>The pilot session record has been saved locally as <code id="completion-file"></code>.</p>
+      <div class="finish-actions">
+        <button id="download-session" class="secondary">DOWNLOAD SESSION JSON AGAIN</button>
+        <button id="replay" class="secondary">START NEW SESSION</button>
+      </div>
     </div>
   </div>
 

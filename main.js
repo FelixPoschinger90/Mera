@@ -7,11 +7,18 @@ const hud = document.getElementById('hud');
 const help = document.getElementById('help');
 const routeStatus = document.getElementById('route-status');
 const finish = document.getElementById('finish');
-const replayBtn = document.getElementById('replay');
-const saveGuideBtn = document.getElementById('save-guide');
-const downloadSessionBtn = document.getElementById('download-session');
 const guideText = document.getElementById('guide-text');
+const saveGuideBtn = document.getElementById('save-guide');
 const saveNote = document.getElementById('save-note');
+const generalization = document.getElementById('generalization');
+const generalizationStimuli = document.getElementById('generalization-stimuli');
+const generalizationText = document.getElementById('generalization-text');
+const submitGeneralizationBtn = document.getElementById('submit-generalization');
+const generalizationNote = document.getElementById('generalization-note');
+const completeScreen = document.getElementById('complete-screen');
+const completionFile = document.getElementById('completion-file');
+const downloadSessionBtn = document.getElementById('download-session');
+const replayBtn = document.getElementById('replay');
 const navPanel = document.getElementById('nav-panel');
 const navCopy = document.getElementById('nav-copy');
 const navState = document.getElementById('nav-state');
@@ -36,7 +43,7 @@ window.addEventListener('unhandledrejection', event => {
 
 function showBootError(err) {
   const message = err?.stack || err?.message || String(err);
-  bootStatus.textContent = 'E3.9.4 failed to initialize.';
+  bootStatus.textContent = 'MERA study build failed to initialize.';
   bootError.textContent = message;
   bootError.classList.remove('hidden');
   enterBtn.disabled = true;
@@ -49,41 +56,129 @@ const cinematicCaption = document.getElementById('cinematic-caption');
 const cinematicLine = document.getElementById('cinematic-line');
 const outpostContinue = document.getElementById('outpost-continue');
 
-const STUDY = {
-  // Six deliberately distinctive nonce forms. A player encounters only the
-  // three forms attached to the three branches actually taken.
-  routes: {
-    river: {
-      bridge: {form:'menic', cues:'old, narrow, single-file'},
-      ford: {form:'blicket', cues:'shallow, stone-set, broken by exposed rocks'}
+const STUDY_VERSION = 'MERA_E4_0_COUNTERBALANCED_PILOT';
+const LEXICAL_ITEMS = ['menic','blicket','boskot','fiffin','virdex','teebu'];
+const SLOT_ORDER = [
+  'river_bridge','river_ford','woodland_pine','woodland_birch','ascent_ridge','ascent_switchback'
+];
+const ROUTE_META = {
+  river: {
+    bridge: {
+      slot:'river_bridge', sign:'BRIDGE', cues:'old, narrow, single-file',
+      context:w=>`The ${w} bridge is old and narrow, barely single-file. It should still hold.`,
+      reinforce:w=>`Stay centred on the ${w} bridge.`
     },
-    woodland: {
-      pine: {form:'boskot', cues:'dense, enclosed, wind-sheltered'},
-      birch: {form:'fiffin', cues:'open, exposed, wind-hit'}
+    ford: {
+      slot:'river_ford', sign:'CROSSING', cues:'shallow, stone-set, broken by exposed rocks',
+      context:w=>`The ${w} crossing is shallow, broken by exposed rocks. Watch your footing.`,
+      reinforce:w=>`Keep to the ${w} crossing until you reach the far bank.`
+    }
+  },
+  woodland: {
+    pine: {
+      slot:'woodland_pine', sign:'TRAIL', cues:'dense, enclosed, wind-sheltered',
+      context:w=>`This is the ${w} trail — sheltered beneath dense tree cover. Wind exposure should be lower here.`,
+      reinforce:w=>`Stay on the ${w} trail until the trees begin to thin.`
     },
-    ascent: {
-      ridge: {form:'virdex', cues:'steep, direct, loose-rock'},
-      switchback: {form:'teebu', cues:'long, winding, gradual'}
+    birch: {
+      slot:'woodland_birch', sign:'TRAIL', cues:'open, exposed, wind-hit',
+      context:w=>`This is the ${w} trail — open and exposed to the wind. Keep moving.`,
+      reinforce:w=>`Stay on the ${w} trail until you reach cover.`
+    }
+  },
+  ascent: {
+    ridge: {
+      slot:'ascent_ridge', sign:'RIDGE', cues:'steep, direct, loose-rock',
+      context:w=>`The ${w} ridge is steep and direct. Expect a hard climb.`,
+      reinforce:w=>`Keep climbing the ${w} ridge. The outpost is close.`
+    },
+    switchback: {
+      slot:'ascent_switchback', sign:'PATH', cues:'long, winding, gradual',
+      context:w=>`The ${w} path climbs gradually through long turns. It is slower, but easier.`,
+      reinforce:w=>`Stay on the ${w} path. Do not cut across the slope.`
     }
   }
 };
+const COUNTERBALANCE_CONDITIONS = Array.from({length:6},(_,shift)=>
+  Object.fromEntries(SLOT_ORDER.map((slot,i)=>[slot,LEXICAL_ITEMS[(i+shift)%LEXICAL_ITEMS.length]]))
+);
+function secureRandomInt(max){
+  if(globalThis.crypto?.getRandomValues){const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%max;}
+  return Math.floor(Math.random()*max);
+}
+const conditionParam=Number.parseInt(new URLSearchParams(location.search).get('condition')||'',10);
+const COUNTERBALANCE_CONDITION=Number.isInteger(conditionParam)&&conditionParam>=1&&conditionParam<=6?conditionParam:(secureRandomInt(6)+1);
+const CONDITION_SOURCE=Number.isInteger(conditionParam)&&conditionParam>=1&&conditionParam<=6?'url_override':'random';
+const LEXICAL_MAPPING={...COUNTERBALANCE_CONDITIONS[COUNTERBALANCE_CONDITION-1]};
+function routeMeta(kind,route){return ROUTE_META[kind]?.[route]||null;}
+function lexicalFor(kind,route){const meta=routeMeta(kind,route);return meta?LEXICAL_MAPPING[meta.slot]:null;}
+function clipIdFor(kind,route,phase){const meta=routeMeta(kind,route);const word=lexicalFor(kind,route);return meta&&word?`lex_${meta.slot}_${word}_${phase}`:null;}
+function makeSessionId(){
+  if(globalThis.crypto?.randomUUID)return crypto.randomUUID();
+  return `mera-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,12)}`;
+}
+function detectBrowserFamily(){
+  const ua=navigator.userAgent||'';
+  if(/Edg\//.test(ua))return 'Edge';
+  if(/Firefox\//.test(ua))return 'Firefox';
+  if(/Chrome\//.test(ua))return 'Chrome';
+  if(/Safari\//.test(ua))return 'Safari';
+  return 'Other';
+}
 
 const session = {
-  build: 'MERA_E3_9_1_PATHS_ROCKS',
+  schemaVersion: 1,
+  build: STUDY_VERSION,
+  sessionId: makeSessionId(),
+  createdAt: new Date().toISOString(),
   startedAt: null,
+  gameplayEndedAt: null,
   finishedAt: null,
+  studyCompletedAt: null,
+  timingMilestones:{bootReadyAt:null,introStartedAt:null,introEndedAt:null,gameStartedAt:null,outpostReachedAt:null,guideDisplayedAt:null,generalizationDisplayedAt:null,studyCompletedAt:null},
+  counterbalance: {
+    condition: COUNTERBALANCE_CONDITION,
+    assignmentSource: CONDITION_SOURCE,
+    mapping: {...LEXICAL_MAPPING}
+  },
   routes: {river:null, woodland:null, ascent:null},
-  exposures: {menic:0, blicket:0, boskot:0, fiffin:0, virdex:0, teebu:0},
+  decisions: {
+    river:{promptAt:null,choiceAt:null,latencySeconds:null,choice:null},
+    woodland:{promptAt:null,choiceAt:null,latencySeconds:null,choice:null},
+    ascent:{promptAt:null,choiceAt:null,latencySeconds:null,choice:null}
+  },
+  exposures: Object.fromEntries(LEXICAL_ITEMS.map(w=>[w,0])),
+  lexicalState: Object.fromEntries(SLOT_ORDER.map(slot=>[slot,{
+    word:LEXICAL_MAPPING[slot],contextStarted:false,contextStatus:null,signEncountered:false,signDwellMs:0,reinforceStatus:null
+  }])),
   events: [],
-  guide: '',
+  trajectory: [],
+  movement: {
+    totalGameplayMs:0, walkingMs:0, runningMs:0, stationaryMs:0, airborneMs:0,
+    cinematicMs:0, chatMs:0, windExposureMs:0, offTrailMs:0, totalDistance:0, walkingDistance:0, runningDistance:0,
+    airborneDistance:0, offTrailDistance:0, jumpCount:0, runKeyActivations:0, stateTransitions:0
+  },
+  navigation:{backtrackingEpisodes:0,maxBacktrackDistance:0,activeBacktrack:false,furthestProgressZ:216},
+  responses: {
+    guide:{displayedAt:null,firstInputAt:null,submittedAt:null,text:'',length:0},
+    generalization:{displayedAt:null,firstInputAt:null,submittedAt:null,text:'',length:0,stimuli:[]}
+  },
   mission: {relayRestored:false},
   environmentalEvents: [],
-  chat: {
-    opened: 0,
-    questions: [],
-    optionalTargetExposures: {menic:0, blicket:0, boskot:0, fiffin:0, virdex:0, teebu:0}
+  chat: {opened:0, questions:[], lexicalTargetsEnabled:false},
+  quality: {
+    audioFailures:[], visibilityHiddenCount:0, focusLossCount:0,
+    exposureWarnings:[], localExportSucceeded:false
   },
-  voice: {enabled:true, engine:'kokoro_heart_prerendered', profile:'af_heart', fixedStimulus:true}
+  technical: {
+    browserFamily:detectBrowserFamily(),
+    platform:navigator.userAgentData?.platform||navigator.platform||'unknown',
+    viewport:{width:window.innerWidth,height:window.innerHeight},
+    devicePixelRatio:Math.round((window.devicePixelRatio||1)*100)/100,
+    touchCapable:(navigator.maxTouchPoints||0)>0
+  },
+  storage: {mode:'local_pilot',remoteSubmission:false},
+  voice: {enabled:true,engine:'kokoro_heart_prerendered',profile:'af_heart',fixedStimulus:true}
 };
 const fired = new Set();
 let navTimer = null;
@@ -92,11 +187,16 @@ const navQueue = [];
 let gameStarted = false;
 let audioCtx = null;
 let chatOpen = false;
-let lastPlayerPosition = {x:0,z:216};
+let lastPlayerPosition = {x:0,y:0,z:216};
 let lastChatStage = '';
 let outpostFinalized = false;
 let outpostWatchdog = null;
 let outpostSubtitleTimers = [];
+let inputSnapshot={forward:false,backward:false,leftward:false,rightward:false,run:false,jump:false};
+let lastMovementState='not_started';
+let lastTrajectorySampleMs=0;
+let lastStageLogged=null;
+let lastLocalExportName='';
 const worldState = {
   introActive:false,
   cinematic:null,
@@ -105,16 +205,21 @@ const worldState = {
 };
 
 function nowMs(){ return performance.now(); }
+function relativeSeconds(){
+  return session.startedAt ? Math.round((Date.now()-new Date(session.startedAt).getTime())/10)/100 : 0;
+}
 function logEvent(type, data={}) {
-  session.events.push({
-    type,
-    t: session.startedAt ? Math.round((Date.now() - new Date(session.startedAt).getTime())/10)/100 : 0,
-    ...data
-  });
+  session.events.push({type,t:relativeSeconds(),...data});
 }
 function inputActive(){
   return boot.classList.contains('hidden') && gameStarted && !chatOpen && !worldState.introActive && !worldState.cinematic && !session.finishedAt;
 }
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){session.quality.visibilityHiddenCount++;logEvent('page_hidden');}
+  else logEvent('page_visible');
+});
+window.addEventListener('blur',()=>{if(gameStarted&&!session.studyCompletedAt){session.quality.focusLossCount++;logEvent('window_blur');}});
+window.addEventListener('focus',()=>{if(gameStarted&&!session.studyCompletedAt)logEvent('window_focus');});
 function radioCrackle(duration=.22, volume=.075){
   try{
     audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();
@@ -154,20 +259,13 @@ function startFieldWeather(){
   scheduleFieldLightning();
 }
 
-// E3.9 retains the verified E3.6.1 fixed Heart audio layer unchanged.
-// Participants only download/play the resulting WAV files; Kokoro is not loaded in-game.
+// Fixed Heart speech stimuli are pre-rendered; no speech synthesis runs during a study session.
 let activeMeraAudio = null;
 const VOICE_CLIPS = {
   intro:'audio/intro.wav',
   river_choice_prompt:'audio/decision_river.wav',
-  menic_intro:'audio/menic_intro.wav', menic_bare:'audio/menic_bare.wav',
-  blicket_intro:'audio/blicket_intro.wav', blicket_bare:'audio/blicket_bare.wav',
   wood_choice_prompt:'audio/decision_wood.wav',
-  boskot_intro:'audio/boskot_intro.wav', boskot_bare:'audio/boskot_bare.wav',
-  fiffin_intro:'audio/fiffin_intro.wav', fiffin_bare:'audio/fiffin_bare.wav',
   ascent_choice_prompt:'audio/decision_ascent.wav',
-  virdex_intro:'audio/virdex_intro.wav', virdex_bare:'audio/virdex_bare.wav',
-  teebu_intro:'audio/teebu_intro.wav', teebu_bare:'audio/teebu_bare.wav',
   consequence_river_bridge:'audio/consequence_river_bridge.wav',
   consequence_river_ford:'audio/consequence_river_ford.wav',
   consequence_woodland_pine:'audio/consequence_wood_pine.wav',
@@ -176,9 +274,20 @@ const VOICE_CLIPS = {
   consequence_ascent_switchback:'audio/consequence_ascent_switchback.wav',
   outro:'audio/outro.wav'
 };
+for(const slot of SLOT_ORDER){
+  for(const word of LEXICAL_ITEMS){
+    for(const phase of ['context','reinforce']){
+      const id=`lex_${slot}_${word}_${phase}`;
+      VOICE_CLIPS[id]=`audio/${id}.wav`;
+    }
+  }
+}
+const FIXED_VOICE_IDS=['intro','river_choice_prompt','wood_choice_prompt','ascent_choice_prompt','consequence_river_bridge','consequence_river_ford','consequence_woodland_pine','consequence_woodland_birch','consequence_ascent_ridge','consequence_ascent_switchback','outro'];
+const SESSION_VOICE_IDS=new Set(FIXED_VOICE_IDS);
+for(const slot of SLOT_ORDER){const word=LEXICAL_MAPPING[slot];for(const phase of ['context','reinforce'])SESSION_VOICE_IDS.add(`lex_${slot}_${word}_${phase}`);}
 const preloadedVoice = new Map();
-for(const [id,src] of Object.entries(VOICE_CLIPS)){
-  const a=new Audio(src); a.preload='auto'; preloadedVoice.set(id,a);
+for(const id of SESSION_VOICE_IDS){
+  const src=VOICE_CLIPS[id],a=new Audio(src);a.preload='auto';preloadedVoice.set(id,a);
 }
 function stopMeraVoice(){
   if(activeMeraAudio){
@@ -211,7 +320,7 @@ function playMeraClip(id){
 }
 function getVoiceDurationMs(id,fallback=5000){const a=preloadedVoice.get(id);return Number.isFinite(a?.duration)&&a.duration>0?a.duration*1000:fallback;}
 async function verifyHeartVoicePack(){
-  const required=Object.values(VOICE_CLIPS);
+  const required=[...SESSION_VOICE_IDS].map(id=>VOICE_CLIPS[id]);
   const failures=[];
   await Promise.all(required.map(src=>new Promise(resolve=>{
     const a=new Audio();
@@ -221,7 +330,7 @@ async function verifyHeartVoicePack(){
     setTimeout(()=>finish(false),7000);
   })));
   if(failures.length){
-    throw new Error(`Heart voice pack is missing or unreadable (${failures.length} file${failures.length===1?'':'s'}). Generate HEART_AUDIO_GENERATOR.html and upload the resulting audio/ folder. First missing: ${failures[0]}`);
+    throw new Error(`Heart voice pack is missing or unreadable (${failures.length} file${failures.length===1?'':'s'}). First missing: ${failures[0]}`);
   }
 }
 function thunderRumble(intensity=.12){
@@ -266,6 +375,7 @@ const INTRO_SUBTITLES = [
   [0.975,'Move.',true]
 ];
 async function beginIntro(){
+  session.timingMilestones.introStartedAt=new Date().toISOString();
   worldState.introActive=true;
   intro.classList.remove('hidden');intro.classList.add('booting');
   chatToggle.classList.add('hidden');
@@ -283,18 +393,34 @@ async function beginIntro(){
   timers.forEach(clearTimeout);
   intro.classList.remove('booting','flash');intro.classList.add('hidden');
   worldState.introActive=false;worldState.cinematic=null;gameStarted=true;
-  session.startedAt=new Date().toISOString();
-  logEvent('game_start',{intro:'storm_emergency_transmission',voice:'kokoro_heart_prerendered'});
+  session.timingMilestones.introEndedAt=new Date().toISOString();
+  session.startedAt=new Date().toISOString();session.timingMilestones.gameStartedAt=session.startedAt;
+  logEvent('game_start',{intro:'storm_emergency_transmission',voice:'kokoro_heart_prerendered',counterbalanceCondition:session.counterbalance.condition,mapping:{...session.counterbalance.mapping}});
   hud.classList.remove('hidden');help.classList.remove('hidden');routeStatus.classList.remove('hidden');
   startFieldWeather();
   chatToggle.classList.remove('hidden');refreshChatUI();
+}
+function decisionKindForPrompt(id){
+  return id==='river_choice_prompt'?'river':id==='wood_choice_prompt'?'woodland':id==='ascent_choice_prompt'?'ascent':null;
+}
+function recordLexicalOpportunity(word,slot,modality,phase,data={}){
+  if(word && session.exposures[word]!==undefined)session.exposures[word]++;
+  logEvent('lexical_exposure',{word,slot,modality,phase,...data});
 }
 function pumpNavQueue() {
   if (navBusy || !navQueue.length || session.finishedAt || worldState.introActive || worldState.cinematic) return;
   const msg = navQueue.shift();
   navBusy = true;
-  if (msg.target && session.exposures[msg.target] !== undefined) session.exposures[msg.target]++;
-  logEvent('nav_message', {id:msg.id, target:msg.target, exposure:msg.exposure, text:msg.text, voiced:!!msg.voice});
+  const decisionKind=decisionKindForPrompt(msg.id);
+  if(decisionKind && session.decisions[decisionKind].promptAt===null){
+    session.decisions[decisionKind].promptAt=relativeSeconds();
+    logEvent('decision_prompt_displayed',{kind:decisionKind,id:msg.id});
+  }
+  if(msg.target && msg.slot){
+    if(msg.exposure==='context')session.lexicalState[msg.slot].contextStarted=true;
+    recordLexicalOpportunity(msg.target,msg.slot,'voice',msg.exposure,{id:msg.id,status:'started'});
+  }
+  logEvent('nav_message', {id:msg.id,target:msg.target,slot:msg.slot,exposure:msg.exposure,text:msg.text,voiced:!!msg.voice});
   navCopy.textContent = msg.text;
   navState.textContent = msg.voice ? 'VOICE LINK' : 'ONLINE';
   navPanel.classList.toggle('target-word',!!msg.target);
@@ -306,27 +432,40 @@ function pumpNavQueue() {
     navBusy=false;setTimeout(pumpNavQueue,350);
   };
   if(msg.voice){
-    playMeraClip(msg.id)
-      .finally(()=>{navTimer=setTimeout(closeMessage,1500);});
+    playMeraClip(msg.id).then(result=>{
+      if(msg.target&&msg.slot){
+        const ls=session.lexicalState[msg.slot];
+        if(msg.exposure==='context')ls.contextStatus=result.status;
+        if(msg.exposure==='reinforce')ls.reinforceStatus=result.status;
+        logEvent('lexical_voice_result',{word:msg.target,slot:msg.slot,phase:msg.exposure,id:msg.id,status:result.status,duration:result.duration});
+        if(result.status!=='ended'){
+          session.quality.audioFailures.push({id:msg.id,word:msg.target,slot:msg.slot,phase:msg.exposure,status:result.status});
+        }
+      }
+      return result;
+    }).finally(()=>{navTimer=setTimeout(closeMessage,1500);});
   }else{
     navTimer=setTimeout(closeMessage,msg.duration);
   }
 }
-function showNav(id, text, {target=null, exposure=null, duration=7800, voice=false, voiceRate=.98}={}) {
+function showNav(id, text, {target=null,slot=null,exposure=null,duration=7800,voice=false,voiceRate=.98}={}) {
   if (fired.has(id)) return;
   fired.add(id);
-  navQueue.push({id,text,target,exposure,duration,voice,voiceRate});
+  navQueue.push({id,text,target,slot,exposure,duration,voice,voiceRate});
   pumpNavQueue();
 }
 function setRoute(kind, value) {
   if (session.routes[kind]) return;
   session.routes[kind] = value;
-  const item=STUDY.routes[kind][value];
-  logEvent('route_choice', {kind, value, lexicalItem:item.form});
+  const meta=routeMeta(kind,value),word=lexicalFor(kind,value);
+  const d=session.decisions[kind];
+  d.choiceAt=relativeSeconds();d.choice=value;d.lexicalItem=word;d.slot=meta?.slot||null;
+  d.latencySeconds=d.promptAt===null?null:Math.round((d.choiceAt-d.promptAt)*100)/100;
+  logEvent('route_choice', {kind,value,slot:meta?.slot||null,lexicalItem:word,decisionLatencySeconds:d.latencySeconds,position:{...lastPlayerPosition}});
   const id = kind === 'river' ? 'river-choice' : kind === 'woodland' ? 'wood-choice' : 'ascent-choice';
   const el = document.getElementById(id);
   if (el) el.textContent = value.toUpperCase();
-  window.dispatchEvent(new CustomEvent('mera-route',{detail:{kind,value}}));
+  window.dispatchEvent(new CustomEvent('mera-route',{detail:{kind,value,slot:meta?.slot||null,word}}));
 }
 function startConsequence(kind){
   if(!session.routes[kind] || worldState.effects[kind] || navBusy || navQueue.length) return;
@@ -401,13 +540,8 @@ function addChatMessage(role,text){
   row.append(tag,body); chatLog.appendChild(row); chatLog.scrollTop=chatLog.scrollHeight;
 }
 function optionalLexicalAnswer(form,withTarget,withoutTarget){
-  const used=session.chat.optionalTargetExposures[form]||0;
-  if(!used){
-    session.chat.optionalTargetExposures[form]=1;
-    session.exposures[form]=(session.exposures[form]||0)+1;
-    logEvent('optional_target_exposure',{source:'chat',target:form,exposure:'information_seeking'});
-    return {text:withTarget,target:form};
-  }
+  // The text link never exposes target forms. Lexical exposure is restricted
+  // to the three controlled route encounters (voice → sign → voice).
   return {text:withoutTarget,target:null};
 }
 function answerIntent(intent){
@@ -512,8 +646,102 @@ function updateElapsed() {
   const ms = Date.now() - new Date(session.startedAt).getTime();
   const sec = Math.max(0, Math.floor(ms/1000));
   const m = String(Math.floor(sec/60)).padStart(2,'0');
-  const s = String(sec%60).padStart(2,'0');
-  document.getElementById('elapsed').textContent = `${m}:${s}`;
+  const ss = String(sec%60).padStart(2,'0');
+  document.getElementById('elapsed').textContent = `${m}:${ss}`;
+}
+function routeSlotsExperienced(){
+  return ['river','woodland','ascent'].map(kind=>{
+    const route=session.routes[kind];return route?routeMeta(kind,route)?.slot:null;
+  }).filter(Boolean);
+}
+function shuffled(items){
+  const a=[...items];for(let i=a.length-1;i>0;i--){const j=secureRandomInt(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;
+}
+function stimulusSvg(slot){
+  const common=`viewBox="0 0 300 180" role="img" aria-label="Generalisation section"`;
+  const sky='<rect width="300" height="180" rx="16" fill="#77878a"/><path d="M0 112 Q75 88 150 108 T300 100 V180 H0Z" fill="#64715e"/>';
+  if(slot==='river_bridge')return `<svg ${common}>${sky}<path d="M0 126 Q150 145 300 124 V180 H0Z" fill="#425d66"/><path d="M88 108 L212 92" stroke="#6b5439" stroke-width="13"/><path d="M88 98 L212 82 M88 118 L212 102" stroke="#33291f" stroke-width="3"/><path d="M88 92 V124 M212 76 V108" stroke="#33291f" stroke-width="4"/></svg>`;
+  if(slot==='river_ford')return `<svg ${common}>${sky}<path d="M0 112 Q85 137 152 115 T300 121 V180 H0Z" fill="#496b75"/><g fill="#9b9b8d" stroke="#66675f" stroke-width="2"><ellipse cx="66" cy="134" rx="24" ry="10"/><ellipse cx="112" cy="123" rx="20" ry="9"/><ellipse cx="156" cy="132" rx="23" ry="10"/><ellipse cx="204" cy="119" rx="21" ry="9"/><ellipse cx="246" cy="130" rx="24" ry="10"/></g></svg>`;
+  if(slot==='woodland_pine')return `<svg ${common}><rect width="300" height="180" rx="16" fill="#43534a"/><path d="M132 180 Q145 110 151 76 Q162 112 170 180Z" fill="#9a8d72"/><g fill="#263d31"><path d="M22 180 L48 34 L75 180Z"/><path d="M64 180 L91 18 L118 180Z"/><path d="M188 180 L215 24 L244 180Z"/><path d="M228 180 L257 42 L285 180Z"/></g><g stroke="#1f3027" stroke-width="7"><path d="M49 65V180"/><path d="M92 49V180"/><path d="M215 53V180"/><path d="M258 68V180"/></g></svg>`;
+  if(slot==='woodland_birch')return `<svg ${common}><rect width="300" height="180" rx="16" fill="#849096"/><path d="M0 128 Q85 102 152 124 T300 111 V180 H0Z" fill="#8c9871"/><path d="M142 180 Q153 136 168 106 Q178 131 185 180Z" fill="#b5a88d"/><g stroke="#d8d1bc" stroke-width="5"><path d="M54 74V139"/><path d="M248 66V132"/></g><g stroke="#d8e0df" stroke-width="2" opacity=".72"><path d="M34 55l32 -8"/><path d="M215 47l43 -11"/><path d="M76 89l35 -7"/></g></svg>`;
+  if(slot==='ascent_ridge')return `<svg ${common}><rect width="300" height="180" rx="16" fill="#738086"/><path d="M0 180 L70 104 L133 120 L220 30 L300 76 V180Z" fill="#6f7167"/><path d="M139 180 Q166 126 192 83 Q207 57 220 30" fill="none" stroke="#b3a58b" stroke-width="12"/><g fill="#8e8d83"><circle cx="177" cy="111" r="10"/><circle cx="195" cy="77" r="8"/><circle cx="157" cy="143" r="7"/></g></svg>`;
+  return `<svg ${common}><rect width="300" height="180" rx="16" fill="#738086"/><path d="M0 180 L46 122 L110 108 L181 53 L249 32 L300 56 V180Z" fill="#77786b"/><path d="M67 168 L204 148 L105 126 L231 101 L135 78 L249 49" fill="none" stroke="#b9ad92" stroke-width="11" stroke-linejoin="round"/></svg>`;
+}
+function renderGeneralizationTask(){
+  const slots=shuffled(routeSlotsExperienced());
+  session.responses.generalization.stimuli=slots.map((slot,i)=>({label:String.fromCharCode(65+i),slot,targetWord:LEXICAL_MAPPING[slot]}));
+  generalizationStimuli.innerHTML=session.responses.generalization.stimuli.map(s=>
+    `<div class="stimulus-card"><div class="stimulus-label">${s.label}</div>${stimulusSvg(s.slot)}</div>`
+  ).join('');
+  finish.classList.add('hidden');
+  generalization.classList.remove('hidden');
+  session.responses.generalization.displayedAt=relativeSeconds();session.timingMilestones.generalizationDisplayedAt=new Date().toISOString();
+  logEvent('generalization_task_displayed',{stimuli:session.responses.generalization.stimuli.map(x=>({label:x.label,slot:x.slot}))});
+  setTimeout(()=>generalizationText.focus(),60);
+}
+function exposureIntegrity(){
+  const experienced=routeSlotsExperienced(),chosenSlots=new Set(experienced),warnings=[];
+  if(experienced.length!==3)warnings.push(`route choices incomplete: ${experienced.length}/3`);
+  for(const slot of SLOT_ORDER){
+    const ls=session.lexicalState[slot],selected=chosenSlots.has(slot);
+    if(selected){
+      if(ls.contextStatus!=='ended')warnings.push(`${slot}: context ${ls.contextStatus||'missing'}`);
+      if(!ls.signEncountered)warnings.push(`${slot}: sign missing`);
+      if(ls.reinforceStatus!=='ended')warnings.push(`${slot}: reinforcement ${ls.reinforceStatus||'missing'}`);
+      if(session.exposures[ls.word]!==3)warnings.push(`${slot}/${ls.word}: ${session.exposures[ls.word]} nominal exposures`);
+    }else if(session.exposures[ls.word]!==0){warnings.push(`${slot}/${ls.word}: unexpected exposure`);}
+  }
+  session.quality.exposureWarnings=warnings;
+  return warnings;
+}
+function finalizeDerivedData(){
+  const chosenSlots=routeSlotsExperienced();
+  const encountered=chosenSlots.map(slot=>{
+    const ls=session.lexicalState[slot];
+    return {slot,word:ls.word,nominalExposureCount:session.exposures[ls.word],contextStatus:ls.contextStatus,signEncountered:ls.signEncountered,signDwellMs:ls.signDwellMs,reinforceStatus:ls.reinforceStatus};
+  });
+  const encounteredWords=encountered.map(x=>x.word);
+  const ms=session.movement;
+  session.derived={
+    encountered,
+    encounteredWords,
+    unexposedWords:LEXICAL_ITEMS.filter(w=>!encounteredWords.includes(w)),
+    nominalExposureTotal:Object.values(session.exposures).reduce((a,b)=>a+b,0),
+    expectedNominalExposureTotal:9,
+    exposureIntegrityWarnings:exposureIntegrity(),
+    timingSeconds:{
+      totalSession:session.studyCompletedAt?Math.round((new Date(session.studyCompletedAt)-new Date(session.createdAt))/10)/100:null,
+      gameplay:session.startedAt&&session.gameplayEndedAt?Math.round((new Date(session.gameplayEndedAt)-new Date(session.startedAt))/10)/100:null,
+      guideResponse:session.responses.guide.displayedAt!==null&&session.responses.guide.submittedAt!==null?Math.round((session.responses.guide.submittedAt-session.responses.guide.displayedAt)*100)/100:null,
+      generalizationResponse:session.responses.generalization.displayedAt!==null&&session.responses.generalization.submittedAt!==null?Math.round((session.responses.generalization.submittedAt-session.responses.generalization.displayedAt)*100)/100:null,
+      walking:Math.round(ms.walkingMs/10)/100,
+      running:Math.round(ms.runningMs/10)/100,
+      stationary:Math.round(ms.stationaryMs/10)/100,
+      airborne:Math.round(ms.airborneMs/10)/100,
+      cinematic:Math.round(ms.cinematicMs/10)/100,
+      chat:Math.round(ms.chatMs/10)/100,
+      windExposure:Math.round(ms.windExposureMs/10)/100,
+      offTrail:Math.round(ms.offTrailMs/10)/100
+    },
+    distance:{
+      total:+ms.totalDistance.toFixed(2),walking:+ms.walkingDistance.toFixed(2),running:+ms.runningDistance.toFixed(2),airborne:+ms.airborneDistance.toFixed(2),offTrail:+ms.offTrailDistance.toFixed(2)
+    },
+    navigation:{backtrackingEpisodes:session.navigation.backtrackingEpisodes,maxBacktrackDistance:+session.navigation.maxBacktrackDistance.toFixed(2)}
+  };
+}
+function sessionFilename(){return `mera_${STUDY_VERSION.toLowerCase()}_${session.sessionId.slice(0,8)}.json`;}
+function downloadSession({automatic=false}={}) {
+  const filename=sessionFilename();
+  try{
+    session.quality.localExportSucceeded=true;lastLocalExportName=filename;
+    logEvent(automatic?'local_export_auto':'local_export_manual',{filename});
+    if(session.studyCompletedAt)finalizeDerivedData();
+    const blob=new Blob([JSON.stringify(session,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);
+  }catch(error){
+    session.quality.localExportSucceeded=false;logEvent('local_export_failed',{message:String(error?.message||error)});
+  }
+  return filename;
 }
 // A blocked/missing audio event must never prevent collection of the free-text DV.
 function revealGuideTask(reason='audio_completed') {
@@ -523,85 +751,70 @@ function revealGuideTask(reason='audio_completed') {
   outpostWatchdog = null;
   outpostSubtitleTimers.forEach(clearTimeout);
   outpostSubtitleTimers = [];
-  stopMeraVoice();
-  worldState.cinematic = null;
-  cinematicEl.classList.add('hidden');
-  outpostContinue.classList.add('hidden');
-  navState.textContent = 'OFFLINE';
-  logEvent('guide_task_displayed', {reason});
+  stopMeraVoice();worldState.cinematic=null;cinematicEl.classList.add('hidden');outpostContinue.classList.add('hidden');
+  navState.textContent='OFFLINE';
+  session.responses.guide.displayedAt=relativeSeconds();session.timingMilestones.guideDisplayedAt=new Date().toISOString();
+  logEvent('guide_task_displayed',{reason});
   finish.classList.remove('hidden');
-  setTimeout(() => guideText.focus(), 60);
+  setTimeout(()=>guideText.focus(),60);
 }
-outpostContinue.addEventListener('click', () => revealGuideTask('participant_continued'));
+outpostContinue.addEventListener('click',()=>revealGuideTask('participant_continued'));
 
 async function finishStudy(outpostPoint) {
   if (session.finishedAt || worldState.cinematic?.id === 'outro') return;
-  session.finishedAt = new Date().toISOString();
-  session.mission.relayRestored = true;
-  logEvent('relay_restored', {status:'emergency_uplink_online'});
-  logEvent('outpost_reached', {routes:{...session.routes}});
-  closeChat(); chatToggle.classList.add('hidden'); stopMeraVoice();
-  hud.classList.add('hidden'); help.classList.add('hidden'); routeStatus.classList.add('hidden');
-  navPanel.classList.add('hidden'); navBusy=false;navQueue.length=0;
-  // The arrival coordinates/height are passed from the 3D scene. In E3.6,
-  // OUTPOST and terrainHeight were local to bootApp and threw ReferenceError here.
+  session.finishedAt=new Date().toISOString();session.gameplayEndedAt=session.finishedAt;session.timingMilestones.outpostReachedAt=session.finishedAt;
+  session.mission.relayRestored=true;
+  logEvent('relay_restored',{status:'emergency_uplink_online'});
+  logEvent('outpost_reached',{routes:{...session.routes},position:{...lastPlayerPosition}});
+  closeChat();chatToggle.classList.add('hidden');stopMeraVoice();
+  hud.classList.add('hidden');help.classList.add('hidden');routeStatus.classList.add('hidden');
+  navPanel.classList.add('hidden');navBusy=false;navQueue.length=0;
   const durationMs=getVoiceDurationMs('outro',30000);
-  const location=outpostPoint || {x:10,y:6,z:-218};
+  const location=outpostPoint||{x:10,y:6,z:-218};
   worldState.cinematic={id:'outro',started:performance.now(),duration:durationMs+900,
-    from:[location.x+5,location.y+12,location.z+14],
-    to:[location.x+1,location.y+10,location.z+7],
-    lookAt:[location.x,location.y+6,location.z]};
-  cinematicCaption.textContent='NORTHERN OUTPOST · RELAY RESTART';
-  cinematicEl.classList.remove('hidden');
-  cinematicLine.textContent='Northern Outpost reached.';
-  outpostContinue.classList.add('hidden');
-  setTimeout(() => {if(!outpostFinalized)outpostContinue.classList.remove('hidden');},1800);
+    from:[location.x+5,location.y+12,location.z+14],to:[location.x+1,location.y+10,location.z+7],lookAt:[location.x,location.y+6,location.z]};
+  cinematicCaption.textContent='NORTHERN OUTPOST · RELAY RESTART';cinematicEl.classList.remove('hidden');cinematicLine.textContent='Northern Outpost reached.';
+  outpostContinue.classList.add('hidden');setTimeout(()=>{if(!outpostFinalized)outpostContinue.classList.remove('hidden');},1800);
   const segments=[
     [0.00,'Northern Outpost reached.'],
-    [0.075,'Stand by. Attempting relay restart.'],
-    [0.175,'Uplink restored. Emergency channel is responding.'],
-    [0.300,'Help can be contacted.'],
-    [0.360,'There is a problem.'],
-    [0.425,'My local navigation cache was damaged during the uplink transfer.'],
-    [0.610,'Another responder is approaching from the southern trailhead. They will not have access to my route guidance.'],
-    [0.825,'Leave them clear directions to the outpost. Describe the route you took and anything they need to know.']
+    [0.12,'Stand by. Attempting relay restart.'],
+    [0.28,'Uplink restored. Emergency channel is responding.'],
+    [0.46,'My local navigation cache is empty.'],
+    [0.60,'The rescue team is approaching from the southern trailhead. They will not have access to my route guidance.'],
+    [0.82,'Tell them exactly how to reach the outpost. Describe the route you took and anything they need to know.']
   ];
-  outpostSubtitleTimers=segments.slice(1).map(([fraction,text])=>setTimeout(()=>{
-    if(!outpostFinalized)cinematicLine.textContent=text;
-  },durationMs*fraction));
-  // Independent of audio promises, a bounded watchdog guarantees the writing
-  // task appears even if an onended event never fires.
+  outpostSubtitleTimers=segments.slice(1).map(([fraction,text])=>setTimeout(()=>{if(!outpostFinalized)cinematicLine.textContent=text;},durationMs*fraction));
   outpostWatchdog=setTimeout(()=>revealGuideTask('audio_watchdog'),Math.min(90000,Math.max(65000,durationMs+8000)));
-  try {
+  try{
     const result=await playMeraClip('outro');
-    if(!outpostFinalized) {
-      await sleep(result.status==='ended'?850:2000);
-      revealGuideTask(result.status==='ended'?'audio_completed':`audio_${result.status}`);
-    }
-  } catch(error) {
-    logEvent('outpost_voice_error',{message:String(error?.message||error)});
-    if(!outpostFinalized)revealGuideTask('audio_error');
-  }
-}
-function downloadSession() {
-  const blob = new Blob([JSON.stringify(session, null, 2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `mera_e3_7_session_${Date.now()}.json`;
-  a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),900);
+    if(!outpostFinalized){await sleep(result.status==='ended'?850:2000);revealGuideTask(result.status==='ended'?'audio_completed':`audio_${result.status}`);}
+  }catch(error){logEvent('outpost_voice_error',{message:String(error?.message||error)});if(!outpostFinalized)revealGuideTask('audio_error');}
 }
 
-saveGuideBtn.addEventListener('click', () => {
-  const text = guideText.value.trim();
-  if (!text) { saveNote.textContent = 'Please write a short route guide first.'; return; }
-  session.guide = text;
-  logEvent('guide_saved', {length:text.length});
-  saveNote.textContent = 'Guide saved locally in this session. You can download the pilot JSON.';
-  downloadSessionBtn.classList.remove('hidden');
+guideText.addEventListener('input',()=>{
+  if(session.responses.guide.firstInputAt===null){session.responses.guide.firstInputAt=relativeSeconds();logEvent('guide_first_input');}
 });
-downloadSessionBtn.addEventListener('click', downloadSession);
-replayBtn.addEventListener('click', () => location.reload());
+generalizationText.addEventListener('input',()=>{
+  if(session.responses.generalization.firstInputAt===null){session.responses.generalization.firstInputAt=relativeSeconds();logEvent('generalization_first_input');}
+});
+saveGuideBtn.addEventListener('click',()=>{
+  const raw=guideText.value;
+  if(!raw.trim()){saveNote.textContent='Please write a short route guide first.';return;}
+  session.responses.guide.text=raw;session.responses.guide.length=raw.length;session.responses.guide.submittedAt=relativeSeconds();
+  logEvent('guide_submitted',{length:raw.length,responseSeconds:session.responses.guide.displayedAt===null?null:Math.round((session.responses.guide.submittedAt-session.responses.guide.displayedAt)*100)/100});
+  renderGeneralizationTask();
+});
+submitGeneralizationBtn.addEventListener('click',()=>{
+  const raw=generalizationText.value;
+  if(!raw.trim()){generalizationNote.textContent='Please describe sections A, B and C before completing the task.';return;}
+  session.responses.generalization.text=raw;session.responses.generalization.length=raw.length;session.responses.generalization.submittedAt=relativeSeconds();
+  logEvent('generalization_submitted',{length:raw.length,responseSeconds:session.responses.generalization.displayedAt===null?null:Math.round((session.responses.generalization.submittedAt-session.responses.generalization.displayedAt)*100)/100});
+  session.studyCompletedAt=new Date().toISOString();session.timingMilestones.studyCompletedAt=session.studyCompletedAt;logEvent('study_complete');finalizeDerivedData();
+  const filename=downloadSession({automatic:true});
+  generalization.classList.add('hidden');completeScreen.classList.remove('hidden');completionFile.textContent=filename;
+});
+downloadSessionBtn.addEventListener('click',()=>downloadSession({automatic:false}));
+replayBtn.addEventListener('click',()=>location.reload());
 
 async function bootApp() {
   try {
@@ -1330,28 +1543,47 @@ async function bootApp() {
       return h(RigidBody,{type:'fixed',colliders:false},...locks);
     }
 
-    function LexicalSignpost({position,rotation=0,kind,route,lines,mats}){
-      // The entire wooden marker is in the world from the initial render. Its
-      // lettering is disclosed only after commitment AND within readable range.
-      // This prevents exposure to a label on the unchosen route.
+    function LexicalSignpost({position,rotation=0,kind,route,mats}){
+      // A committed route receives exactly one visual target-form encounter. The
+      // lettering is withheld until the first spoken contextualisation has resolved.
+      const meta=routeMeta(kind,route),slot=meta.slot,word=LEXICAL_MAPPING[slot];
+      const lines=[word.toUpperCase(),meta.sign];
       const blank=useMemo(()=>makeTextTexture([]),[]);
-      const labelled=useMemo(()=>makeTextTexture(lines),[lines[0],lines[1]]);
+      const labelled=useMemo(()=>makeTextTexture(lines),[word,meta.sign]);
       const mat=useMemo(()=>new THREE.MeshStandardMaterial({map:blank,roughness:1}),[blank]);
-      const readable=useRef(false);
+      const revealed=useRef(false),inside=useRef(false),enteredAt=useRef(null);
       useFrame(()=>{
         const distance=Math.hypot(lastPlayerPosition.x-position[0],lastPlayerPosition.z-position[2]);
-        const shouldRead=readable.current || (session.routes[kind]===route && distance<=17);
-        if(shouldRead!==readable.current){
-          readable.current=shouldRead;
-          mat.map=shouldRead?labelled:blank;
-          mat.needsUpdate=true;
-          if(shouldRead)logEvent('lexical_sign_in_range',{
-            kind,route,item:lines[0].toLowerCase(),distance:Math.round(distance*10)/10,
-            note:'proximity, not verified visual attention'
+        const ls=session.lexicalState[slot];
+        const canExpose=session.routes[kind]===route && ls.contextStarted;
+        const inRange=canExpose && distance<=17;
+        if(inRange && !revealed.current){
+          revealed.current=true;
+          mat.map=labelled;mat.needsUpdate=true;
+          ls.signEncountered=true;
+          recordLexicalOpportunity(word,slot,'sign','sign',{
+            kind,route,distance:Math.round(distance*10)/10,
+            note:'proximity-defined visual exposure; visual attention not directly observed'
           });
         }
+        if(inRange && !inside.current){
+          inside.current=true;enteredAt.current=performance.now();
+          logEvent('lexical_sign_enter',{word,slot,kind,route,distance:Math.round(distance*10)/10});
+        }else if(!inRange && inside.current){
+          inside.current=false;
+          const dwell=Math.max(0,performance.now()-(enteredAt.current||performance.now()));
+          enteredAt.current=null;ls.signDwellMs+=Math.round(dwell);
+          logEvent('lexical_sign_exit',{word,slot,kind,route,dwellMs:Math.round(dwell)});
+        }
       });
-      useEffect(()=>()=>{mat.dispose();blank.dispose();labelled.dispose();},[mat,blank,labelled]);
+      useEffect(()=>()=>{
+        if(inside.current&&enteredAt.current){
+          const dwell=Math.max(0,performance.now()-enteredAt.current);
+          session.lexicalState[slot].signDwellMs+=Math.round(dwell);
+          logEvent('lexical_sign_exit',{word,slot,kind,route,dwellMs:Math.round(dwell),reason:'unmount'});
+        }
+        mat.dispose();blank.dispose();labelled.dispose();
+      },[mat,blank,labelled]);
       return h('group',{
         position:[position[0],terrainHeight(position[0],position[2]),position[2]],
         rotation:[0,rotation,0]
@@ -1365,15 +1597,13 @@ async function bootApp() {
       );
     }
     function DynamicLexicalSigns({mats}){
-      // These six markers are mounted immediately, *ahead* of the commitment
-      // triggers and on the outer edge of the actual, divergent paths.
       return h(React.Fragment,null,
-        h(LexicalSignpost,{key:'lex-men',position:[-34,0,127],rotation:.12,kind:'river',route:'bridge',lines:['MENIC','BRIDGE'],mats}),
-        h(LexicalSignpost,{key:'lex-bli',position:[34,0,127],rotation:-.12,kind:'river',route:'ford',lines:['BLICKET','CROSSING'],mats}),
-        h(LexicalSignpost,{key:'lex-bos',position:[-37,0,13],rotation:.10,kind:'woodland',route:'pine',lines:['BOSKOT','TRAIL'],mats}),
-        h(LexicalSignpost,{key:'lex-fif',position:[37,0,13],rotation:-.10,kind:'woodland',route:'birch',lines:['FIFFIN','TRAIL'],mats}),
-        h(LexicalSignpost,{key:'lex-vir',position:[24,0,-121],rotation:-.08,kind:'ascent',route:'ridge',lines:['VIRDEX','RIDGE'],mats}),
-        h(LexicalSignpost,{key:'lex-tee',position:[-44,0,-118],rotation:.08,kind:'ascent',route:'switchback',lines:['TEEBU','PATH'],mats})
+        h(LexicalSignpost,{key:'river_bridge',position:[-34,0,127],rotation:.12,kind:'river',route:'bridge',mats}),
+        h(LexicalSignpost,{key:'river_ford',position:[34,0,127],rotation:-.12,kind:'river',route:'ford',mats}),
+        h(LexicalSignpost,{key:'woodland_pine',position:[-37,0,13],rotation:.10,kind:'woodland',route:'pine',mats}),
+        h(LexicalSignpost,{key:'woodland_birch',position:[37,0,13],rotation:-.10,kind:'woodland',route:'birch',mats}),
+        h(LexicalSignpost,{key:'ascent_ridge',position:[24,0,-121],rotation:-.08,kind:'ascent',route:'ridge',mats}),
+        h(LexicalSignpost,{key:'ascent_switchback',position:[-44,0,-118],rotation:.08,kind:'ascent',route:'switchback',mats})
       );
     }
 
@@ -1535,8 +1765,97 @@ async function bootApp() {
     }
     function DirectKeyboardInput({controllerRef}){
       const pressed=useRef({forward:false,backward:false,leftward:false,rightward:false,run:false,jump:false});
-      useEffect(()=>{const map={KeyW:'forward',ArrowUp:'forward',KeyS:'backward',ArrowDown:'backward',KeyA:'leftward',ArrowLeft:'leftward',KeyD:'rightward',ArrowRight:'rightward',ShiftLeft:'run',ShiftRight:'run',Space:'jump'};const sync=()=>{const c=controllerRef.current,active=inputActive();if(c)c.setMovement(active?{...pressed.current}:{forward:false,backward:false,leftward:false,rightward:false,run:false,jump:false});const el=document.getElementById('input-state');if(el){const p=pressed.current,a=[];if(active){if(p.forward)a.push('W');if(p.backward)a.push('S');if(p.leftward)a.push('A');if(p.rightward)a.push('D');if(p.run)a.push('RUN');if(p.jump)a.push('JUMP');}el.textContent=a.length?a.join(' + '):'—';}};const isTyping=e=>{const t=e.target,tag=t?.tagName;return tag==='INPUT'||tag==='TEXTAREA'||t?.isContentEditable;};const down=e=>{if(isTyping(e))return;const f=map[e.code];if(!f)return;e.preventDefault();pressed.current[f]=true;sync();};const up=e=>{if(isTyping(e))return;const f=map[e.code];if(!f)return;e.preventDefault();pressed.current[f]=false;sync();};const clear=()=>{Object.keys(pressed.current).forEach(k=>pressed.current[k]=false);sync();};window.addEventListener('keydown',down,{passive:false});window.addEventListener('keyup',up,{passive:false});window.addEventListener('blur',clear);return()=>{window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);window.removeEventListener('blur',clear);};},[controllerRef]);
-      useFrame(()=>{const c=controllerRef.current;if(c)c.setMovement(inputActive()?{...pressed.current}:{forward:false,backward:false,leftward:false,rightward:false,run:false,jump:false});});return null;
+      useEffect(()=>{
+        const map={KeyW:'forward',ArrowUp:'forward',KeyS:'backward',ArrowDown:'backward',KeyA:'leftward',ArrowLeft:'leftward',KeyD:'rightward',ArrowRight:'rightward',ShiftLeft:'run',ShiftRight:'run',Space:'jump'};
+        const sync=()=>{
+          inputSnapshot={...pressed.current};
+          const c=controllerRef.current,active=inputActive();
+          if(c)c.setMovement(active?{...pressed.current}:{forward:false,backward:false,leftward:false,rightward:false,run:false,jump:false});
+          const el=document.getElementById('input-state');
+          if(el){
+            const p=pressed.current,a=[];
+            if(active){if(p.forward)a.push('W');if(p.backward)a.push('S');if(p.leftward)a.push('A');if(p.rightward)a.push('D');if(p.run)a.push('RUN');if(p.jump)a.push('JUMP');}
+            el.textContent=a.length?a.join(' + '):'—';
+          }
+        };
+        const isTyping=e=>{const t=e.target,tag=t?.tagName;return tag==='INPUT'||tag==='TEXTAREA'||t?.isContentEditable;};
+        const down=e=>{
+          if(isTyping(e))return;
+          const f=map[e.code];if(!f)return;e.preventDefault();
+          if(!pressed.current[f]){
+            if(f==='jump'&&inputActive()){session.movement.jumpCount++;logEvent('jump_input',{position:{...lastPlayerPosition}});}
+            if(f==='run'&&inputActive()){session.movement.runKeyActivations++;logEvent('run_key_down',{position:{...lastPlayerPosition}});}
+          }
+          pressed.current[f]=true;sync();
+        };
+        const up=e=>{if(isTyping(e))return;const f=map[e.code];if(!f)return;e.preventDefault();pressed.current[f]=false;sync();};
+        const clear=()=>{Object.keys(pressed.current).forEach(k=>pressed.current[k]=false);sync();};
+        window.addEventListener('keydown',down,{passive:false});window.addEventListener('keyup',up);window.addEventListener('blur',clear);
+        return()=>{window.removeEventListener('keydown',down);window.removeEventListener('keyup',up);window.removeEventListener('blur',clear);};
+      },[controllerRef]);
+      useFrame(()=>{const c=controllerRef.current;if(c)c.setMovement(inputActive()?{...pressed.current}:{forward:false,backward:false,leftward:false,rightward:false,run:false,jump:false});});
+      return null;
+    }
+    function MovementTelemetry({controllerRef}){
+      const prev=useRef(null),lastSample=useRef(0);
+      useFrame((_,delta)=>{
+        if(!gameStarted||session.finishedAt)return;
+        const c=controllerRef.current,p=c?.currPos;if(!p)return;
+        const now=performance.now();
+        const dt=Math.min(.12,Math.max(0,delta||0));
+        let dist=0;
+        if(prev.current)dist=Math.hypot(p.x-prev.current.x,p.y-prev.current.y,p.z-prev.current.z);
+        const horizontal=prev.current?Math.hypot(p.x-prev.current.x,p.z-prev.current.z):0;
+        const moving=horizontal>.0015;
+        let state='stationary';
+        if(worldState.cinematic)state='cinematic';
+        else if(chatOpen)state='chat';
+        else if(!c.isOnGround)state='airborne';
+        else if(moving&&inputSnapshot.run)state='running';
+        else if(moving)state='walking';
+        const ms=dt*1000;
+        const trailDist=Math.min(...Object.values(PATHS).map(path=>distancePolyline(p.x,p.z,path)));
+        const offTrail=trailDist>3.2;
+        session.movement.totalGameplayMs+=ms;
+        if(worldState.windExposed)session.movement.windExposureMs+=ms;
+        if(offTrail&&state!=='cinematic'&&state!=='chat')session.movement.offTrailMs+=ms;
+        if(state==='walking')session.movement.walkingMs+=ms;
+        else if(state==='running')session.movement.runningMs+=ms;
+        else if(state==='stationary')session.movement.stationaryMs+=ms;
+        else if(state==='airborne')session.movement.airborneMs+=ms;
+        else if(state==='cinematic')session.movement.cinematicMs+=ms;
+        else if(state==='chat')session.movement.chatMs+=ms;
+        if(dist<5){
+          session.movement.totalDistance+=dist;
+          if(state==='walking')session.movement.walkingDistance+=dist;
+          else if(state==='running')session.movement.runningDistance+=dist;
+          else if(state==='airborne')session.movement.airborneDistance+=dist;
+          if(offTrail&&state!=='cinematic'&&state!=='chat')session.movement.offTrailDistance+=dist;
+        }
+        if(session.routes.river||session.routes.woodland||session.routes.ascent){
+          session.navigation.furthestProgressZ=Math.min(session.navigation.furthestProgressZ,p.z);
+          const backtrack=Math.max(0,p.z-session.navigation.furthestProgressZ);
+          session.navigation.maxBacktrackDistance=Math.max(session.navigation.maxBacktrackDistance,backtrack);
+          if(backtrack>4&&!session.navigation.activeBacktrack){session.navigation.activeBacktrack=true;session.navigation.backtrackingEpisodes++;logEvent('backtracking_start',{distance:+backtrack.toFixed(2),position:{x:+p.x.toFixed(2),z:+p.z.toFixed(2)}});}
+          else if(backtrack<1.5&&session.navigation.activeBacktrack){session.navigation.activeBacktrack=false;logEvent('backtracking_end',{position:{x:+p.x.toFixed(2),z:+p.z.toFixed(2)}});}
+        }
+        if(state!==lastMovementState){
+          if(lastMovementState!=='not_started')session.movement.stateTransitions++;
+          logEvent('movement_state',{from:lastMovementState,to:state,position:{x:+p.x.toFixed(2),y:+p.y.toFixed(2),z:+p.z.toFixed(2)}});
+          lastMovementState=state;
+        }
+        if(now-lastSample.current>=1000){
+          lastSample.current=now;
+          session.trajectory.push({
+            t:relativeSeconds(),x:+p.x.toFixed(2),y:+p.y.toFixed(2),z:+p.z.toFixed(2),state,
+            grounded:!!c.isOnGround,stage:currentChatStage(),runKey:!!inputSnapshot.run,
+            nearestTrailDistance:+trailDist.toFixed(2),offTrail,windExposed:!!worldState.windExposed,
+            routes:{river:session.routes.river,woodland:session.routes.woodland,ascent:session.routes.ascent}
+          });
+        }
+        prev.current={x:p.x,y:p.y,z:p.z};
+      });
+      return null;
     }
     function FollowCamera({controllerRef}){
       const controls=useRef(),{camera}=useThree(),started=useRef(false),wasCinematic=useRef(false),up=useMemo(()=>new THREE.Vector3(0,1,0),[]);
@@ -1563,8 +1882,10 @@ async function bootApp() {
     function updateStudyFromPosition(p){
       if(!gameStarted||session.finishedAt||worldState.cinematic)return;
       updateElapsed();
-      lastPlayerPosition={x:p.x,z:p.z};
+      lastPlayerPosition={x:p.x,y:p.y,z:p.z};
       refreshChatUI();
+      const stage=currentChatStage();
+      if(stage!==lastStageLogged){lastStageLogged=stage;logEvent('stage_enter',{stage,position:{...lastPlayerPosition}});}
 
       const windy=session.routes.woodland==='birch' && inBirchWindZone(p);
       if(!windy)windNote?.classList.remove('active');
@@ -1583,54 +1904,43 @@ async function bootApp() {
         logEvent('environmental_event',{event:'shallow_water',route:'ford'});
       }
 
-      // DECISION 1 — no nonce item before commitment. The player chooses from ordinary
-      // route information, then encounters the form only on the route actually taken.
-      if(p.z<174)showNav('river_choice_prompt','Two crossings ahead. The bridge is faster, but narrow. The rocks are slower, but give you more room. Water levels are rising. Choose.',{duration:12000,voice:'Two crossings ahead. The bridge is faster, but narrow. The rocks are slower, but give you more room. Water levels are rising. Choose.'});
+      // Decision 1: target forms appear only after route commitment.
+      if(p.z<174)showNav('river_choice_prompt','Two crossings ahead. The bridge is faster, but narrow. The rocks are slower, but give you more room. Water levels are rising. Choose.',{duration:12000,voice:true});
       if(!session.routes.river && p.z<133){
         if(p.x<-14)setRoute('river','bridge'); else if(p.x>14)setRoute('river','ford');
       }
-      if(session.routes.river==='bridge'){
-        showNav('menic_intro','The menic bridge is old and narrow, barely single-file. It should still hold.',{target:'menic',exposure:'context',duration:10000,voice:'The menic bridge is old and narrow, barely single-file. It should still hold.',voiceRate:.94});
-        if(p.z<124)showNav('menic_bare','Stay centred on the menic bridge.',{target:'menic',exposure:'bare',duration:8500,voice:'Stay centred on the menic bridge.',voiceRate:.94});
-        if(p.z<106)startConsequence('river');
-      }
-      if(session.routes.river==='ford'){
-        showNav('blicket_intro','The blicket crossing is shallow, broken by exposed rocks. Watch your footing.',{target:'blicket',exposure:'context',duration:10000,voice:'The blicket crossing is shallow, broken by exposed rocks. Watch your footing.',voiceRate:.94});
-        if(p.z<122)showNav('blicket_bare','Keep to the blicket crossing until you reach the far bank.',{target:'blicket',exposure:'bare',duration:8500,voice:'Keep to the blicket crossing until you reach the far bank.',voiceRate:.94});
-        if(p.z<106)startConsequence('river');
+      if(session.routes.river){
+        const route=session.routes.river,meta=routeMeta('river',route),word=lexicalFor('river',route),ls=session.lexicalState[meta.slot];
+        showNav(clipIdFor('river',route,'context'),meta.context(word),{target:word,slot:meta.slot,exposure:'context',duration:10000,voice:true});
+        const reinforceThreshold=route==='bridge'?124:122;
+        if(ls.signEncountered && p.z<reinforceThreshold)showNav(clipIdFor('river',route,'reinforce'),meta.reinforce(word),{target:word,slot:meta.slot,exposure:'reinforce',duration:8500,voice:true});
+        if(p.z<106 && ls.reinforceStatus!==null)startConsequence('river');
       }
 
-      // DECISION 2 — shelter versus exposure. Branches are physically isolated until
-      // the reconvergence in the upper basin.
-      if(p.z<69)showNav('wood_choice_prompt','The trail divides again. The forest route is sheltered, but storm debris may slow you down. The open route is faster, but exposed to the wind. The front is getting closer. Choose.',{duration:12000,voice:'The trail divides again. The forest route is sheltered, but storm debris may slow you down. The open route is faster, but exposed to the wind. The front is getting closer. Choose.'});
+      // Decision 2: shelter versus exposure.
+      if(p.z<69)showNav('wood_choice_prompt','The trail divides again. The forest route is sheltered, but storm debris may slow you down. The open route is faster, but exposed to the wind. The front is getting closer. Choose.',{duration:12000,voice:true});
       if(!session.routes.woodland && p.z<27){
         if(p.x<-9)setRoute('woodland','pine'); else if(p.x>9)setRoute('woodland','birch');
       }
-      if(session.routes.woodland==='pine'){
-        showNav('boskot_intro','This is the boskot trail — sheltered beneath dense tree cover. Wind exposure should be lower here.',{target:'boskot',exposure:'context',duration:10000,voice:'This is the boskot trail — sheltered beneath dense tree cover. Wind exposure should be lower here.',voiceRate:.94});
-        if(p.z<1)showNav('boskot_bare','Stay on the boskot trail until the trees begin to thin.',{target:'boskot',exposure:'bare',duration:8500,voice:'Stay on the boskot trail until the trees begin to thin.',voiceRate:.94});
-        if(p.z<-37)startConsequence('woodland');
-      }
-      if(session.routes.woodland==='birch'){
-        showNav('fiffin_intro','This is the fiffin trail — open and exposed to the wind. Keep moving.',{target:'fiffin',exposure:'context',duration:10000,voice:'This is the fiffin trail — open and exposed to the wind. Keep moving.',voiceRate:.94});
-        if(p.z<3)showNav('fiffin_bare','Stay on the fiffin trail until you reach cover.',{target:'fiffin',exposure:'bare',duration:8500,voice:'Stay on the fiffin trail until you reach cover.',voiceRate:.94});
-        if(p.z<-37)startConsequence('woodland');
+      if(session.routes.woodland){
+        const route=session.routes.woodland,meta=routeMeta('woodland',route),word=lexicalFor('woodland',route),ls=session.lexicalState[meta.slot];
+        showNav(clipIdFor('woodland',route,'context'),meta.context(word),{target:word,slot:meta.slot,exposure:'context',duration:10000,voice:true});
+        const reinforceThreshold=route==='pine'?1:3;
+        if(ls.signEncountered && p.z<reinforceThreshold)showNav(clipIdFor('woodland',route,'reinforce'),meta.reinforce(word),{target:word,slot:meta.slot,exposure:'reinforce',duration:8500,voice:true});
+        if(p.z<-37 && ls.reinforceStatus!==null)startConsequence('woodland');
       }
 
-      // DECISION 3 — direct steep ridge versus longer gradual switchback.
-      if(p.z<-72)showNav('ascent_choice_prompt','The outpost is directly above us. The ridge is shorter, but steep. The switchback is longer and easier to climb. We are running out of time. Choose.',{duration:12000,voice:'The outpost is directly above us. The ridge is shorter, but steep. The switchback is longer and easier to climb. We are running out of time. Choose.'});
+      // Decision 3: direct steep ridge versus longer gradual switchback.
+      if(p.z<-72)showNav('ascent_choice_prompt','The outpost is directly above us. The ridge is shorter, but steep. The switchback is longer and easier to climb. We are running out of time. Choose.',{duration:12000,voice:true});
       if(!session.routes.ascent && p.z<-107){
         if(p.x>8)setRoute('ascent','ridge'); else if(p.x<-8)setRoute('ascent','switchback');
       }
-      if(session.routes.ascent==='ridge'){
-        showNav('virdex_intro','The virdex ridge is steep and direct. Expect a hard climb.',{target:'virdex',exposure:'context',duration:10000,voice:'The virdex ridge is steep and direct. Expect a hard climb.',voiceRate:.94});
-        if(p.z<-137)showNav('virdex_bare','Keep climbing the virdex ridge. The outpost is close.',{target:'virdex',exposure:'bare',duration:8500,voice:'Keep climbing the virdex ridge. The outpost is close.',voiceRate:.94});
-        if(p.z<-196)startConsequence('ascent');
-      }
-      if(session.routes.ascent==='switchback'){
-        showNav('teebu_intro','The teebu path climbs gradually through long turns. It is slower, but easier.',{target:'teebu',exposure:'context',duration:10000,voice:'The teebu path climbs gradually through long turns. It is slower, but easier.',voiceRate:.94});
-        if(p.z<-145)showNav('teebu_bare','Stay on the teebu path. Do not cut across the slope.',{target:'teebu',exposure:'bare',duration:8500,voice:'Stay on the teebu path. Do not cut across the slope.',voiceRate:.94});
-        if(p.z<-196)startConsequence('ascent');
+      if(session.routes.ascent){
+        const route=session.routes.ascent,meta=routeMeta('ascent',route),word=lexicalFor('ascent',route),ls=session.lexicalState[meta.slot];
+        showNav(clipIdFor('ascent',route,'context'),meta.context(word),{target:word,slot:meta.slot,exposure:'context',duration:10000,voice:true});
+        const reinforceThreshold=route==='ridge'?-137:-145;
+        if(ls.signEncountered && p.z<reinforceThreshold)showNav(clipIdFor('ascent',route,'reinforce'),meta.reinforce(word),{target:word,slot:meta.slot,exposure:'reinforce',duration:8500,voice:true});
+        if(p.z<-196 && ls.reinforceStatus!==null)startConsequence('ascent');
       }
 
       if(p.z<-210)showNav('final_neutral','Outpost in range. Emergency relay handshake starting.',{duration:7000});
@@ -1670,6 +1980,7 @@ async function bootApp() {
       return h(React.Fragment,null,
         h(EcctrlAnimationStateController,{ecctrl:controllerRef}),
         h(DirectKeyboardInput,{controllerRef}),
+        h(MovementTelemetry,{controllerRef}),
         h(Ecctrl,{
           ref:controllerRef,position:[0,4,216],capsuleHalfHeight:.55,capsuleRadius:.32,floatHeight:.20,
           maxWalkVel:speed.walk,maxRunVel:speed.run,
@@ -1693,7 +2004,7 @@ async function bootApp() {
     }
     function App(){
       const [ready,setReady]=useState(false),once=useRef(false);
-      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking the fixed Heart voice pack…';loadfill.style.width='90%';try{await verifyHeartVoicePack();setReady(true);bootStatus.textContent='Ecctrl, Rapier, fixed Heart voice pack and the E3.9.4 incised-trail and rock-collision pass is ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
+      const onCharacterReady=React.useCallback(async()=>{if(once.current)return;once.current=true;bootStatus.textContent='Checking the fixed Heart voice pack…';loadfill.style.width='90%';try{await verifyHeartVoicePack();setReady(true);session.timingMilestones.bootReadyAt=new Date().toISOString();bootStatus.textContent='MERA E4.0 study logic, counterbalanced Heart voice pack, Adventurer controller and route geometry are ready.';loadfill.style.width='100%';enterBtn.disabled=false;}catch(err){showBootError(err);}},[]);
       useEffect(()=>{if(!ready)return;enterBtn.onclick=()=>{boot.classList.add('hidden');beginIntro();};},[ready]);
       return h(Canvas,{shadows:false,dpr:[1,1.18],camera:{position:[4.8,3.2,224],fov:54,near:.1,far:650},gl:{antialias:true,powerPreference:'high-performance'},onCreated:({gl})=>{gl.outputColorSpace=THREE.SRGBColorSpace;gl.toneMapping=THREE.ACESFilmicToneMapping;gl.toneMappingExposure=.92;loadfill.style.width='78%';}},h(Suspense,{fallback:null},h(Scene,{onCharacterReady})));
     }
